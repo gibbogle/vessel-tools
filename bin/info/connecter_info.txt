@@ -1,0 +1,14 @@
+Connecter information
+
+Parameter:
+
+Minimum size of objects
+
+The thresholded and filled image is separated into separate connected objects.
+Only objects with more than the minimum voxel count are tracked.  The five
+biggest objects are written to tiff files.  If the base name for the object
+files is Albert, the files are named:
+Albert00.tif
+Albert01.tif
+..
+Albert04.tif

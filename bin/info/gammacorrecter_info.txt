@@ -1,0 +1,12 @@
+Gamma Correcter information
+
+Parameter: gamma (> 1)
+
+The specified gamma correction is applied to the input greyscale image, and the result
+is written to the output image file.
+
+The gamma correction used is the simple formula:
+
+V2 = V1^(1/gamma)
+
+where V1 and V2 are the input and output voxel values scaled to the range (0,1)

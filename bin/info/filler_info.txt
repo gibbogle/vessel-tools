@@ -1,0 +1,66 @@
+Filler information
+------------------
+
+Parameters:
+L = probeLen = probe length parameter
+N = insideHitLimit = enclosure criterion parameter
+M = number of iterations
+
+The filling algorithm algorithm is applied to the thresholded image, i.e.
+to an image that contains only "lit" (value=255) and "unlit" (value=0) voxels.
+There are two stages.  The first stage is application a cavity-filling algorithm.
+This method is based on quantifying the extent to which an unlit voxel is 
+"enclosed" by lit voxels.  An unlit voxel is considered to be enclosed, and 
+therefore within a vessel, if there is a lit voxel within a specified range
+in a sufficient number of sampling directions.  Each voxel in a 3D image has
+26 neighbours, i.e. voxels with which it shares a face, an edge, or a vertex.
+These neighbours define a set of directions given by vectors like:
+(1,0,0), (0,1,0), (0,0,1), (-1,0,0), (0,-1,0), (0,0,-1), (1,1,0), (1,0,1), ... 
+
+The first step is to create a list of "candidate" unlit voxels - those close
+enough to enough lit voxels to have any chance of being enclosed.  Subsequent
+processing steps are restricted to voxels in this list.
+
+For each candidate voxel P0:
+  The hit counter is initialized to 0
+  For each of 26 directions:
+    A probe is sent out to a maximum distance of L from P0.  If a lit voxel
+    is hit, the counter is incremented
+  If the count of lit voxels encountered exceeds N, filling is executed on
+  the voxel P0 (as described below)
+
+When a voxel is selected as a filling target, the voxel itself and some set of
+nearby unlit voxels have their values set to 255.  The other voxels chosen to
+be lit are determined as follows.  
+
+The filler function lights voxels within a spherical neighbourhood of the 
+voxel P0(x0,y0,z0) that has been determined to be enclosed, subject to:
+(a) The radius of the sphere is the length of the shortest probe that hit
+(b) Each voxel (x,y,z) within the sphere is tested for a measure of
+    "insideness", using info from the probes.
+    To be considered "inside", the unit vector of the offset of (x,y,z) 
+    from (x0,y0,z0) must have a projection onto one of the normalized hitting 
+    probes that exceeds a threshold value projLimit (= 0.86).  This is a way
+    of determining whether or not the voxel is within the cavity.
+
+These criteria generate filling of surface pits with minimal overfilling.
+
+The next stage is an optional healing step, which can be suppressed by setting
+the number of iterations M to a negative number.
+The purpose of this stage is to fill holes in the vessel wall that might have
+been missed by the previous cavity-filling stage.  This might be necessary 
+if a large vessel, showing up as hollow, has a small hole, in such a way that
+there are an insufficient number of probe hits to trigger filling.
+
+For this method a set of 25 disks have been defined, with orientations
+intended to span the range of different possible planes tangent to a vessel.
+The radius of each disk is currently set at 5, the thickness at 2.  
+The idea is to see if one of the disks, when placed with its centre at a 
+candidate unlit voxel, intersects the vessel (i.e. the set of lit voxels) 
+at a number of voxels that exceeds a specified threshold.  In this case 
+the candidate voxel is lit.
+ 
+The filling algorithm algorithm can be applied iteratively, but usually
+a single pass (M=1) is sufficient.
+
+Typical run parameters are L = 6, N = 18.

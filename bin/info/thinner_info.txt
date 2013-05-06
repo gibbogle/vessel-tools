@@ -1,0 +1,6 @@
+Thinner information
+
+The code operates on a thresholded, connected object image.
+The thinning code is based on the ITK filter, itkBinaryThinningImageFilter3D.
+Modifications have been made to speed it up, but the functionality is unchanged.
+Voxels are removed until a skeleton of single connected voxels remains.

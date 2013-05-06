@@ -1,0 +1,12 @@
+Smoother information
+
+The purpose of creating a smoothed image is to use it as the background in
+the local thresholding step.
+
+The input parameter, R, is nominally the radius over which averaging is
+done, but in fact the averaging region is a cube NxNxN, where N = 2R+1.
+
+The value computed at the centre of the cube is the sum of values at the voxels
+within the cube divided by NxNxN.
+
+Execution is significantly speeded up by using multiple CPUs.

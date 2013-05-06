@@ -1,0 +1,5 @@
+Inverter information
+
+The negative of a tiff image is created.
+
+Voxel value V is replaced by 255-V

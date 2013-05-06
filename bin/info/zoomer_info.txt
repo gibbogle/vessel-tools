@@ -1,0 +1,24 @@
+Zoomer information
+
+This program enables selection of a subset of the network.  
+The user specifies a subregion by:
+  the centre (xv,yv,zv)
+and 
+  the size wv
+  (i.e. the diameter if a sphere is chosen, or the width for a cube).  
+These values are all in terms of the voxel coordinates of the original 3D image.
+The voxel size is used to translate the values into the units the network file uses, i.e. um:
+xc = voxelsize*xv
+yc = voxelsize*yv
+zc = voxelsize*zv
+wc = voxelsize*wv
+
+All vessel segments with a vertex that falls within the subregion are selected.
+The resulting network (which is not necessarily connected) is saved to the specified output .am file, and optionally to CMGUI files.
+
+If "Shift origin" is selected, the origin of the network will be shifted to be consistent with the corresponding cropped TIFF file.  
+If the centre is (xc,yc,zc) and R = (cube width)/2:
+x -> x - (xc-R)
+y -> y - (yc-R)
+z -> z - (zc-R)
+where xc, yc, zc, R are the values after scaling by voxelsize.

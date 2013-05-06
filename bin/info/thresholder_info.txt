@@ -1,0 +1,44 @@
+Thresholder info
+----------------
+
+At a point (x,y,z) the image intensity is V(x,y,z), and the background 
+intensity is B(x,y,z), from the smoothed image.  This is generated in advance
+by a simple smoothing of the original image, averaging over a specified radius.
+
+The basic idea of local thresholding is that a lower threshold should be used 
+when the background is faint, i.e. in low intensity regions of the image.
+The program uses two parameters, T and delta (d). 
+The logic is as follows:
+
+v = V(x,y,z);
+b = B(x,y,z);
+if (b >= T)
+    thresh = T + d;
+else 
+    thresh = b + d;
+if (v >= thresh)
+    V(x,y,z) = 255;
+else
+    V(x,y,z) = 0;
+
+
+        |
+        |
+        |
+        |
+        |
+thresh  |
+        |
+        |       ________________________________
+     T+d|      /
+        |     /
+        |    /
+        |   /
+        |  /
+        | /
+        |/
+      d |
+        |
+        |________________________________________
+               T
+                             b

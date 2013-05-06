@@ -1,0 +1,5 @@
+SGtiffer information
+
+This program generates a 3D b&w TIFF image corresponding to the SpatialGraph file.
+The user specifies the voxel spacing delta for the TIFF.
+Voxels inside vessels are white, those outside are black.

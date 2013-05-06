@@ -1,0 +1,16 @@
+Distancer generates a probability distribution for the distance from a blood vessel.
+
+The analysis can be either for the whole network, or for a spherical subregion.
+
+Parameters:
+
+(Note that all distances are in microns)
+
+Grid spacing (grid_dx).  This is the spacing of the regular 3D grid of points where the distance is computed.  
+Note that a value that is too small will cause the program to exceed available memory and fail. 
+For the whole network a value in the range 3 - 5 um is usually appropriate.  For a subregion a smaller value can be used.
+
+ 
+If the sphere subregion option is selected:
+
+(x0,y0,z0) is the centre of the sphere with the specified radius.

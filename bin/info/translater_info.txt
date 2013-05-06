@@ -1,0 +1,8 @@
+Translater information
+
+This program translates an Amira spatialgraph file (.am) to a pair of CMGUI files, 
+and computes the distributions of vessel diameter and vessel length.
+
+The CMGUI files are generated if the box is ticked.
+
+The Amira file is written out using a more concise format, as zzz.am.

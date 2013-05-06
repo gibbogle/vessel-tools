@@ -1,0 +1,13 @@
+Cropper information
+
+This program enables selection and saving of a rectangular piece of a 3D TIFF image.  
+The user specifies a subregion either by:
+  the X, Y and Z ranges
+or by
+  the centre and size for each axis (size is the voxel range)
+(all values are in voxel units)
+
+For comparison with a sub-network generated with zoomer, the piece should be a cube, i.e. all sizes should be the same.  
+It is advisable to make the size an odd number to ensure that the centre point is exactly the centre of the cube.
+Note that the centre and range numbers are 0-based for consistency with Amira network coordinates (unlike Irfanview, which uses 1-based pixel coordinates).
+When loaded into Amira for comparison with the zoomed network, the voxelsize must be specified in order to ensure that the two representations are aligned.

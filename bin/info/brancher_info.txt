@@ -1,0 +1,16 @@
+Brancher information
+
+This program first determines the branch separation (or distance) of every node in the network from one or two specified nodes, generally the ends of the main artery and/or vein.  
+The branch separation is the number of branches on the shortest path to the specified node.
+The distance is the actual distance from the specified node, along the shortest path.
+The user chooses to colour based on branch count or distance.
+The user specifies the target node(s), and - in the case of branch count - the ratio_limit (if 0 there is no limit).
+At each branch on a path the ratio of (maximum vessel diameter)/(minimum vessel diameter) is determined, and if this is less than ratio_limit the branch is counted. 
+
+The node numbers are 1-based (like CMGUI files, not like Amira spatialgraph files), and '0' signifies that the node is ignored.
+
+The output file contains the distribution(s) of number of branches.
+
+The CMGUI files that are created contain for each node an RGB vector field that is computed from the two distance values (or the single value if only one node is specified).
+
+

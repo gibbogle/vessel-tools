@@ -1,0 +1,5 @@
+libgomp_64-1.dll 	(smooth.exe)
+pthreadgc2_64.dll 	(smooth.exe)
+libgcc_s_sjlj-1.dll (compress.exe, flood2D.exe)
+libstdc++-6.dll 	(compress.exe, flood2D.exe)
+
