@@ -1,0 +1,4 @@
+Compresser information
+
+This program enables compression of a 3D TIFF image.  
+
