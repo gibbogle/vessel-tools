@@ -1,5 +1,5 @@
 /*
- * Despeckle a .tif 
+ * Despeckle a binary .tif (currently this works only on an image that has voxel values 0 or 255)
  */
 
 #include <cstdio>

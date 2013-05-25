@@ -12,8 +12,8 @@ The logic is as follows:
 
 v = V(x,y,z);
 b = B(x,y,z);
-if (b >= T)
-    thresh = T + d;
+if (b >= T-d)
+    thresh = T;
 else 
     thresh = b + d;
 if (v >= thresh)
@@ -30,7 +30,7 @@ else
 thresh  |
         |
         |       ________________________________
-     T+d|      /
+      T |      /
         |     /
         |    /
         |   /
@@ -40,5 +40,5 @@ thresh  |
       d |
         |
         |________________________________________
-               T
+               T-d
                              b

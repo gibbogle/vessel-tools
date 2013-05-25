@@ -92,7 +92,8 @@ int main(int argc, char**argv)
 		printf("              T is the basic threshold value\n");
 		printf("              delta is the excess-over-background criterion at low-intensities ( < T )\n");
 		printf("Note: with v = voxel value, b = background value:\n");
-		printf("       the threshold is b+delta when b < T-delta, T+delta when b >= T-delta\n");
+		printf("       the threshold is b+delta when b < T-delta, T when b >= T-delta\n");
+		printf("Note: if T = delta the threshold is T and the background level is ignored\n");
 		fprintf(fp,"Usage: threshold input_tiff back_tiff output_tiff T delta\n");
 		fprintf(fp,"       where: input_tiff is the image to be thresholded\n");
 		fprintf(fp,"              back_tiff is the background level image (smoothed)\n");
@@ -101,6 +102,8 @@ int main(int argc, char**argv)
 		fprintf(fp,"              delta is the excess-over-background criterion at low-intensities ( < T )\n");
 		fprintf(fp,"Note: with v = voxel value, b = background value:\n");
 		fprintf(fp,"       the threshold is b+delta when b < T-delta, T when b >= T-delta\n");
+		fprintf(fp,"Note: if T = delta the threshold is T and the background level is ignored\n\n");
+
 		fprintf(fp,"Submitted command line: argc: %d\n",argc);
 		for (int i=0; i<argc; i++) {
 			fprintf(fp,"argv: %d: %s\n",i,argv[i]);
