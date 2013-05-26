@@ -1,0 +1,4 @@
+Uncompresser information
+
+This program enables uncompression of a 3D TIFF image.  
+

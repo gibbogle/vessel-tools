@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Compressing tiff file</string>
+   <string>Uncompressing tiff file</string>
   </property>
   <widget class="QWidget" name="centralWidget">
    <widget class="QPushButton" name="pushButtonInputFile">
@@ -40,7 +40,7 @@
      <string/>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButtonCompress">
+   <widget class="QPushButton" name="pushButtonUncompress">
     <property name="geometry">
      <rect>
       <x>240</x>
@@ -50,7 +50,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>Compress</string>
+     <string>Uncompress</string>
     </property>
    </widget>
    <widget class="QLabel" name="label">
@@ -172,18 +172,18 @@
    </hints>
   </connection>
   <connection>
-   <sender>pushButtonCompress</sender>
+   <sender>pushButtonUncompress</sender>
    <signal>clicked()</signal>
    <receiver>MainWindow</receiver>
-   <slot>compresser()</slot>
+   <slot>uncompresser()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>309</x>
-     <y>200</y>
+     <x>308</x>
+     <y>206</y>
     </hint>
     <hint type="destinationlabel">
-     <x>420</x>
-     <y>249</y>
+     <x>395</x>
+     <y>259</y>
     </hint>
    </hints>
   </connection>
@@ -191,6 +191,6 @@
  <slots>
   <slot>outputFileSelecter()</slot>
   <slot>inputFileSelecter()</slot>
-  <slot>compresser()</slot>
+  <slot>uncompresser()</slot>
  </slots>
 </ui>
