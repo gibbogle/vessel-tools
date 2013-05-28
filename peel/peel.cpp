@@ -147,7 +147,7 @@ void doSeg(const CmdLineType &CmdLineObj)
   MultiplyImageFilterType::Pointer multiplyImageFilter = MultiplyImageFilterType::New();
   multiplyImageFilter->SetInput(closed);
   multiplyImageFilter->SetConstant(255);
-  writeIm<RawImType>(multiplyImageFilter->GetOutput(), CmdLineObj.OutputImPrefix + "_closed" + CmdLineObj.suffix);
+  writeImComp<RawImType>(multiplyImageFilter->GetOutput(), CmdLineObj.OutputImPrefix + "_closed" + CmdLineObj.suffix);
 
   printf("eroding\n");
   // now do a basic erosion, say by half the closing size. We could do
@@ -164,7 +164,7 @@ void doSeg(const CmdLineType &CmdLineObj)
   printf("keeping big\n");
   //Gib
   multiplyImageFilter->SetInput(KeepBig->GetOutput());
-  writeIm<RawImType>(multiplyImageFilter->GetOutput(), CmdLineObj.OutputImPrefix + "_eroded_big" + CmdLineObj.suffix);
+  writeImComp<RawImType>(multiplyImageFilter->GetOutput(), CmdLineObj.OutputImPrefix + "_eroded_big" + CmdLineObj.suffix);
 
   printf("dilating\n");
   PMaskImType dilated = doDilateMM<MaskImType>(closed, CmdLineObj.closingsize/4);
@@ -180,18 +180,18 @@ void doSeg(const CmdLineType &CmdLineObj)
 
   //Gib
   multiplyImageFilter->SetInput(Invert->GetOutput());
-  writeIm<RawImType>(multiplyImageFilter->GetOutput(), CmdLineObj.OutputImPrefix + "_inverted" + CmdLineObj.suffix);
+  writeImComp<RawImType>(multiplyImageFilter->GetOutput(), CmdLineObj.OutputImPrefix + "_inverted" + CmdLineObj.suffix);
 
   itk::Instance<itk::MaximumImageFilter<MaskImType, MaskImType, MaskImType> > Comb;
   Comb->SetInput(Invert->GetOutput());
   Comb->SetInput2(KeepBig->GetOutput());
 
   printf("combining\n");
-  writeIm<MaskImType>(Comb->GetOutput(), CmdLineObj.OutputImPrefix + "_marker" + CmdLineObj.suffix);
+  writeImComp<MaskImType>(Comb->GetOutput(), CmdLineObj.OutputImPrefix + "_marker" + CmdLineObj.suffix);
 
   //Gib
   multiplyImageFilter->SetInput(Comb->GetOutput());
-  writeIm<RawImType>(multiplyImageFilter->GetOutput(), CmdLineObj.OutputImPrefix + "_combined" + CmdLineObj.suffix);
+  writeImComp<RawImType>(multiplyImageFilter->GetOutput(), CmdLineObj.OutputImPrefix + "_combined" + CmdLineObj.suffix);
 
   // now for watershed
   itk::Instance< itk::SmoothingRecursiveGaussianImageFilter <RawImType, RawImType> > Smoother;
@@ -217,21 +217,21 @@ void doSeg(const CmdLineType &CmdLineObj)
   Selector->SetInsideValue(1);
   Selector->SetOutsideValue(0);
 
-  writeIm<MaskImType>(Selector->GetOutput(), CmdLineObj.OutputImPrefix + "_wsseg" + CmdLineObj.suffix);
+  writeImComp<MaskImType>(Selector->GetOutput(), CmdLineObj.OutputImPrefix + "_wsseg" + CmdLineObj.suffix);
 
   PMaskImType peeled = doErodeMM<MaskImType>(Selector->GetOutput(), CmdLineObj.peel);
 
-  writeIm<MaskImType>(peeled, CmdLineObj.OutputImPrefix + "_peeled" + CmdLineObj.suffix);
+  writeImComp<MaskImType>(peeled, CmdLineObj.OutputImPrefix + "_peeled" + CmdLineObj.suffix);
 
   //Gib
   multiplyImageFilter->SetInput(peeled);
-  writeIm<RawImType>(multiplyImageFilter->GetOutput(), CmdLineObj.OutputImPrefix + "_peeled255" + CmdLineObj.suffix);
+  writeImComp<RawImType>(multiplyImageFilter->GetOutput(), CmdLineObj.OutputImPrefix + "_peeled255" + CmdLineObj.suffix);
 
   itk::Instance<itk::MaskImageFilter<RawImType, MaskImType> > masker;
   masker->SetInput(input);
   masker->SetInput2(peeled);
 
-  writeIm<RawImType>(masker->GetOutput(), CmdLineObj.OutputImPrefix + "_masked" + CmdLineObj.suffix);
+  writeImComp<RawImType>(masker->GetOutput(), CmdLineObj.OutputImPrefix + "_masked" + CmdLineObj.suffix);
 
 }
 
@@ -239,6 +239,11 @@ int main(int argc, char * argv[])
 {
   //itk::MultiThreader::SetGlobalMaximumNumberOfThreads(1);
 
+	//FILE *fplog;
+	//fplog = fopen("peel.log","w");
+	//for (int i=0; i<argc; i++)
+	//	fprintf(fplog,"%s\n",argv[i]);
+	//return 0;
   CmdLineType CmdLineObj;
   ParseCmdLine(argc, argv, CmdLineObj);
   const int dimension = 3;

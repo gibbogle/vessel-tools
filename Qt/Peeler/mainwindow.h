@@ -17,7 +17,7 @@ public:
 
 public slots:
 	void inputFileSelecter();
-	void outputFileSelecter();
+//	void outputFileSelecter();
     void peeler();
 
 private:
@@ -25,8 +25,8 @@ private:
 
 public:
 	QString inputFileName;
-	QString outputFileName;
-    QString prefix;
+//	QString outputFileName;
+    QString prefixpath;
 };
 
 #endif // MAINWINDOW_H

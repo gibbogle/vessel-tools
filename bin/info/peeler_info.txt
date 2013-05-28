@@ -9,3 +9,4 @@ Peel thickness   The thickness of the layer to be removed (8)
 Threshold        The initial thresholding level (10)
 Sigma            The smoothing parameter (2)
 
+Output prefix    Prepended to the various output file names

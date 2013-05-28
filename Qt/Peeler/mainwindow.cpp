@@ -39,8 +39,11 @@ void MainWindow::inputFileSelecter()
 	inputFileName = QFileDialog::getOpenFileName(this,
 		tr("Input TIFF file"), ".", tr("TIFF Files (*.tif)"));
 	ui->labelInputFile->setText(inputFileName);
+    QFileInfo qfinfo = QFileInfo(inputFileName);
+    prefixpath = qfinfo.path() + "/";
 }
 
+/*
 void MainWindow::outputFileSelecter()
 {
 	ui->labelResult->setText("");
@@ -48,21 +51,21 @@ void MainWindow::outputFileSelecter()
 		tr("Output TIFF file"), ".", tr("TIFF Files (*.tif)"));
 	ui->labelOutputFile->setText(outputFileName);
     QFileInfo qfinfo = QFileInfo(outputFileName);
-    prefix = qfinfo.path() + qfinfo.baseName();
+    prefix = qfinfo.path() + "/" + qfinfo.baseName();
 }
-
+*/
 void MainWindow::peeler()
 {
 	int res;
 	QString qstr, resultstr;
-	char cmdstr[256];
+    char cmdstr[1024];
 
 
     qstr = QCoreApplication::applicationDirPath() + "/exec/peel";
     qstr += " --input ";
 	qstr += inputFileName;
     qstr += " --outputprefix ";
-    qstr += prefix;
+    qstr += prefixpath + ui->lineEdit_prefix->text();
     qstr += " --closingsize ";
     qstr += ui->lineEdit_closingsize->text();
     qstr += " --peelsize ";
