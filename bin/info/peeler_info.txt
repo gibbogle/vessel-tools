@@ -1,0 +1,11 @@
+Peeler information
+
+This program is to remove an outer layer from a 3D TIFF image of a tissue sample.
+
+Inputs:
+
+Closing size     The size of the structuring element used to close (30)
+Peel thickness   The thickness of the layer to be removed (8)
+Threshold        The initial thresholding level (10)
+Sigma            The smoothing parameter (2)
+
