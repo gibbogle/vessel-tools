@@ -1,0 +1,242 @@
+%
+% Complete documentation on the extended LaTeX markup used for Insight
+% documentation is available in ``Documenting Insight'', which is part
+% of the standard documentation for Insight.  It may be found online
+% at:
+%
+%     http://www.itk.org/
+
+\documentclass{InsightArticle}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  hyperref should be the last package to be loaded.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage[dvips,
+bookmarks,
+bookmarksopen,
+backref,
+colorlinks,linkcolor={blue},citecolor={blue},urlcolor={blue},
+]{hyperref}
+% to be able to use options in graphics
+\usepackage{graphicx}
+% for pseudo code
+\usepackage{listings}
+% subfigures
+\usepackage{subfigure}
+
+
+%  This is a template for Papers to the Insight Journal. 
+%  It is comparable to a technical report format.
+
+% The title should be descriptive enough for people to be able to find
+% the relevant document. 
+\title{Morphology with parabolic structuring elements}
+
+% Increment the release number whenever significant changes are made.
+% The author and/or editor can define 'significant' however they like.
+\release{0.00}
+
+% At minimum, give your name and an email address.  You can include a
+% snail-mail address if you like.
+\author{Richard Beare}
+\authoraddress{Richard.Beare@med.monash.edu.au\\Department of Medicine\\Monash University\\Melbourne\\Australia}
+
+\begin{document}
+\maketitle
+
+\ifhtml
+\chapter*{Front Matter\label{front}}
+\fi
+
+
+\begin{abstract}
+\noindent
+Morphological erosion and dilation filters employ a structuring
+function, with flat structuring functions being the most common
+example. Parabolic\footnote{This article will use the term
+``parabolic'', but much of the literature uses ``quadratic''}
+structuring functions are less well known but theoretically very
+important and practically very useful. This paper briefly introduces
+morphology using parabolic structuring functions, describes the ITK
+classes used to implement them and includes a number of sample
+applications.
+\end{abstract}
+
+\tableofcontents
+
+\section{Introduction}
+Parabolic structuring functions (PSF) have the following important properties:
+\begin{itemize}
+\item They are closed under dilation - i.e. dilating two PSFs results in a third PSF.
+\item An n-dimensional PSF can be obtained by combining n
+one-dimensional PSFs in independent directions.
+\item PSFs are rotationally symmetric allowing the dimensional
+decomposition by dilation.
+\end{itemize}
+These properties make PSFs the morphological counterpart of the
+Gaussian in linear image processing \cite{Boomgaard96}.
+
+The dimensional decompostion properties lead to efficient algorithms
+for implementing parabolic morphological operations.
+
+Parabolic morphology operations are useful in image sharpening,
+distance transforms, are a less vigorous alternative to conventional
+morphological operations based on flat structuring elements and a
+potentially useful, faster, alternative to shaped structuring elements
+such as the ``rolling ball'' often used in background estimation in
+tools such as ImageJ.
+
+\section{Brief background theory}
+A dilation by a one dimensional parabolic structuring element is
+illustrated in Figure \ref{fig:paradilate}. The dilation of the signal
+at point A is found by lowering the structuring function centred at A
+until the structuring function comes into contact with the signal, in
+this case at point B. The dilation at this point is given by point C,
+the height of the parabola turning point. The equivalent erosion is
+calculated by raising an inverted parabola into the signal from below.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[scale=0.75]{dilate_parabolic}
+\caption{Dilation of a 1D signal with a parabolic structuring element.\label{fig:paradilate}}
+\end{figure}
+
+\section{ITK classes}
+The filters discussed in this section implement the ``point of
+contact'' algorithm \cite{Boomgaard96}. Algorithms that are more
+efficient for larger kernel sizes are available and are discussed by
+van den Boomgaard et al, but haven't been implemented in this package.
+The classes {\em itkParabolicErodeImageFilter}, {\em
+itkParabolicDilateImageFilter}, {\em itkParabolicCloseImageFilter} and
+{\em itkParabolicOpenImageFilter} provide the range of parabolic
+morphology operations. These classes derive from {\em
+itkParabolicErodeDilateImageFilter} and {\em
+itkParabolicOpenCloseImageFilter}, which implement the core
+functionality. The open and close filters offer an optional border
+padding facility.
+
+The controling methods available for these classes is :
+\begin{itemize}
+\item {\bf Set/GetScale} : a PSF is usually defined as $f(x)=\frac{1}{2\rho}x^2$. This method sets $\rho$.
+\item {\bf Set/GetUseImageSpacing} : defines whether the units for $\rho$ are voxels or image spacing.
+\item {\bf SetSafeBorder} : controls whether border padding is used in opening or closing operations.
+\end{itemize}
+
+Note that there are actually a variety of ways in which scale is of
+PSFs is defined in the literature, including $f(x) =
+(\frac{x}{scale})^2$ and $f(x) = (\frac{x^2}{scale})$. Logarithmic
+scales are another alternative.
+
+\section{Applications}
+\subsection{Sharpening}
+Image sharpening using parabolic operations has been analysed in
+\cite{Schavemaker2000}. This form of sharpening is based on the following formula:
+\begin{equation}
+\epsilon[f](x, \rho) =
+\begin{cases}
+F^\oplus(x,\rho), &F^\oplus(x,\rho) - F(x,0) < F(x,0) - F^\ominus(x,\rho),\\
+F^\ominus(x,\rho), &F^\oplus(x,\rho) - F(x,0) > F(x,0) - F^\ominus(x,\rho),\\
+F(x,0), &otherwise
+\end{cases}
+\end{equation}
+where $F^\oplus(x,\rho)$ indicates dilation by parabolic structuring
+element with scale $\rho$ and $F^\ominus$ indicates erosion. In
+summary, the output of the sharpening process at a pixel is the
+dilation, if the difference between the dilation and the input is less
+than the difference between the erosion and the input. This formula
+describes one step in an iterative process. The parameters controling
+the process are scale and number of iterations. Scale selection will
+require experimentation, but will tend to be related to the size of
+blurring.
+
+This sharpening algorithm has been implemented in the {\em
+  itkMorphologicalSharpeningImageFilter}, and {\em testSharpening}
+illustrates its use. Figure \ref{fig:sharpprofs} illustrates the
+results of sharpening using profiles through an artificial image.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[scale=0.8]{sharp.eps}
+\caption{Profiles through an artificial image illustrating the sharpening process. Scale value was 1 pixel.\label{fig:sharpprofs}}
+\end{figure}
+
+\subsection{Distance Tranforms}
+Parabolic erosions and dilations can be used to construct distance
+transforms. Two classes have been provided in this package:
+\begin{itemize}
+\item {\em itkMorphologicalDistanceTransformImageFilter} for one sided distance transforms.
+\item {\em itkMorphologicalSignedDistanceTransformImageFilter} for signed distance transforms.
+\end{itemize}
+The concept is fairly simple - consider applying a parabolic erosion,
+with scale 1, to a mask image with values of $0$ and $\inf$. The value
+of the erosion at mask locations with value 0 will remain 0. The value
+at mask locations of $\inf$ are equal to the square of the distance to
+the nearest 0 value. The idea can be easily extended to allow
+computation of the inside and outside distances without
+rethresholding. This method should be more accurate than basic chamfer
+approaches and appears slightly faster than the {\em
+  SignedDanielssonDistanceTransform} but slower than the {\em
+  SignedMaurerDistanceTransform} currently provided in ITK, as
+illustrated in Table \ref{tbl:perf}. The parabolic version does not
+return voronoi tesselations or vectors pointing to the nearest inverse
+pixel because such things aren't required in construction of the
+distance transform. The Danielsson approach produces an approximate
+distance transform (albeit a good one for most purposes), while the
+approach using parabolic morphology is exact. The parabolic morphology
+approach does not perform as well as the Maurer approach, but may be
+able to do better in the future since it is easily threadable (see
+Section \ref{sect:threading}) and other optimizations that haven't yet
+been implemented are available. In addition, no attempt has been made
+to use integer arithmetic. 
+
+\begin{table}[phtb]
+\centering
+\begin{tabular}{cccc}
+\hline
+Image & Parabolic & Maurer & Danielsson \\ 
+$256 \times 256$ & 0.0457 & 0.0152 & 0.0568 \\
+$258 \times 258 \times 182$ & 10.4  &  7.28  &  16.1 \\
+\hline
+\end{tabular}
+\caption{Execution times, in seconds, for computing signed distance tranforms using parabolic morphology, Maurer and Danielsson methods in ITK. The standard, $256 \times 256$ {\em cthead} image was used for 2D, the bunnyPadded image for 3D, and the test was repeated 10 times. These figures were obtained using perfDT and perfDT3D, in this package. Tests were single threaded and run on an Intel Core2 Duo CPU, E4600, 2.40GHz, 2M cache running Linux.\label{tbl:perf}}
+\end{table}
+
+\section{Multi-threaded implementations}
+\label{sect:threading}
+The morphological operations described in this article are constructed
+using sequences of one dimensional operations along directions
+parallel to the image axes. Such operations are easily parallelisable,
+with each line operation being independent. However the current ITK
+threading framework is not ideal for implementing this style of
+parallel operation. Alternative approaches are available but haven't
+yet been implemented. When they are available they will also provide a
+useful framework for threading other line based filters, such as the
+recursive gaussian smoothing filters and morphological operations
+using flat structuring elements.
+
+Parallel implementation will also allow acceleration of the
+morphological distance transform computation - which is not feasible
+for queue based approaches like the Danielsson method.
+
+
+\section{Conclusions and further work}
+This article introduces implementations of an important class of
+morphological operations - erosions and dilations be parabolic
+structuring elements. Applications of these operations to sharpening
+and distance transforms are also presented. The latter appears to
+outperform some existing implementations and may do better as improved
+algorithms are implemented.
+
+\section*{Acknowledgements}
+Thanks to Paul Jackway for valuable discussions.
+
+
+\bibliographystyle{plain}
+\bibliography{local,InsightJournal}
+\nocite{ITKSoftwareGuide}
+
+\end{document}
+
