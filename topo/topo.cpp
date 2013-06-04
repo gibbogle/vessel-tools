@@ -35,7 +35,7 @@
 #define MAXNBRS 20
 //#define MINSTUB 3		// remove an edge that has an unconnected end if npts <= MINSTUB 
 #define MINSEGLEN 3		// segments less than MINSEGLEN are ignored
-#define NBOX 400
+#define NBOX 800
 
 // If the number of neighbours is not 2, the voxel is a vertex.
 // nbrs = 1 => an unconnected vessel end
