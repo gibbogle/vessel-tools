@@ -3782,7 +3782,7 @@ int TraceSkeleton(int n_prune_cycles)
 int main(int argc, char**argv)
 {
 	int n_prune_cycles;
-	double voxelsize_xy, voxelsize_z;
+	double voxelsize_x, voxelsize_y, voxelsize_z;
 	char *vessFile, *skelFile;
 	int err;
 	char *outfilename;
@@ -3790,10 +3790,10 @@ int main(int argc, char**argv)
 	char errfilename[256], amfilename[256];
 	bool squeeze = true;
 
-	if (argc != 8) {
-		printf("Usage: topo skel_tiff object_tiff output_file voxelsize_xy voxelsize_z n_prune_cycles fixed_diam\n");
+	if (argc != 9) {
+		printf("Usage: topo skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z n_prune_cycles fixed_diam\n");
 		fperr = fopen("topo_error.log","w");
-		fprintf(fperr,"Usage: topo skel_tiff object_tiff output_file voxelsize_xy voxelsize_z n_prune_cycles fixed_diam\n");
+		fprintf(fperr,"Usage: topo skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z n_prune_cycles fixed_diam\n");
 		fprintf(fperr,"Submitted command line: argc: %d\n",argc);
 		for (int i=0; i<argc; i++) {
 			fprintf(fperr,"argv: %d: %s\n",i,argv[i]);
@@ -3816,13 +3816,14 @@ int main(int argc, char**argv)
 
 	skelFile = argv[1];
 	vessFile = argv[2];
-	sscanf(argv[4],"%lf",&voxelsize_xy);
-	sscanf(argv[5],"%lf",&voxelsize_z);
-	sscanf(argv[6],"%d",&n_prune_cycles);
-	sscanf(argv[7],"%f",&FIXED_DIAMETER);
+	sscanf(argv[4],"%lf",&voxelsize_x);
+	sscanf(argv[5],"%lf",&voxelsize_y);
+	sscanf(argv[6],"%lf",&voxelsize_z);
+	sscanf(argv[7],"%d",&n_prune_cycles);
+	sscanf(argv[8],"%f",&FIXED_DIAMETER);
 
-	vsize[0] = voxelsize_xy;
-	vsize[1] = voxelsize_xy;
+	vsize[0] = voxelsize_x;
+	vsize[1] = voxelsize_y;
 	vsize[2] = voxelsize_z;
 
 	fpout = fopen(outfilename,"w");
@@ -3832,8 +3833,8 @@ int main(int argc, char**argv)
 	fprintf(fpout,"Input object file: %s\n",vessFile);
 	printf("Output basename: %s\n",output_basename);
 	fprintf(fpout,"Output basename: %s\n",output_basename);
-	printf("Voxel size: x,y: %f  z: %f\n",voxelsize_xy,voxelsize_z);
-	fprintf(fpout,"Voxel size: x,y: %f  z: %f\n",voxelsize_xy,voxelsize_z);
+	printf("Voxel size: x,y,z: %f %f %f\n",voxelsize_x, voxelsize_y,voxelsize_z);
+	fprintf(fpout,"Voxel size: x,y,z: %f %f %f\n",voxelsize_x, voxelsize_y,voxelsize_z);
 	printf("Number of prune cycles: %d\n",n_prune_cycles);
 	fprintf(fpout,"Number of prune cycles: %d\n",n_prune_cycles);
 	if (FIXED_DIAMETER > 0) {

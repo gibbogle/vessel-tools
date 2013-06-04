@@ -141,11 +141,11 @@
      <string/>
     </property>
    </widget>
-   <widget class="QLineEdit" name="lineEditVoxelSize_xy">
+   <widget class="QLineEdit" name="lineEditVoxelSize_y">
     <property name="geometry">
      <rect>
-      <x>120</x>
-      <y>100</y>
+      <x>300</x>
+      <y>130</y>
       <width>31</width>
       <height>20</height>
      </rect>
@@ -154,17 +154,17 @@
      <string>1.95</string>
     </property>
    </widget>
-   <widget class="QLabel" name="labelVoxelSize_xy">
+   <widget class="QLabel" name="labelVoxelSize_y">
     <property name="geometry">
      <rect>
-      <x>160</x>
-      <y>100</y>
+      <x>340</x>
+      <y>130</y>
       <width>91</width>
       <height>21</height>
      </rect>
     </property>
     <property name="text">
-     <string>Voxel size x,y (um)</string>
+     <string>Voxel size y (um)</string>
     </property>
    </widget>
    <widget class="QCheckBox" name="checkBoxDiam">
@@ -241,8 +241,8 @@
    <widget class="QLineEdit" name="lineEditVoxelSize_z">
     <property name="geometry">
      <rect>
-      <x>280</x>
-      <y>100</y>
+      <x>300</x>
+      <y>160</y>
       <width>31</width>
       <height>20</height>
      </rect>
@@ -254,14 +254,40 @@
    <widget class="QLabel" name="labelVoxelSize_z">
     <property name="geometry">
      <rect>
-      <x>320</x>
-      <y>100</y>
+      <x>340</x>
+      <y>160</y>
       <width>91</width>
       <height>21</height>
      </rect>
     </property>
     <property name="text">
      <string>Voxel size z (um)</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="lineEditVoxelSize_x">
+    <property name="geometry">
+     <rect>
+      <x>300</x>
+      <y>100</y>
+      <width>31</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>1.95</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="labelVoxelSize_x">
+    <property name="geometry">
+     <rect>
+      <x>340</x>
+      <y>100</y>
+      <width>91</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Voxel size x (um)</string>
     </property>
    </widget>
   </widget>
@@ -271,7 +297,7 @@
      <x>0</x>
      <y>0</y>
      <width>950</width>
-     <height>18</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>

@@ -83,8 +83,10 @@ void MainWindow::topology()
 //	qstr += outputBaseName;
 	qstr += outputFileName;
 	qstr += " ";
-    qstr += ui->lineEditVoxelSize_xy->text();
+    qstr += ui->lineEditVoxelSize_x->text();
 	qstr += " ";
+    qstr += ui->lineEditVoxelSize_y->text();
+    qstr += " ";
     qstr += ui->lineEditVoxelSize_z->text();
     qstr += " ";
     qstr += ui->lineEditPrune->text();
