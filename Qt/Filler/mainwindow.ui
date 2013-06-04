@@ -130,12 +130,12 @@
      <rect>
       <x>150</x>
       <y>70</y>
-      <width>381</width>
+      <width>91</width>
       <height>21</height>
      </rect>
     </property>
     <property name="text">
-     <string>Probe length</string>
+     <string>Probe length (um)</string>
     </property>
    </widget>
    <widget class="QLabel" name="label_3">
@@ -184,7 +184,7 @@
      </rect>
     </property>
    </widget>
-   <widget class="QLineEdit" name="lineEditVoxelsize_xy">
+   <widget class="QLineEdit" name="lineEditVoxelsize_x">
     <property name="geometry">
      <rect>
       <x>260</x>
@@ -201,13 +201,13 @@
     <property name="geometry">
      <rect>
       <x>260</x>
-      <y>100</y>
+      <y>130</y>
       <width>41</width>
       <height>20</height>
      </rect>
     </property>
    </widget>
-   <widget class="QLabel" name="label_voxel_xy">
+   <widget class="QLabel" name="label_voxel_x">
     <property name="geometry">
      <rect>
       <x>320</x>
@@ -217,10 +217,36 @@
      </rect>
     </property>
     <property name="text">
-     <string>Voxel size xy (um)</string>
+     <string>Voxel size x (um)</string>
     </property>
    </widget>
    <widget class="QLabel" name="label_voxel_z">
+    <property name="geometry">
+     <rect>
+      <x>320</x>
+      <y>130</y>
+      <width>101</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Voxel size z (um)</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="lineEditVoxelsize_y">
+    <property name="geometry">
+     <rect>
+      <x>260</x>
+      <y>100</y>
+      <width>41</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_voxel_y">
     <property name="geometry">
      <rect>
       <x>320</x>
@@ -230,7 +256,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>Voxel size z (um)</string>
+     <string>Voxel size y (um)</string>
     </property>
    </widget>
   </widget>
@@ -240,7 +266,7 @@
      <x>0</x>
      <y>0</y>
      <width>934</width>
-     <height>18</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>

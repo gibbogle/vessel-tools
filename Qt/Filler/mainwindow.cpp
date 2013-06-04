@@ -61,7 +61,9 @@ void MainWindow::filler()
 	qstr += " ";
 	qstr += outfileName;
 	qstr += " ";
-    qstr += ui->lineEditVoxelsize_xy->text();
+    qstr += ui->lineEditVoxelsize_x->text();
+    qstr += " ";
+    qstr += ui->lineEditVoxelsize_y->text();
     qstr += " ";
     qstr += ui->lineEditVoxelsize_z->text();
     qstr += " ";

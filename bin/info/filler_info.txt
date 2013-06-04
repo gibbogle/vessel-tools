@@ -2,6 +2,7 @@ Filler information
 ------------------
 
 Parameters:
+(dx,dy,dz) = voxel dimensions
 L = probeLen = probe length parameter
 N = insideHitLimit = enclosure criterion parameter
 M = number of iterations

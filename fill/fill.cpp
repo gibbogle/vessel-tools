@@ -449,7 +449,7 @@ int main(int argc, char**argv)
 	int flist[10000][3];
 //	int nflist;
 	int nsweeps = 4;
-	double voxelsize_xy, voxelsize_z;
+	double voxelsize_x, voxelsize_y, voxelsize_z;
 //	bool nearedge;
 	FILE *fp;
 	char errfile[] = "error.log";
@@ -457,9 +457,10 @@ int main(int argc, char**argv)
 
 	probeSetup();
 
-	if (argc != 8) {
-		printf("Usage: fill input_tiff filled_tiff voxelsize_xy voxelsize_z probeLen insideHitLimit niter\n");
-		printf("   where:   voxelsize_xy is the x-y voxel size (um)\n");
+	if (argc != 9) {
+		printf("Usage: fill input_tiff filled_tiff voxelsize_x voxelsize_y voxelsize_z probeLen insideHitLimit niter\n");
+		printf("   where:   voxelsize_x is the x voxel size (um)\n");
+		printf("            voxelsize_y is the y voxel size (um)\n");
 		printf("            voxelsize_z is the z voxel size (um)\n");
 		printf("            probeLen is the probe length parameter (um)\n");
 		printf("            insideHitLimit is the algorithm decision parameter\n");
@@ -469,13 +470,14 @@ int main(int argc, char**argv)
 
 	printf("Input image stack file: %s\n",argv[1]);
 	printf("Output image stack file: %s\n",argv[2]);
-	sscanf(argv[3],"%lf",&voxelsize_xy);
-	sscanf(argv[4],"%lf",&voxelsize_z);
-	sscanf(argv[5],"%lf",&probeLen);
-	sscanf(argv[6],"%d",&insideHitLimit);
-	sscanf(argv[7],"%d",&niter);
-	vsize[0] = voxelsize_xy;
-	vsize[1] = voxelsize_xy;
+	sscanf(argv[3],"%lf",&voxelsize_x);
+	sscanf(argv[4],"%lf",&voxelsize_y);
+	sscanf(argv[5],"%lf",&voxelsize_z);
+	sscanf(argv[6],"%lf",&probeLen);
+	sscanf(argv[7],"%d",&insideHitLimit);
+	sscanf(argv[8],"%d",&niter);
+	vsize[0] = voxelsize_x;
+	vsize[1] = voxelsize_y;
 	vsize[2] = voxelsize_z;
 	printf("Hole-filling parameters: probeLen: %lf insideHitLimit: %d iterations: %d\n",probeLen,insideHitLimit,niter);
 	if (niter < 0) {
