@@ -174,7 +174,7 @@ void doSeg(const CmdLineType &CmdLineObj)
   Comb->SetInput(Invert->GetOutput());
   Comb->SetInput2(KeepBig->GetOutput());
 
-  writeIm<MaskImType>(Comb->GetOutput(), CmdLineObj.OutputImPrefix + "_marker" + CmdLineObj.suffix);
+  writeImComp<MaskImType>(Comb->GetOutput(), CmdLineObj.OutputImPrefix + "_marker" + CmdLineObj.suffix);
 
   // now for watershed
   itk::Instance< itk::SmoothingRecursiveGaussianImageFilter <RawImType, RawImType> > Smoother;
@@ -200,20 +200,20 @@ void doSeg(const CmdLineType &CmdLineObj)
   Selector->SetInsideValue(1);
   Selector->SetOutsideValue(0);
 
-  writeIm<MaskImType>(Selector->GetOutput(), CmdLineObj.OutputImPrefix + "_wsseg" + CmdLineObj.suffix);
+  writeImComp<MaskImType>(Selector->GetOutput(), CmdLineObj.OutputImPrefix + "_wsseg" + CmdLineObj.suffix);
 
   itk::Instance<itk::BinaryErodeParaImageFilter<MaskImType, MaskImType> > Peeler;
   Peeler->SetInput(Selector->GetOutput());
   Peeler->SetUseImageSpacing(true);
   Peeler->SetRadius(CmdLineObj.peel);
 
-  writeIm<MaskImType>(Peeler->GetOutput(), CmdLineObj.OutputImPrefix + "_peeled" + CmdLineObj.suffix);
+  writeImComp<MaskImType>(Peeler->GetOutput(), CmdLineObj.OutputImPrefix + "_peeled" + CmdLineObj.suffix);
 
   itk::Instance<itk::MaskImageFilter<RawImType, MaskImType> > masker;
   masker->SetInput(input);
   masker->SetInput2(Peeler->GetOutput());
 
-  writeIm<RawImType>(masker->GetOutput(), CmdLineObj.OutputImPrefix + "_masked" + CmdLineObj.suffix);
+  writeImComp<RawImType>(masker->GetOutput(), CmdLineObj.OutputImPrefix + "_masked" + CmdLineObj.suffix);
 
 
 }

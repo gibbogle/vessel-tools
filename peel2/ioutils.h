@@ -35,6 +35,18 @@ void writeIm(typename TImage::Pointer Im, std::string filename)
   writer->Update();
 }
 
+//Gib
+template <class TImage>
+void writeImComp(typename TImage::Pointer Im, std::string filename)
+{
+  typedef typename itk::ImageFileWriter<TImage> WriterType;
+  typename WriterType::Pointer writer = WriterType::New();
+  writer->SetInput(Im);
+  writer->SetFileName(filename.c_str());
+  writer->UseCompressionOn();
+  writer->Update();
+}
+
 template <class TImage, class PixType>
 void writeImScale(typename TImage::Pointer Im, std::string filename)
 {
