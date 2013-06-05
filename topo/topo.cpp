@@ -2544,7 +2544,7 @@ int deloop(int iter)
 {
 	int i, ii, kv0, kv1, kkv0, kkv1, kv2, kv3, edrop;
 	int npairs, ne2, j1, j2, j3, nloops, ndropped, NE2MAX;
-	int dropped[100000];
+	int dropped[1000000];
 	EDGE edge, eedge;
 	PAIR *pair;
 	int *e2;
@@ -2560,7 +2560,7 @@ int deloop(int iter)
 			ne2++;
 		}
 	}
-	NE2MAX = 2*ne2;
+	NE2MAX = 4*ne2;
 	e2 = (int *)malloc(NE2MAX*sizeof(int));
 	pair = (PAIR *)malloc(NE2MAX*sizeof(PAIR));
 	ne2 = 0;
