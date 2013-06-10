@@ -2560,7 +2560,7 @@ int deloop(int iter)
 			ne2++;
 		}
 	}
-	NE2MAX = 4*ne2;
+	NE2MAX = 10*ne2;
 	e2 = (int *)malloc(NE2MAX*sizeof(int));
 	pair = (PAIR *)malloc(NE2MAX*sizeof(PAIR));
 	ne2 = 0;
