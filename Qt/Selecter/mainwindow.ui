@@ -177,7 +177,7 @@
    <widget class="QCheckBox" name="checkBoxCmgui">
     <property name="geometry">
      <rect>
-      <x>250</x>
+      <x>320</x>
       <y>230</y>
       <width>121</width>
       <height>17</height>
@@ -238,6 +238,22 @@
      </attribute>
     </widget>
    </widget>
+   <widget class="QCheckBox" name="checkBoxConnect">
+    <property name="geometry">
+     <rect>
+      <x>120</x>
+      <y>230</y>
+      <width>151</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Select connected network</string>
+    </property>
+    <property name="checked">
+     <bool>true</bool>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
@@ -245,7 +261,7 @@
      <x>0</x>
      <y>0</y>
      <width>963</width>
-     <height>18</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>

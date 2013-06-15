@@ -14,8 +14,10 @@ struct vertex_str
 {
 	POINT point;
 	int nlinks;
+	int *edge;	// list of connected edges
 	int pt[10];
 	bool used;
+	int netID;	// needs to be initialised to 0
 };
 typedef vertex_str VERTEX;	
 // A VERTEX has a POINT (point), number of linked segments (nlinks)
@@ -30,6 +32,7 @@ struct edge_str
 	float length_vox;	// voxel-voxel length
 //	double length_jun;	// junction-junction length
 	bool used;
+	int netID;	// connected network ID, initially 0
 };
 typedef edge_str EDGE;	
 // An EDGE has two VERTEX indices (vert[2]) to the array vertex[], 
