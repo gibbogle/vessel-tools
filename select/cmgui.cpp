@@ -130,6 +130,7 @@ int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[])
 				net->point[k].y - origin_shift[1],
 				net->point[k].z - origin_shift[2]);
 			fprintf(exnode, "%6.2f\n", net->point[k].d/2);
+//			if (net->point[k].d > 75) printf("point: %d diameter: %6.1f\n",k,net->point[k].d);
 			if (net->point[k].d == 0) {
 				printf("Error: zero diameter: %d\n",k);
 				return 1;

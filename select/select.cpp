@@ -456,6 +456,10 @@ int ExtractConnectedNet(NETWORK *net0, NETWORK *net1, int netID)
 		for (kp=0; kp<elist[ie].npts; kp++) {
 			i = elist[ie].pt[kp];
 			net1->point[i].used = true;
+			//if (net1->point[i].d > 75) {
+			//	printf("Error ExtractConnectedNet: edge: %d npts: %d pt: %d %d d: %6.1f\n",ie,elist[ie].npts,kp,i,net1->point[i].d);
+			//	return 1;
+			//}
 		}
 	}
 
@@ -469,7 +473,7 @@ int ExtractConnectedNet(NETWORK *net0, NETWORK *net1, int netID)
 //-----------------------------------------------------------------------------------------------------
 int CreateLargestConnectedNet(NETWORK *net1, NETWORK *net2)
 {
-	int ie0, kv0, netID, nconn;
+	int ie0, kv0, netID, nconn, err;
 	int ne_max, netID_max;
 
 	// First determine a net_ID for every edge
@@ -497,7 +501,8 @@ int CreateLargestConnectedNet(NETWORK *net1, NETWORK *net2)
 		}
 	}
 	// Now create net2 from the largest subnetwork
-	ExtractConnectedNet(net1,net2,netID_max);
+	err = ExtractConnectedNet(net1,net2,netID_max);
+	if (err != 0) return err;
 	return 0;
 }
 
@@ -505,13 +510,16 @@ int CreateLargestConnectedNet(NETWORK *net1, NETWORK *net2)
 // Locate all edges with at least one vertex within the sphere of radius R, centre (x,y,z)
 // If cube_flag = 1, use a cube.
 // The criterion is either:
+// diam_flag = 0  average
+//             1  majority
+//             2  all
 // use_average = true
 //     vessel average diameter is in the range
 // use_average = false
 //     a majority of vessel nodes are in the range
 // Note the inefficiency in keeping all points, used or not.
 //-----------------------------------------------------------------------------------------------------
-int CreateSelectNet(NETWORK *net0, NETWORK *net1, float diam_min, float diam_max, bool use_average)
+int CreateSelectNet(NETWORK *net0, NETWORK *net1, float diam_min, float diam_max, int diam_flag)
 {
 	int i, j, ie, iv, kp, kv, ne, nv, nin, kin;
 	float d, dave;
@@ -532,15 +540,21 @@ int CreateSelectNet(NETWORK *net0, NETWORK *net1, float diam_min, float diam_max
 				kin++;
 			}
 		}
-		if (use_average) {
+		if (diam_flag == 0) {
 			dave = dave/net0->edgeList[i].npts;
 			if (dave < diam_min || dave > diam_max) {
 				in = false;
 			} else {
 				in = true;
 			}
-		} else {
+		} else if (diam_flag == 1) {
 			if (kin > nin) {
+				in = true;
+			} else {
+				in = false;
+			}
+		} else if (diam_flag == 2) {
+			if (kin == net0->edgeList[i].npts) {
 				in = true;
 			} else {
 				in = false;
@@ -567,6 +581,27 @@ int CreateSelectNet(NETWORK *net0, NETWORK *net1, float diam_min, float diam_max
 				kin++;
 			}
 		}
+		if (diam_flag == 0) {
+			dave = dave/net0->edgeList[i].npts;
+			if (dave < diam_min || dave > diam_max) {
+				in = false;
+			} else {
+				in = true;
+			}
+		} else if (diam_flag == 1) {
+			if (kin > nin) {
+				in = true;
+			} else {
+				in = false;
+			}
+		} else if (diam_flag == 2) {
+			if (kin == net0->edgeList[i].npts) {
+				in = true;
+			} else {
+				in = false;
+			}
+		}	
+		/*
 		if (use_average) {
 			dave = dave/net0->edgeList[i].npts;
 			if (dave < diam_min || dave > diam_max) {
@@ -581,6 +616,7 @@ int CreateSelectNet(NETWORK *net0, NETWORK *net1, float diam_min, float diam_max
 				in = false;
 			}
 		}
+		*/
 		if (in) {
 			elist[ne] = net0->edgeList[i];
 			for (j=0; j<2; j++) {
@@ -634,6 +670,10 @@ int CreateSelectNet(NETWORK *net0, NETWORK *net1, float diam_min, float diam_max
 		for (kp=0; kp<elist[ie].npts; kp++) {
 			i = elist[ie].pt[kp];
 			net1->point[i].used = true;
+			//if (net1->point[i].d > 75) {
+			//	printf("Error ExtractSelectNet: edge: %d npts: %d pt: %d %d d: %6.1f\n",ie,elist[ie].npts,kp,i,net1->point[i].d);
+			//	return 1;
+			//}
 		}
 	}
 
@@ -671,7 +711,7 @@ int main(int argc, char **argv)
 	char drive[32], dir[2048],filename[256], ext[32];
 	char errfilename[2048], output_amfile[2048], result_file[2048];
 	char output_basename[2048];
-	int ave_flag, cmgui_flag, connect_flag;
+	int diam_flag, cmgui_flag, connect_flag;
 	float diam_min, diam_max, origin_shift[3];
 	bool use_average, connect;
 	NETWORK *NP0, *NP1, *NP2;
@@ -681,9 +721,9 @@ int main(int argc, char **argv)
 //	return 0;
 
 	if (argc != 8) {
-		printf("Usage: select input_amfile output_amfile diam_min diam_max connect_flag ave_flag cmgui_flag\n");
+		printf("Usage: select input_amfile output_amfile diam_min diam_max connect_flag diam_flag cmgui_flag\n");
 		fperr = fopen("select_error.log","w");
-		fprintf(fperr,"Usage: select input_amfile output_amfile diam_min diam_max connect_flag ave_flag cmgui_flag\n");
+		fprintf(fperr,"Usage: select input_amfile output_amfile diam_min diam_max connect_flag diam_flag cmgui_flag\n");
 		fprintf(fperr,"Submitted command line: argc: %d\n",argc);
 		for (int i=0; i<argc; i++) {
 			fprintf(fperr,"argv: %d: %s\n",i,argv[i]);
@@ -696,11 +736,12 @@ int main(int argc, char **argv)
 	strcpy(output_amfile,argv[2]);
 	sscanf(argv[3],"%f",&diam_min);
 	sscanf(argv[4],"%f",&diam_max);
+	sscanf(argv[6],"%d",&diam_flag);
 	sscanf(argv[5],"%d",&connect_flag);
-	sscanf(argv[6],"%d",&ave_flag);
 	sscanf(argv[7],"%d",&cmgui_flag);
-	use_average = (ave_flag != 0);
+//	use_average = (ave_flag != 0);
 	connect = (connect_flag != 0);
+	printf("diam_flag: %d\n",diam_flag);
 
 	_splitpath(output_amfile,drive,dir,filename,ext);
 	strcpy(output_basename,drive);
@@ -718,7 +759,7 @@ int main(int argc, char **argv)
 	err = ReadAmiraFile(input_amfile,NP0);
 	if (err != 0) return 2;
 	NP1 = (NETWORK *)malloc(sizeof(NETWORK));
-	err = CreateSelectNet(NP0,NP1,diam_min,diam_max,use_average);
+	err = CreateSelectNet(NP0,NP1,diam_min,diam_max,diam_flag);
 	if (err != 0) return 3;
 
 	printf("NP1: ne, nv, np: %d %d %d\n",NP1->ne,NP1->nv,NP1->np);

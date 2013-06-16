@@ -66,11 +66,13 @@ void MainWindow::selecter()
 	qstr += " ";
     qstr += ui->lineEditDmax->text();
     qstr += " ";
-    if (ui->checkBoxConnect->isChecked())
+    if (ui->radioButton_average->isChecked())
+        qstr += "0 ";
+    else if (ui->radioButton_majority->isChecked())
         qstr += "1 ";
     else
-        qstr += "0 ";
-    if (ui->radioButton_average->isChecked())
+        qstr += "2 ";
+    if (ui->checkBoxConnect->isChecked())
         qstr += "1 ";
     else
         qstr += "0 ";
