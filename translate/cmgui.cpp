@@ -1,4 +1,4 @@
-// test
+// translate
 #include <cstdio>
 #include <math.h>
 

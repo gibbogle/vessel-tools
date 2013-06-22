@@ -26,6 +26,7 @@
 #define EPSILON 0.051
 #define EQU(a,b) (fabs((a)-(b)) < EPSILON)
 #define EQUIV(a,b) (fabs((a)[0]-(b)[0]) < EPSILON && fabs((a)[1]-(b)[1]) < EPSILON && fabs((a)[2]-(b)[2]) < EPSILON)
+#define PTEQUIV(a,b) (fabs((a).x-(b).x) < EPSILON && fabs((a).y-(b).y) < EPSILON && fabs((a).z-(b).z) < EPSILON)
 
 FILE *fperr, *fpout;
 EDGE *elist;
@@ -70,27 +71,25 @@ int InitNetwork(NETWORK *net)
 //-----------------------------------------------------------------------------------------------------
 int AddNetwork(NETWORK *net0, NETWORK *net1)
 {
-	int ie1, ie0, new_kv0, new_kv1, add_kv0, add_kv1, vmap[2], edir, ne0, nv1, new_ne;
+	int i, kp, ie1, ie0, new_kv0, new_kv1, add_kv0, add_kv1, vmap[2], edir, ne0, nv1, new_ne, npts;
 	bool ehit, vhit00, vhit01, vhit10, vhit11;
 	float new_v0[3], new_v1[3];
 	float old_v0[3], old_v1[3];
+	POINT pt, pt0, pt1, ptv0, ptv1;
 	EDGE edge0, edge1;
 
 	ne0 = net0->ne;
 	new_ne = 0;
-	printf("net0: ne, nv, np: %d %d %d\n",ne0,net0->nv,net0->np);
-	fprintf(fperr,"net0: ne, nv, np: %d %d %d\n",ne0,net0->nv,net0->np);
-	ivlist = (int *)malloc(2*MAX_VERTEX*sizeof(int));
+	printf("net0: ne, nv, np: %d %d %d\n",net0->ne,net0->nv,net0->np);
+	fprintf(fperr,"net0: ne, nv, np: %d %d %d\n",net0->ne,net0->nv,net0->np);
+//	elist = (EDGE *)malloc(MAX_EDGE*sizeof(EDGE));
+//	ivlist = (int *)malloc(2*MAX_VERTEX*sizeof(int));
 	nv1 = 0;
 	for (ie1=0; ie1<net1->ne; ie1++) {
 		// Look for vertex matches
 		edge1 = net1->edgeList[ie1];
 		new_kv0 = edge1.vert[0];
 		new_kv1 = edge1.vert[1];
-		if (dbug) {
-			printf("\nnew edge: %d vertex: %d %d\n",ie1,new_kv0,new_kv1);
-			fprintf(fperr,"\nnew edge: %d vertex: %d %d\n",ie1,new_kv0,new_kv1);
-		}
 		ehit = false;	// true if new_v0 = old_v0, new_v1 = old_v1 (edir = 1), or  new_v0 = old_v1, new_v1 = old_v0 (edir = -1)
 		vmap[0] = vmap[1] = -1;
 		new_v0[0] = net1->vertex[edge1.vert[0]].point.x;
@@ -99,6 +98,18 @@ int AddNetwork(NETWORK *net0, NETWORK *net1)
 		new_v1[0] = net1->vertex[edge1.vert[1]].point.x;
 		new_v1[1] = net1->vertex[edge1.vert[1]].point.y;
 		new_v1[2] = net1->vertex[edge1.vert[1]].point.z;
+		if (dbug) {
+			printf("\nnew edge: %d vertex: %d %d npts: %d\n",ie1,new_kv0,new_kv1,edge1.npts);
+			fprintf(fperr,"\nnew edge: %d vertex: %d %d npts: %d\n",ie1,new_kv0,new_kv1,edge1.npts);
+			printf("vertex 0: %6.1f %6.1f %6.1f  vertex 1: %6.1f %6.1f %6.1f\n",new_v0[0],new_v0[1],new_v0[2],new_v1[0],new_v1[1],new_v1[2]);
+			fprintf(fperr,"vertex 0: %6.1f %6.1f %6.1f  vertex 1: %6.1f %6.1f %6.1f\n",new_v0[0],new_v0[1],new_v0[2],new_v1[0],new_v1[1],new_v1[2]);
+			printf("points:\n");
+			for (i=0; i<edge1.npts; i++) {
+				pt = net1->point[edge1.pt[i]];
+				printf("%3d %6d  %6.1f %6.1f %6.1f\n",i,edge1.pt[i],pt.x,pt.y,pt.z);
+				fprintf(fperr,"%3d %6d  %6.1f %6.1f %6.1f\n",i,edge1.pt[i],pt.x,pt.y,pt.z);
+			}
+		}
 		for (ie0=0; ie0<ne0; ie0++) {
 			edge0 = net0->edgeList[ie0];
 			old_v0[0] = net0->vertex[edge0.vert[0]].point.x;
@@ -148,12 +159,86 @@ int AddNetwork(NETWORK *net0, NETWORK *net1)
 				printf("No hit: vmap: %d %d\n",vmap[0],vmap[1]);
 				fprintf(fperr,"No hit: vmap: %d %d\n",vmap[0],vmap[1]);
 			}
-			if (vmap[0] >= 0 && vmap[1] >= 0) {
+//			if (vmap[0] >= 0 && vmap[1] >= 0) {
 //				printf("AddNetwork: !ehit vmap: %d %d\n",vmap[0],vmap[1]);
 //				return 1;
-			}
+//			}
 			ie0 = net0->ne;	// new edge #
+			npts = edge1.npts;
+			net0->edgeList[ie0].pt = (int *)malloc(npts*sizeof(int));
+			net0->edgeList[ie0].npts = npts;
+			ptv0 = net1->vertex[new_kv0].point;		// location of vertex 0
+			if (dbug) printf("new_kv0, ptv0: %d  %6.1f %6.1f %6.1f\n",new_kv0,ptv0.x,ptv0.y,ptv0.z);
+			ptv1 = net1->vertex[new_kv1].point;		// location of vertex 1
+			if (dbug) printf("new_kv1, ptv1: %d  %6.1f %6.1f %6.1f\n",new_kv1,ptv1.x,ptv1.y,ptv1.z);
+			// Check if ptv0 is in the net0 vertex list, if not add it
+			add_kv0 = -1;
+			for (i=0; i<net0->nv; i++) {
+				pt = net0->vertex[i].point;
+				if (dbug) printf("checking: %d  %6.1f %6.1f %6.1f\n",i,pt.x,pt.y,pt.z);
+				if (PTEQUIV(ptv0,pt)) {
+					add_kv0 = i;
+					kp = net0->vertex[i].pt;
+					if (dbug) printf("Found ptv0: add_kv0: %d  kp: %d\n",add_kv0,kp);
+					if (kp == 0) printf("ptv0 found: kp = 0\n");
+					break;
+				}
+			}
+			if (add_kv0 < 0) {
+				if (dbug) printf("Adding ptv0 to the vertex list\n");
+				add_kv0 = net0->nv;
+				net0->vertex[net0->nv].point = ptv0;	// add ptv0 to the vertex list
+				kp = net0->np;
+				if (kp == 0) printf("ptv0 not found: kp = 0\n");
+				net0->vertex[net0->nv].pt = kp;
+				net0->nv++;
+				net0->point[kp] = ptv0;			// add ptv0 to the point list
+				net0->point[kp].used = true;
+				net0->np++;
+			}
+			if (dbug) printf("adding to edgeList: %d %d\n",add_kv0,kp);
+			net0->edgeList[ie0].vert[0] = add_kv0;
+			net0->edgeList[ie0].pt[0] = kp;
+			if (dbug) printf("added to edgeList\n");
+			// Add the interior edge points to the point list
+			for (i=0; i<npts; i++) {
+				net0->point[net0->np] = net1->point[edge1.pt[i]];
+				net0->point[net0->np].used = true;
+				if (i > 0 && i < npts-1) {
+					net0->edgeList[ie0].pt[i] = net0->np;
+					net0->np++;
+				}
+			}
+			// Check if ptv1 is in the net0 vertex list, if not add it
+			add_kv1 = -1;
+			for (i=0; i<net0->nv; i++) {
+				pt = net0->vertex[i].point;
+				if (PTEQUIV(ptv1,pt)) {
+					add_kv1 = i;
+					kp = net0->vertex[i].pt;
+					if (dbug) printf("Found ptv1: add_kv1: %d  kp: %d\n",add_kv1,kp);
+					break;
+				}
+			}
+			if (add_kv1 < 0) {
+				add_kv1 = net0->nv;
+				net0->vertex[net0->nv].point = ptv1;	// add ptv0 to the vertex list
+				kp = net0->np;
+				if (kp == 0) printf("ptv1 not found: kp = 0\n");
+				net0->vertex[net0->nv].pt = kp;
+				net0->nv++;
+				net0->point[net0->np] = ptv1;			// add ptv0 to the point list
+				net0->point[net0->np].used = true;
+				net0->np++;
+			}
+			net0->edgeList[ie0].vert[1] = add_kv1;
+			net0->edgeList[ie0].pt[npts-1] = kp;
+			net0->edgeList[ie0].used = true;
 			net0->ne++;
+		}
+	}
+
+	/*
 			if (vmap[0] < 0) {
 				add_kv0 = net0->nv + ivlistAdd(new_kv0,ivlist,&nv1);
 			} else {
@@ -172,6 +257,8 @@ int AddNetwork(NETWORK *net0, NETWORK *net1)
 			net0->vertex[add_kv0].point = net1->vertex[new_kv0].point;
 			net0->edgeList[ie0].vert[1] = add_kv1;
 			net0->vertex[add_kv1].point = net1->vertex[new_kv1].point;
+			ptv0 = net0->vertex[add_kv0].point;
+			ptv1 = net0->vertex[add_kv1].point;
 			net0->edgeList[ie0].npts = edge1.npts;
 			net0->edgeList[ie0].used = true;
 			net0->edgeList[ie0].pt = (int *)malloc(net0->edgeList[ie0].npts*sizeof(int));
@@ -181,10 +268,22 @@ int AddNetwork(NETWORK *net0, NETWORK *net1)
 			}
 			int kp = net0->np;
 			for (int i=0; i<edge1.npts; i++) {
-				net0->edgeList[ie0].pt[i] = edge1.pt[i];
+				net0->edgeList[ie0].pt[i] = kp;	//edge1.pt[i];
 				net0->point[kp] = net1->point[edge1.pt[i]];
 				net0->point[kp].used = true;
 				kp++;
+			}
+			pt0 = net0->point[net0->edgeList[ie0].pt[0]];
+			pt1 = net0->point[net0->edgeList[ie0].pt[edge1.npts-1]];
+			if (pt0.x != ptv0.x || pt0.y != ptv0.y || pt0.z != ptv0.z) {
+				printf("Error: \npt0: %6d  %6.1f %6.1f %6.1f  \nptv0: %6.1f %6.1f %6.1f\n",net0->edgeList[ie0].pt[0],pt0.x,pt0.y,pt0.z,ptv0.x,ptv0.y,ptv0.z);
+				fprintf(fperr,"Error: \npt0: %6d  %6.1f %6.1f %6.1f  \nptv0: %6.1f %6.1f %6.1f\n",net0->edgeList[ie0].pt[0],pt0.x,pt0.y,pt0.z,ptv0.x,ptv0.y,ptv0.z);
+				return 1;
+			}
+			if (pt1.x != ptv1.x || pt1.y != ptv1.y || pt1.z != ptv1.z) {
+				printf("Error: pt0: %6.1f %6.1f %6.1f  ptv0: %6.1f %6.1f %6.1f\n",pt1.x,pt1.y,pt1.z,ptv1.x,ptv1.y,ptv1.z);
+				fprintf(fperr,"Error: pt0: %6.1f %6.1f %6.1f  ptv0: %6.1f %6.1f %6.1f\n",pt1.x,pt1.y,pt1.z,ptv1.x,ptv1.y,ptv1.z);
+				return 1;
 			}
 			net0->np = kp;
 		} else {
@@ -193,6 +292,7 @@ int AddNetwork(NETWORK *net0, NETWORK *net1)
 		}
 	}
 	net0->nv += nv1;
+	*/
 	return 0;
 }
 
@@ -445,7 +545,7 @@ int ReadAmiraFile(char *amFile, NETWORK *net)
 void free_network(NETWORK *net)
 {
 //	free(elist);
-	free(ivlist);
+//	free(ivlist);
 	free(net->vertex);
 	free(net->edgeList);
 	free(net->point);
@@ -678,5 +778,159 @@ int main(int argc, char **argv)
 		err = WriteCmguiData(output_basename,NP0);
 		if (err != 0) return 5;
 	}
+	return 0;
+}
+
+//-----------------------------------------------------------------------------------------------------
+int AddNetwork1(NETWORK *net0, NETWORK *net1)
+{
+	int i, ie1, ie0, new_kv0, new_kv1, add_kv0, add_kv1, vmap[2], edir, ne0, nv1, new_ne;
+	bool ehit, vhit00, vhit01, vhit10, vhit11;
+	float new_v0[3], new_v1[3];
+	float old_v0[3], old_v1[3];
+	POINT pt, pt0, pt1, ptv0, ptv1;
+	float dx, dy, dz;
+	EDGE edge0, edge1;
+
+	ne0 = net0->ne;
+	new_ne = 0;
+	printf("net0: ne, nv, np: %d %d %d\n",ne0,net0->nv,net0->np);
+	fprintf(fperr,"net0: ne, nv, np: %d %d %d\n",ne0,net0->nv,net0->np);
+//	elist = (EDGE *)malloc(MAX_EDGE*sizeof(EDGE));
+	ivlist = (int *)malloc(2*MAX_VERTEX*sizeof(int));
+	nv1 = 0;
+	for (ie1=0; ie1<net1->ne; ie1++) {
+		// Look for vertex matches
+		edge1 = net1->edgeList[ie1];
+		new_kv0 = edge1.vert[0];
+		new_kv1 = edge1.vert[1];
+		ehit = false;	// true if new_v0 = old_v0, new_v1 = old_v1 (edir = 1), or  new_v0 = old_v1, new_v1 = old_v0 (edir = -1)
+		vmap[0] = vmap[1] = -1;
+		new_v0[0] = net1->vertex[edge1.vert[0]].point.x;
+		new_v0[1] = net1->vertex[edge1.vert[0]].point.y;
+		new_v0[2] = net1->vertex[edge1.vert[0]].point.z;
+		new_v1[0] = net1->vertex[edge1.vert[1]].point.x;
+		new_v1[1] = net1->vertex[edge1.vert[1]].point.y;
+		new_v1[2] = net1->vertex[edge1.vert[1]].point.z;
+		if (dbug) {
+			printf("\nnew edge: %d vertex: %d %d npts: %d\n",ie1,new_kv0,new_kv1,edge1.npts);
+			fprintf(fperr,"\nnew edge: %d vertex: %d %d npts: %d\n",ie1,new_kv0,new_kv1,edge1.npts);
+			printf("vertex 0: %6.1f %6.1f %6.1f  vertex 1: %6.1f %6.1f %6.1f\n",new_v0[0],new_v0[1],new_v0[2],new_v1[0],new_v1[1],new_v1[2]);
+			fprintf(fperr,"vertex 0: %6.1f %6.1f %6.1f  vertex 1: %6.1f %6.1f %6.1f\n",new_v0[0],new_v0[1],new_v0[2],new_v1[0],new_v1[1],new_v1[2]);
+			printf("points:\n");
+			for (i=0; i<edge1.npts; i++) {
+				pt = net1->point[edge1.pt[i]];
+				printf("%3d %6d  %6.1f %6.1f %6.1f\n",i,edge1.pt[i],pt.x,pt.y,pt.z);
+				fprintf(fperr,"%3d %6d  %6.1f %6.1f %6.1f\n",i,edge1.pt[i],pt.x,pt.y,pt.z);
+			}
+		}
+		for (ie0=0; ie0<ne0; ie0++) {
+			edge0 = net0->edgeList[ie0];
+			old_v0[0] = net0->vertex[edge0.vert[0]].point.x;
+			old_v0[1] = net0->vertex[edge0.vert[0]].point.y;
+			old_v0[2] = net0->vertex[edge0.vert[0]].point.z;
+			old_v1[0] = net0->vertex[edge0.vert[1]].point.x;
+			old_v1[1] = net0->vertex[edge0.vert[1]].point.y;
+			old_v1[2] = net0->vertex[edge0.vert[1]].point.z;
+			vhit00 = vhit01 = vhit10 = vhit11 = false;
+//			if (new_v0[0]==old_v0[0]&&new_v0[1]==old_v0[1]&&new_v0[2]==old_v0[2]) {
+//			if (EQU(new_v0[0],old_v0[0])&&EQU(new_v0[1],old_v0[1])&&EQU(new_v0[2],old_v0[2])) {
+			if (EQUIV(new_v0,old_v0)) {
+				vhit00 = true;
+				vmap[0] = edge0.vert[0];
+//				printf("vhit00: %d\n",vmap[0]);
+//			} else if (new_v0[0]==old_v1[0]&&new_v0[1]==old_v1[1]&&new_v0[2]==old_v1[2]) {
+//			} else if (EQU(new_v0[0],old_v1[0])&&EQU(new_v0[1],old_v1[1])&&EQU(new_v0[2],old_v1[2])) {
+			} else if (EQUIV(new_v0,old_v1)) {
+				vhit01 = true;
+				vmap[0] = edge0.vert[1];
+//				printf("vhit01: %d\n",vmap[0]);
+			}
+//			if (new_v1[0]==old_v0[0]&&new_v1[1]==old_v0[1]&&new_v1[2]==old_v0[2]) {
+//			if (EQU(new_v1[0],old_v0[0])&&EQU(new_v1[1],old_v0[1])&&EQU(new_v1[2],old_v0[2])) {
+			if (EQUIV(new_v1,old_v0)) {
+				vhit10 = true;
+				vmap[1] = edge0.vert[0];
+//				printf("vhit10: %d\n",vmap[1]);
+//			} else if (new_v1[0]==old_v1[0]&&new_v1[1]==old_v1[1]&&new_v1[2]==old_v1[2]) {
+//			} else if (EQU(new_v1[0],old_v1[0])&&EQU(new_v1[1],old_v1[1])&&EQU(new_v1[2],old_v1[2])) {
+			} else if (EQUIV(new_v1,old_v1)) {
+				vhit11 = true;
+				vmap[1] = edge0.vert[1];
+//				printf("vhit11: %d\n",vmap[1]);
+			}
+			if (vhit00 && vhit11) {
+				ehit = true;
+				edir = 1;
+			}
+			if (vhit01 && vhit10) {
+				ehit = true;
+				edir = -1;
+			}
+		}
+		if (!ehit) {		// add the vessel edge1
+			if (dbug) {
+				printf("No hit: vmap: %d %d\n",vmap[0],vmap[1]);
+				fprintf(fperr,"No hit: vmap: %d %d\n",vmap[0],vmap[1]);
+			}
+			if (vmap[0] >= 0 && vmap[1] >= 0) {
+//				printf("AddNetwork: !ehit vmap: %d %d\n",vmap[0],vmap[1]);
+//				return 1;
+			}
+			ie0 = net0->ne;	// new edge #
+			net0->ne++;
+			if (vmap[0] < 0) {
+				add_kv0 = net0->nv + ivlistAdd(new_kv0,ivlist,&nv1);
+			} else {
+				add_kv0 = vmap[0];	// vertex in net0
+			}
+			if (vmap[1] < 0) {
+				add_kv1 = net0->nv + ivlistAdd(new_kv1,ivlist,&nv1);
+			} else {
+				add_kv1 = vmap[1];	// vertex in net0
+			}
+			if (dbug) {
+				printf("add_kv0, add_kv1: %d %d\n",add_kv0,add_kv1);
+				fprintf(fperr,"add_kv0, add_kv1: %d %d\n",add_kv0,add_kv1);
+			}
+			net0->edgeList[ie0].vert[0] = add_kv0;
+			net0->vertex[add_kv0].point = net1->vertex[new_kv0].point;
+			net0->edgeList[ie0].vert[1] = add_kv1;
+			net0->vertex[add_kv1].point = net1->vertex[new_kv1].point;
+			ptv0 = net0->vertex[add_kv0].point;
+			ptv1 = net0->vertex[add_kv1].point;
+			net0->edgeList[ie0].npts = edge1.npts;
+			net0->edgeList[ie0].used = true;
+			net0->edgeList[ie0].pt = (int *)malloc(net0->edgeList[ie0].npts*sizeof(int));
+			if (dbug) {
+				printf("Add pts: %d\n",edge1.npts);
+				fprintf(fperr,"Add pts: %d %d\n",net0->np,edge1.npts);
+			}
+			int kp = net0->np;
+			for (int i=0; i<edge1.npts; i++) {
+				net0->edgeList[ie0].pt[i] = kp;	//edge1.pt[i];
+				net0->point[kp] = net1->point[edge1.pt[i]];
+				net0->point[kp].used = true;
+				kp++;
+			}
+			pt0 = net0->point[net0->edgeList[ie0].pt[0]];
+			pt1 = net0->point[net0->edgeList[ie0].pt[edge1.npts-1]];
+			if (pt0.x != ptv0.x || pt0.y != ptv0.y || pt0.z != ptv0.z) {
+				printf("Error: \npt0: %6d  %6.1f %6.1f %6.1f  \nptv0: %6.1f %6.1f %6.1f\n",net0->edgeList[ie0].pt[0],pt0.x,pt0.y,pt0.z,ptv0.x,ptv0.y,ptv0.z);
+				fprintf(fperr,"Error: \npt0: %6d  %6.1f %6.1f %6.1f  \nptv0: %6.1f %6.1f %6.1f\n",net0->edgeList[ie0].pt[0],pt0.x,pt0.y,pt0.z,ptv0.x,ptv0.y,ptv0.z);
+				return 1;
+			}
+			if (pt1.x != ptv1.x || pt1.y != ptv1.y || pt1.z != ptv1.z) {
+				printf("Error: pt0: %6.1f %6.1f %6.1f  ptv0: %6.1f %6.1f %6.1f\n",pt1.x,pt1.y,pt1.z,ptv1.x,ptv1.y,ptv1.z);
+				fprintf(fperr,"Error: pt0: %6.1f %6.1f %6.1f  ptv0: %6.1f %6.1f %6.1f\n",pt1.x,pt1.y,pt1.z,ptv1.x,ptv1.y,ptv1.z);
+				return 1;
+			}
+			net0->np = kp;
+		} else {
+//			printf("Hit\n");
+//			fprintf(fperr,"Hit\n");
+		}
+	}
+	net0->nv += nv1;
 	return 0;
 }

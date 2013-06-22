@@ -13,8 +13,9 @@ typedef point_str POINT;
 struct vertex_str
 {
 	POINT point;
-	int nlinks;
-	int pt[10];
+	int pt;		// this points to the entry in the point list
+//	int nlinks;
+//	int pt[10];
 	bool used;
 };
 typedef vertex_str VERTEX;	

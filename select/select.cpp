@@ -25,6 +25,16 @@ int nconnected;
 int ne_net[NEMAX];
 
 //-----------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------
+float dist(NETWORK *net, int k1, int k2)
+{
+	float dx = net->point[k2].x - net->point[k1].x;
+	float dy = net->point[k2].y - net->point[k1].y;
+	float dz = net->point[k2].z - net->point[k1].z;
+	return sqrt(dx*dx+dy*dy+dz*dz);
+}
+
+//-----------------------------------------------------------------------------------------------------
 // This code is faulty - because points can appear multiple times, there are multiple subtractions.
 // NOT USED
 //-----------------------------------------------------------------------------------------------------

@@ -9,6 +9,7 @@ extern EDGE *edgeList;
 extern VERTEX *vertex;
 extern POINT *point;
 extern FILE *fperr, *fpout;
+extern float dist(NETWORK *net, int k1, int k2);
 
 int testfunction(void)
 {
@@ -112,12 +113,14 @@ int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[])
 	//		point_used[kfrom] = true;
 			for (ip=1; ip<npts; ip++) {
 				int k2 = edge.pt[ip];
-	//			int k2 = edge.pt_used[ip];
-				kelem++;
-				fprintf(exelem, "Element: %d 0 0\n", kelem);
-				fprintf(exelem, "  Nodes: %d %d\n", kfrom+1, k2+1);
-				fprintf(exelem, "  Scale factors: 1 1\n");
-				kfrom = k2;
+				double d = dist(net,kfrom,k2);
+				if (d > 0.5*(net->point[kfrom].d/2+net->point[k2].d/2) || ip == npts-1) {
+					kelem++;
+					fprintf(exelem, "Element: %d 0 0\n", kelem);
+					fprintf(exelem, "  Nodes: %d %d\n", kfrom+1, k2+1);
+					fprintf(exelem, "  Scale factors: 1 1\n");
+					kfrom = k2;
+				}
 			}
 		}
 	}
