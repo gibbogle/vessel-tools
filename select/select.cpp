@@ -17,8 +17,10 @@
 
 int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[]);
 
+#define PI 3.14159
 #define STR_LEN 128
 #define NEMAX 1000
+#define NBOX 500
 
 FILE *fperr, *fpout;
 int nconnected;
@@ -703,6 +705,186 @@ int myFactorial( int integer)
 } 
 
 //-----------------------------------------------------------------------------------------------------
+// The average diameter of a vessel (edge) is now estimated by dividing the volume by the length.
+// All distances in the .am file are in um.
+//-----------------------------------------------------------------------------------------------------
+int CreateDistributions(NETWORK *net)
+{
+	int adbox[NBOX], lvbox[NBOX];
+	int segadbox[NBOX];
+	double lsegadbox[NBOX];
+	double ad, len, ddiam, dlen, ltot, lsum, dsum, dvol, r2, r2prev, lsegdtot;
+	double ave_len, volume, d95;
+	double ave_pt_diam, ave_seg_diam;
+	int ie, ip, k, ka, kp, kpprev, ndpts, nlpts, ndtot, nsegdtot;
+	double lenlimit = 3.0;
+	EDGE edge;
+
+	for (k=0;k<NBOX;k++) {
+		adbox[k] = 0;
+		segadbox[k] = 0;
+		lsegadbox[k] = 0;
+		lvbox[k] = 0;
+	}
+	printf("Compute diameter distributions\n");
+	fprintf(fperr,"Compute diameter distributions\n");
+	// Diameters
+	ddiam = 0.5;
+	ndtot = 0;
+	nsegdtot = 0;
+	lsegdtot = 0;
+	ave_pt_diam = 0;
+	ave_seg_diam = 0;
+	volume = 0;
+	for (ie=0; ie<net->ne; ie++) {
+		edge = net->edgeList[ie];
+		if (!edge.used) continue;
+//		printf("ie: %d npts: %d\n",ie,edge.npts);
+		fprintf(fperr,"ie: %d npts: %d\n",ie,edge.npts);
+		fflush(fperr);
+		bool dbug = false;
+		kpprev = 0;
+		r2prev = 0;
+		dsum = 0;
+		lsum = 0;
+		dvol = 0;
+		for (ip=0; ip<edge.npts; ip++) {
+			kp = edge.pt[ip];
+			ad = net->point[kp].d;
+//			ad = avediameter[kp];
+			ave_pt_diam += ad;
+			if (dbug) {
+				printf("%d  %d  %f  %f\n",ip,kp,ad,ddiam);
+				fprintf(fperr,"%d  %d  %f  %f\n",ip,kp,ad,ddiam);
+			}
+			fflush(fperr);
+//			dsum += ad;
+			if (ad < 0.001) {
+				printf("Zero point diameter: edge: %d point: %d ad: %f\n",ie,ip,ad);
+				fprintf(fperr,"Zero point diameter: edge: %d point: %d ad: %f\n",ie,ip,ad);
+				return 1;
+			}
+			ka = int(ad/ddiam + 0.5);
+			if (ka >= NBOX) {
+				printf("Vessel too wide (point): d: %f k: %d\n",ad,ka);
+				fprintf(fperr,"Vessel too wide (point): d: %f k: %d\n",ad,ka);
+				continue;
+			}
+			adbox[ka]++;
+			ndtot++;
+			if (ip > 0) {
+				dlen = dist(net,kp,kpprev);
+				r2 = ad*ad/4;
+				dvol += PI*dlen*(r2 + r2prev)/2;
+				lsum += dlen;
+			}
+			kpprev = kp;
+			r2prev = r2;
+		}
+		net->edgeList[ie].length_um = float(lsum);
+		volume += dvol;
+		if (dbug) {
+			printf("lsum: %f\n",lsum);
+			fprintf(fperr,"lsum: %f\n",lsum);
+			fflush(fperr);
+			if (lsum == 0) return 1;
+		}
+//		ad = dsum/edge.npts;
+		ad = 2*sqrt(dvol/(PI*lsum));	// segment diameter
+		ave_seg_diam += ad;
+		if (ad < 0.001) {
+			printf("Zero segment diameter: edge: %d ad: %f\n",ie,ad);
+			fprintf(fperr,"Zero segment diameter: edge: %d ad: %f\n",ie,ad);
+			return 1;
+		}
+		ka = int(ad/ddiam + 0.5);
+		if (ka >= NBOX) {
+			printf("Vessel too wide (segment ave): d: %f k: %d\n",ad,ka);
+			fprintf(fperr,"Vessel too wide (segment ave): d: %f k: %d\n",ad,ka);
+			continue;
+		}
+		segadbox[ka]++;
+		nsegdtot++;
+		lsegadbox[ka] += lsum;
+		lsegdtot += lsum;
+	}
+	// Determine d95, the diameter that >95% of points exceed.
+	dsum = 0;
+	for (k=0; k<NBOX; k++) {
+		dsum += adbox[k]/float(ndtot);
+		if (dsum > 0.05) {
+			d95 = (k-1)*ddiam;
+			break;
+		}
+	}
+	printf("Compute length distributions: lower limit = %6.1f um\n",lenlimit);
+	fprintf(fperr,"Compute length distributions: lower limit = %6.1f um\n",lenlimit);
+	// Lengths
+	dlen = 1;
+	ltot = 0;
+	ave_len = 0;
+	for (ie=0; ie<net->ne; ie++) {
+		edge = net->edgeList[ie];
+		if (!edge.used) continue;
+		len = edge.length_um;
+		k = int(len/dlen + 0.5);
+		if (k*dlen <= lenlimit) continue;
+		if (k >= NBOX) {
+			printf("Edge too long: len: %d  %f  k: %d\n",ie,len,k);
+			fprintf(fperr,"Edge too long: len: %d  %f  k: %d\n",ie,len,k);
+			continue;
+		}
+		lvbox[k]++;
+		ave_len += len;
+		ltot++;
+	}
+	ave_pt_diam /= ndtot;
+	ave_seg_diam /= nsegdtot;
+	fprintf(fpout,"Total vertices: %d  points: %d\n",net->nv,net->np);
+	fprintf(fpout,"Vessels: %d\n",net->ne);
+	printf("Average pt diameter: %6.2f vessel diameter: %6.2f\n",ave_pt_diam, ave_seg_diam);
+	fprintf(fpout,"Average pt diameter: %6.2f vessel diameter: %6.2f\n",ave_pt_diam, ave_seg_diam);
+	printf("Average vessel length: %6.1f\n",ave_len/ltot);
+	fprintf(fpout,"Average vessel length: %6.1f\n",ave_len/ltot);
+	fprintf(fpout,"Volume: %10.0f\n\n",volume);
+
+	//ndpts = 0;
+	//for (k=0; k<NBOX; k++) {
+	//	if (adbox[k]/float(ndtot) >= 0.0005) {
+	//		ndpts = k+1;
+	//	}
+	//}
+	for (k=NBOX-1; k>=0; k--) {
+		if (segadbox[k] > 0) break;
+	}
+	ndpts = k+2;
+	fprintf(fpout,"Vessel diameter distribution\n");
+	fprintf(fpout,"   um    number  fraction    length  fraction\n");
+	for (k=0; k<ndpts; k++) {
+		fprintf(fpout,"%6.2f %8d %9.5f  %8.0f %9.5f\n",k*ddiam,segadbox[k],segadbox[k]/float(nsegdtot),
+			lsegadbox[k],lsegadbox[k]/lsegdtot);
+	}
+
+	//nlpts = 0;
+	//for (k=0; k<NBOX; k++) {
+	//	if (lvbox[k]/ltot >= 0.0005) {
+	//		nlpts = k+1;
+	//	}
+	//}
+	for (k=NBOX-1; k>=0; k--) {
+		if (lvbox[k] > 0) break;
+	}
+	nlpts = k+2;
+	fprintf(fpout,"Vessel length distribution\n");
+	fprintf(fpout,"   um    number  fraction\n");
+	for (k=0; k<nlpts; k++) {
+		fprintf(fpout,"%6.2f %8d %9.5f\n",k*dlen,lvbox[k],lvbox[k]/ltot);
+	}
+	return 0;
+}
+
+
+//-----------------------------------------------------------------------------------------------------
 // This code assumes that the selection of a region of interest (a cube) is carried out on the 3D image.
 // This means that the cube centre (xc,yc,zc) and the width (diameter) are all specified in voxel
 // coordinates.  The values are converted to um by multiplying by voxelsize in um.  This is necessary
@@ -723,12 +905,8 @@ int main(int argc, char **argv)
 	char output_basename[2048];
 	int diam_flag, cmgui_flag, connect_flag;
 	float diam_min, diam_max, origin_shift[3];
-	bool use_average, connect;
+	bool connect;
 	NETWORK *NP0, *NP1, *NP2;
-
-//	int itest = 5;
-//	printf("Factorial %d = %d\n",itest,myFactorial(itest));
-//	return 0;
 
 	if (argc != 8) {
 		printf("Usage: select input_amfile output_amfile diam_min diam_max connect_flag diam_flag cmgui_flag\n");
@@ -791,13 +969,17 @@ int main(int argc, char **argv)
 			err = WriteCmguiData(output_basename,NP2,origin_shift);
 			if (err != 0) return 6;
 		}
-	} else {
+		err = CreateDistributions(NP2);
+		if (err != 0) return 7;
+} else {
 		err = WriteAmiraFile(output_amfile,input_amfile,NP1,origin_shift);
 		if (err != 0) return 5;
 		if (cmgui_flag == 1) {
 			err = WriteCmguiData(output_basename,NP1,origin_shift);
 			if (err != 0) return 6;
 		}
+		err = CreateDistributions(NP1);
+		if (err != 0) return 7;
 	}
 	return 0;
 }

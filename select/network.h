@@ -33,6 +33,7 @@ struct edge_str
 //	double length_jun;	// junction-junction length
 	bool used;
 	int netID;	// connected network ID, initially 0
+	float length_um;
 };
 typedef edge_str EDGE;	
 // An EDGE has two VERTEX indices (vert[2]) to the array vertex[], 
