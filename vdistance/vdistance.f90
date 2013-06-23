@@ -1,4 +1,5 @@
-! To create a 3D array tagging points within the convex hull of a random set of points
+! To estimate the probability distribution of distance from tissue to the nearest blood vessel.
+! Uses points within the convex hull of a random set of points (?)
 
 module data_mod
 use par_zig_mod
