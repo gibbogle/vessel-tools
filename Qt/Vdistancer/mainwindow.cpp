@@ -10,7 +10,7 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 	ui->textEdit->setReadOnly(true);
-        QString infoFile = QCoreApplication::applicationDirPath() + "/info/distancer_info.txt";
+        QString infoFile = QCoreApplication::applicationDirPath() + "/info/vdistancer_info.txt";
 	QFile file(infoFile);
 	bool ok = file.open(QIODevice::ReadOnly | QIODevice::Text);
 	if (!ok) {
@@ -70,7 +70,7 @@ void MainWindow::distancer()
 	QString qstr, resultstr;
 	char cmdstr[256];
 
-    qstr = QCoreApplication::applicationDirPath() + "/exec/proximity ";
+    qstr = QCoreApplication::applicationDirPath() + "/exec/vdistance ";
 	qstr += infileName;
 	qstr += " ";
     qstr += outfileName;
