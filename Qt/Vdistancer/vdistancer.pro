@@ -6,7 +6,7 @@
 
 QT       += core gui
 
-TARGET = distancer
+TARGET = vdistancer
 TEMPLATE = app
 
 

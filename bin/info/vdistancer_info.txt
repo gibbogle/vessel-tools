@@ -1,4 +1,4 @@
-Vdistancer generates a probability distribution for the distance from a blood vessel.
+Vdistancer generates a probability distribution for the distance from the nearest blood vessel.
 
 The analysis can be either for the whole network, or for a spherical subregion.
 
