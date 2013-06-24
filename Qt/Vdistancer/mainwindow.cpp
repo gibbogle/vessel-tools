@@ -76,6 +76,8 @@ void MainWindow::distancer()
     qstr += outfileName;
     qstr += " ";
     qstr += ui->lineEditGrid_dx->text();
+    qstr += " ";
+    qstr += ui->lineEdit_ncpu->text();
 
     if (ui->checkBoxSphere->isChecked()) {
         qstr += " ";

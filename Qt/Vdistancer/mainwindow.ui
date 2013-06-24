@@ -196,8 +196,8 @@
    <widget class="QLineEdit" name="lineEditGrid_dx">
     <property name="geometry">
      <rect>
-      <x>70</x>
-      <y>120</y>
+      <x>130</x>
+      <y>140</y>
       <width>41</width>
       <height>20</height>
      </rect>
@@ -209,9 +209,9 @@
    <widget class="QLabel" name="labelGrid_dx">
     <property name="geometry">
      <rect>
-      <x>60</x>
-      <y>100</y>
-      <width>81</width>
+      <x>40</x>
+      <y>140</y>
+      <width>91</width>
       <height>20</height>
      </rect>
     </property>
@@ -235,8 +235,8 @@
    <widget class="QLabel" name="labelRadius">
     <property name="geometry">
      <rect>
-      <x>320</x>
-      <y>140</y>
+      <x>370</x>
+      <y>160</y>
       <width>61</width>
       <height>20</height>
      </rect>
@@ -269,6 +269,32 @@
     </property>
     <property name="text">
      <string/>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="lineEdit_ncpu">
+    <property name="geometry">
+     <rect>
+      <x>130</x>
+      <y>180</y>
+      <width>41</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>4</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_ncpu">
+    <property name="geometry">
+     <rect>
+      <x>40</x>
+      <y>180</y>
+      <width>81</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Number of CPUs</string>
     </property>
    </widget>
   </widget>

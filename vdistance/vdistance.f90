@@ -3,6 +3,7 @@
 
 module data_mod
 use par_zig_mod
+use omp_lib
 
 implicit none
 
@@ -26,7 +27,7 @@ integer, allocatable :: nseglist(:,:,:)			! for each (ib,jb,kb), number of segme
 
 real :: grid_dx, delp
 real :: rmin(3), rmax(3), del(3), delb(3), centre(3), radius
-integer :: Npts, N(3), NB(3), Nsegments
+integer :: Npts, N(3), NB(3), Nsegments, Mnodes
 character*(128) :: amfile, distfile
 logical :: use_sphere
 
@@ -50,7 +51,7 @@ if (status .ne. 0) then
     res = 1
     return
 end if
-!write (*,*) 'command line = ', c(1:len)
+write (*,*) 'command line = ', c(1:nlen)
 call get_command_argument (0, c, nlen, status)
 if (status .ne. 0) then
     write (*,*) 'Getting command name failed with status = ', status
@@ -62,15 +63,15 @@ progname = c(1:nlen)
 cnt = command_argument_count ()
 write (*,*) 'number of command arguments = ', cnt
 res = 0
-if (cnt == 3) then
+if (cnt == 4) then
 	use_sphere = .false.
-elseif (cnt == 7) then
+elseif (cnt == 8) then
 	use_sphere = .true.
 else
 	res = 3
-    write(*,*) 'Use either: ',trim(progname),' amfile distfile grid_dx '
+    write(*,*) 'Use either: ',trim(progname),' amfile distfile grid_dx ncpu'
     write(*,*) ' to analyze the whole network'
-    write(*,*) 'or: ',trim(progname),' amfile distfile grid_dx x0 y0 z0 R'
+    write(*,*) 'or: ',trim(progname),' amfile distfile grid_dx x0 y0 z0 R ncpu'
     write(*,*) ' to analyze a spherical subregion with centre (x0,y0,z0), radius R'
     return
 endif
@@ -92,12 +93,14 @@ do i = 1, cnt
         read(c(1:nlen),*) grid_dx																
         write(*,*) 'grid_dx: ',grid_dx
     elseif (i == 4) then
-        read(c(1:nlen),*) centre(1)																
+        read(c(1:nlen),*) Mnodes																
     elseif (i == 5) then
-        read(c(1:nlen),*) centre(2)																
+        read(c(1:nlen),*) centre(1)																
     elseif (i == 6) then
-        read(c(1:nlen),*) centre(3)																
+        read(c(1:nlen),*) centre(2)																
     elseif (i == 7) then
+        read(c(1:nlen),*) centre(3)																
+    elseif (i == 8) then
         read(c(1:nlen),*) radius																
     endif
 end do
@@ -609,6 +612,179 @@ close(nfdist)
 write(*,*) 'Number of points: ',np
 end subroutine
 
+!-----------------------------------------------------------------------------------------
+! For each inside point:
+! 1. Determine the Nbest (10, say) closest segments, using the appropriate segment list.
+! 2. Find the distance from each segment vessel wall.
+! 3. Choose the minumum distance = centreline distance - vessel radius
+!-----------------------------------------------------------------------------------------
+subroutine par_distribution
+integer, parameter :: npdist = 500
+integer :: ib(3), ix, iy, iz, np, id, idmax, i, nth
+real :: p(3), dmin
+real, allocatable :: pdist(:)
+real, allocatable :: par_dmin(:)
+logical :: hit
+
+allocate(pdist(npdist))
+allocate(par_dmin(N(3)))
+pdist = 0
+np = 0
+idmax = 0
+do ix = 1,N(1)
+	write(*,'(a,$)') '.'
+	do iy = 1,N(2)
+		par_dmin = 0
+!$omp parallel do private (p,ib,dmin,hit)
+        do iz = 1,N(3) 
+!nth = omp_get_num_threads()
+!write(*,*) 'Threads, max: ',nth,omp_get_max_threads()
+			if (.not.in(ix,iy,iz)) cycle
+        	p(1) = rmin(1) + (ix-0.5)*del(1)
+	        ib(1) = (ix-0.5)*del(1)/delb(1) + 1
+		    p(2) = rmin(2) + (iy-0.5)*del(2)
+		    ib(2) = (iy-0.5)*del(2)/delb(2) + 1
+			p(3) = rmin(3) + (iz-0.5)*del(3)
+			ib(3) = (iz-0.5)*del(3)/delb(3) + 1
+			
+            call get_mindist(p, ib, dmin, hit)
+            
+            if (.not.hit) cycle
+			par_dmin(iz) = dmin
+		enddo
+!$omp end parallel do
+				
+		do iz = 1,N(3)
+		    dmin = par_dmin(iz)
+		    if (dmin == 0) cycle
+			np = np+1
+			id = min(npdist,int(dmin/delp + 1))
+!			write(*,*) dmin,delp,id
+			pdist(id) = pdist(id) + 1
+			idmax = max(idmax,id)
+		enddo
+
+	enddo
+enddo
+write(*,*)
+pdist = pdist/np
+open(nfdist,file=distfile,status='replace')
+do i = 1,npdist
+	write(nfdist,'(f6.2,e12.4)') (i-0.5)*delp,pdist(i)
+enddo
+close(nfdist)
+write(*,*) 'Number of points: ',np
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine get_mindist(p, ib, dmin, hit)
+integer :: ib(3)
+real :: p(3), dmin
+logical :: hit
+integer :: iseg, ibfrom(3), ibto(3), nd, ib1, ib2, ib3, i, j, k
+real :: d2, r(3), rad, r2, d, d2min
+integer, parameter :: Nbest = 10
+type(segdist_type) :: segdist(Nbest)
+
+ibfrom = max(ib-1,1)
+ibto = min(ib+1,NB)
+nd = 0
+segdist%d2 = 1.0e10
+do ib1 = ibfrom(1),ibto(1)
+	do ib2 = ibfrom(2),ibto(2)
+		do ib3 = ibfrom(3),ibto(3)
+			do k = 1,nseglist(ib1,ib2,ib3)
+				iseg = seglist(ib1,ib2,ib3,k)
+				d2min = 1.0e10
+				do j = 1,3
+					if (j == 1) then
+						r = p - segment(iseg)%end1
+						rad = segment(iseg)%r1
+					elseif (j == 3) then
+						r = p - segment(iseg)%end2
+						rad = segment(iseg)%r2
+					else
+						r = p - segment(iseg)%mid
+						rad = (segment(iseg)%r1 + segment(iseg)%r2)/2
+					endif
+					d2 = dot_product(r,r)
+					r2 = rad*rad
+					if (d2 < r2) cycle
+					d2min = min(d2min,d2)
+				enddo
+				d2 = d2min
+				if (nd == 0) then
+					nd = 1
+					segdist(nd)%iseg = iseg
+					segdist(nd)%d2 = d2
+				else
+					do i = 1,nd
+						if (d2 < segdist(i)%d2) then
+							if (i < Nbest) then
+								do j = Nbest,i+1,-1
+									segdist(j) = segdist(j-1)
+								enddo
+							endif
+							segdist(i)%iseg = iseg
+							segdist(i)%d2 = d2
+							nd = min(nd+1,Nbest)
+							exit
+						endif
+					enddo
+				endif
+			enddo
+		enddo
+	enddo
+enddo
+
+hit = .false.
+if (nd == 0) then
+	return
+endif
+! We have a list of the nd closest segments (mid-points)
+dmin = 1.0e10
+do i = 1,nd
+	iseg = segdist(i)%iseg
+	call get_segdist(p,iseg,d)
+	if (d == 0) cycle
+	dmin = min(dmin,d)
+	hit = .true.
+enddo
+end subroutine
+
+!----------------------------------------------------------------------------------------- 
+!-----------------------------------------------------------------------------------------
+subroutine omp_initialisation(ok)
+logical :: ok
+integer :: npr, nth
+
+ok = .true.
+!if (Mnodes == 1) return
+#if defined(OPENMP) || defined(_OPENMP)
+write(*,'(a,i2)') 'Requested Mnodes: ',Mnodes
+npr = omp_get_num_procs()
+write(*,'(a,i2)') 'Machine processors: ',npr
+
+nth = omp_get_max_threads()
+write(*,'(a,i2)') 'Max threads available: ',nth
+if (nth < Mnodes) then
+    Mnodes = nth
+    write(*,'(a,i2)') 'Setting Mnodes = max thread count: ',nth
+endif
+
+call omp_set_num_threads(Mnodes)
+!!$omp parallel
+!nth = omp_get_num_threads()
+!write(*,*) 'Threads, max: ',nth,omp_get_max_threads()
+!!$omp end parallel
+#endif
+
+write(*,*) 'Did omp_initialisation'
+
+end subroutine
+
+
 end module
 
 !-----------------------------------------------------------------------------------------
@@ -616,12 +792,14 @@ end module
 program main
 use data_mod
 integer :: res
+logical :: ok
 
 res = 0
 call input(res)
 if (res /= 0) then
 	call exit(res)
 endif
+call omp_initialisation(ok)
 call read_network
 call setup
 call create_in(res)
@@ -630,6 +808,6 @@ if (res /= 0) then
 endif
 !call show
 call make_lists
-call distribution
+call par_distribution
 call exit(res)
 end
