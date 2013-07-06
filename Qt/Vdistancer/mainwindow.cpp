@@ -49,6 +49,15 @@ void MainWindow::outFileSelecter()
     ui->labelOutFile->setText(outfileName);
 }
 
+void MainWindow::randomOption()
+{
+    if (ui->checkBoxRandom->isChecked()) {
+        ui->lineEditGrid_dx->setEnabled(false);
+    } else {
+        ui->lineEditGrid_dx->setEnabled(true);
+    }
+}
+
 void MainWindow::sphereOption()
 {
     if (ui->checkBoxSphere->isChecked()) {
@@ -75,9 +84,14 @@ void MainWindow::distancer()
 	qstr += " ";
     qstr += outfileName;
     qstr += " ";
-    qstr += ui->lineEditGrid_dx->text();
+    if (!ui->checkBoxRandom->isChecked()) {
+        qstr += ui->lineEditGrid_dx->text();
+    } else {
+        qstr += "0";
+    }
     qstr += " ";
     qstr += ui->lineEdit_ncpu->text();
+    qstr += " 0";
 
     if (ui->checkBoxSphere->isChecked()) {
         qstr += " ";

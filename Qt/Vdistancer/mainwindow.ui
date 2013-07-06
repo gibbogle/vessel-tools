@@ -79,32 +79,6 @@
      <string/>
     </property>
    </widget>
-   <widget class="QLabel" name="labelX0">
-    <property name="geometry">
-     <rect>
-      <x>230</x>
-      <y>140</y>
-      <width>21</width>
-      <height>21</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>x0</string>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="lineEditX0">
-    <property name="enabled">
-     <bool>false</bool>
-    </property>
-    <property name="geometry">
-     <rect>
-      <x>250</x>
-      <y>140</y>
-      <width>41</width>
-      <height>20</height>
-     </rect>
-    </property>
-   </widget>
    <widget class="QTextEdit" name="textEdit">
     <property name="geometry">
      <rect>
@@ -115,101 +89,23 @@
      </rect>
     </property>
    </widget>
-   <widget class="QLabel" name="labelCentre">
-    <property name="geometry">
-     <rect>
-      <x>240</x>
-      <y>120</y>
-      <width>61</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Centre (um)</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="labelY0">
-    <property name="geometry">
-     <rect>
-      <x>230</x>
-      <y>160</y>
-      <width>21</width>
-      <height>21</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>y0</string>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="lineEditY0">
-    <property name="enabled">
-     <bool>false</bool>
-    </property>
-    <property name="geometry">
-     <rect>
-      <x>250</x>
-      <y>160</y>
-      <width>41</width>
-      <height>20</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QLabel" name="labelZ0">
-    <property name="geometry">
-     <rect>
-      <x>230</x>
-      <y>180</y>
-      <width>21</width>
-      <height>21</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>z0</string>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="lineEditZ0">
-    <property name="enabled">
-     <bool>false</bool>
-    </property>
-    <property name="geometry">
-     <rect>
-      <x>250</x>
-      <y>180</y>
-      <width>41</width>
-      <height>20</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QCheckBox" name="checkBoxSphere">
-    <property name="geometry">
-     <rect>
-      <x>240</x>
-      <y>100</y>
-      <width>141</width>
-      <height>18</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Use spherical subregion?</string>
-    </property>
-   </widget>
    <widget class="QLineEdit" name="lineEditGrid_dx">
     <property name="geometry">
      <rect>
-      <x>130</x>
+      <x>120</x>
       <y>140</y>
       <width>41</width>
       <height>20</height>
      </rect>
     </property>
     <property name="text">
-     <string>3</string>
+     <string>4</string>
     </property>
    </widget>
    <widget class="QLabel" name="labelGrid_dx">
     <property name="geometry">
      <rect>
-      <x>40</x>
+      <x>30</x>
       <y>140</y>
       <width>91</width>
       <height>20</height>
@@ -232,32 +128,6 @@
      <string>Distribution file</string>
     </property>
    </widget>
-   <widget class="QLabel" name="labelRadius">
-    <property name="geometry">
-     <rect>
-      <x>370</x>
-      <y>160</y>
-      <width>61</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Radius (um)</string>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="lineEditRadius">
-    <property name="enabled">
-     <bool>false</bool>
-    </property>
-    <property name="geometry">
-     <rect>
-      <x>320</x>
-      <y>160</y>
-      <width>41</width>
-      <height>20</height>
-     </rect>
-    </property>
-   </widget>
    <widget class="QLabel" name="labelOutFile">
     <property name="geometry">
      <rect>
@@ -274,8 +144,8 @@
    <widget class="QLineEdit" name="lineEdit_ncpu">
     <property name="geometry">
      <rect>
-      <x>130</x>
-      <y>180</y>
+      <x>120</x>
+      <y>190</y>
       <width>41</width>
       <height>20</height>
      </rect>
@@ -287,8 +157,8 @@
    <widget class="QLabel" name="label_ncpu">
     <property name="geometry">
      <rect>
-      <x>40</x>
-      <y>180</y>
+      <x>30</x>
+      <y>190</y>
       <width>81</width>
       <height>20</height>
      </rect>
@@ -296,6 +166,162 @@
     <property name="text">
      <string>Number of CPUs</string>
     </property>
+   </widget>
+   <widget class="QCheckBox" name="checkBoxRandom">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>110</y>
+      <width>141</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Random sampling points?</string>
+    </property>
+   </widget>
+   <widget class="QGroupBox" name="groupBox_sphere">
+    <property name="geometry">
+     <rect>
+      <x>270</x>
+      <y>90</y>
+      <width>221</width>
+      <height>121</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string/>
+    </property>
+    <widget class="QLabel" name="labelRadius">
+     <property name="geometry">
+      <rect>
+       <x>150</x>
+       <y>70</y>
+       <width>61</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Radius (um)</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="labelCentre">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>30</y>
+       <width>61</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Centre (um)</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="lineEditX0">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>50</y>
+       <width>41</width>
+       <height>20</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="lineEditZ0">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>90</y>
+       <width>41</width>
+       <height>20</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="checkBoxSphere">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>10</y>
+       <width>141</width>
+       <height>18</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Use spherical subregion?</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="lineEditY0">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>70</y>
+       <width>41</width>
+       <height>20</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="lineEditRadius">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>100</x>
+       <y>70</y>
+       <width>41</width>
+       <height>20</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="labelZ0">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>90</y>
+       <width>21</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>z0</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="labelX0">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>50</y>
+       <width>21</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>x0</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="labelY0">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>70</y>
+       <width>21</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>y0</string>
+     </property>
+    </widget>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
@@ -385,6 +411,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>checkBoxRandom</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>randomOption()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>148</x>
+     <y>151</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>205</x>
+     <y>166</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>buttonClickHandler()</slot>
@@ -393,5 +435,6 @@
   <slot>radioButtonHandler()</slot>
   <slot>distancer()</slot>
   <slot>sphereOption()</slot>
+  <slot>randomOption()</slot>
  </slots>
 </ui>

@@ -20,6 +20,7 @@ public slots:
     void outFileSelecter();
     void distancer();
     void sphereOption();
+    void randomOption();
 
 private:
     Ui::MainWindow *ui;
