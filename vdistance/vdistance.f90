@@ -32,16 +32,20 @@ type(segment_type), allocatable :: segment(:)	! this is the list of all segments
 type(edge_type), allocatable :: edge(:)
 integer, allocatable :: seglist(:,:,:,:)		! for each (ib,jb,kb), a list of segment numbers
 integer, allocatable :: nseglist(:,:,:)			! for each (ib,jb,kb), number of segments in the seglist
+byte, allocatable :: imagedata(:,:,:)
 
 real :: grid_dx, delp
-real :: rmin(3), rmax(3), rmid(3), del(3), delb(3), sphere_centre(3), sphere_radius, constant_r
-integer :: Nsegpts, N(3), NB(3), Nsegments, Mnodes, np_random, np_grid
-character*(128) :: amfile, distfile
-logical :: use_sphere, use_random, use_constant_radius
+real :: rmin(3), rmax(3), rmid(3), del(3), delb(3), sphere_centre(3), sphere_radius, constant_r, threshold_d
+integer :: Nsegpts, N(3), NB(3), Nsegments, Mnodes, np_random, np_grid, nx, ny, nz
+character*(128) :: amfile, distfile, tempfile
+logical :: use_sphere, use_random, use_constant_radius, save_imagedata
 
-integer, parameter :: nfam = 10, nfdist=11, nfout=12
-real, parameter :: blocksize = 60
+logical :: dbug
+
+integer, parameter :: nfam = 10, nfdist=11, nfout=12, nfdata=13
+real, parameter :: blocksize = 120
 integer, parameter :: seed(2) = (/12345, 67891/)
+integer, parameter :: MAX_NX = 900  ! a guess
 integer, parameter :: test = 0
 
 contains
@@ -70,18 +74,19 @@ progname = c(1:nlen)
 cnt = command_argument_count ()
 write (*,*) 'number of command arguments = ', cnt
 res = 0
-if (cnt == 5) then
+if (cnt == 7) then
 	use_sphere = .false.
-elseif (cnt == 9) then
+elseif (cnt == 11) then
 	use_sphere = .true.
 else
 	res = 3
-    write(*,*) 'Use either: ',trim(progname),' amfile distfile grid_dx ncpu constant_radius'
+    write(*,*) 'Use either: ',trim(progname),' amfile distfile grid_dx ncpu constant_radius threshold image_file'
     write(*,*) ' to analyze the whole network'
-    write(*,*) 'or: ',trim(progname),' amfile distfile grid_dx ncpu constant_radius x0 y0 z0 R'
+    write(*,*) 'or: ',trim(progname),' amfile distfile grid_dx ncpu constant_radius threshold image_file x0 y0 z0 R'
     write(*,*) ' to analyze a spherical subregion with centre (x0,y0,z0), radius R'
     write(*,*) ' If grid_dx = 0 the sampling points and randomly placed'
     write(*,*) ' If constant_radius != 0 all vessels are given this radius'
+    write(*,*) ' If threshold != 0 the sampling points are used to generate the image_file data, voxel=255 if distance > threshold'
     return
 endif
 
@@ -106,12 +111,16 @@ do i = 1, cnt
     elseif (i == 5) then
         read(c(1:nlen),*) constant_r																
     elseif (i == 6) then
-        read(c(1:nlen),*) sphere_centre(1)																
+        read(c(1:nlen),*) threshold_d																
     elseif (i == 7) then
-        read(c(1:nlen),*) sphere_centre(2)																
+        read(c(1:nlen),*) tempfile																
     elseif (i == 8) then
-        read(c(1:nlen),*) sphere_centre(3)																
+        read(c(1:nlen),*) sphere_centre(1)																
     elseif (i == 9) then
+        read(c(1:nlen),*) sphere_centre(2)																
+    elseif (i == 10) then
+        read(c(1:nlen),*) sphere_centre(3)																
+    elseif (i == 11) then
         read(c(1:nlen),*) sphere_radius																
     endif
 end do
@@ -124,6 +133,11 @@ if (constant_r > 0) then
     use_constant_radius = .true.
 else
     use_constant_radius = .false.
+endif
+if (threshold_d > 0) then
+    save_imagedata = .true.
+else
+    save_imagedata = .false.
 endif
 if (use_sphere) then
 	write(*,'(a,4f8.2)') 'Sphere centre, radius: ',sphere_centre,sphere_radius
@@ -169,6 +183,7 @@ end function
 !-----------------------------------------------------------------------------------------
 subroutine setup
 integer :: k, i, ierr
+real :: rng
 
 call rng_initialisation
 
@@ -183,15 +198,27 @@ do i = 1,nsegments
 	k = k+1
 	point(k,:) = segment(i)%end2
 enddo
-
-do k = 1,Nsegpts
-	rmin = min(rmin,point(k,:))
-	rmax = max(rmax,point(k,:))
-enddo
+if (use_sphere) then
+	write(*,'(a,4f8.2)') 'Using sphere: centre, radius: ',sphere_centre,sphere_radius
+	rmin = sphere_centre - sphere_radius
+	rmax = sphere_centre + sphere_radius
+else
+    do k = 1,Nsegpts
+	    rmin = min(rmin,point(k,:))
+	    rmax = max(rmax,point(k,:))
+    enddo
+endif
 rmid = (rmin + rmax)/2
 write(*,'(a,3f8.2)') 'rmin: ',rmin
 write(*,'(a,3f8.2)') 'rmax: ',rmax
 open(nfout, file='histo.out', status='replace')
+if (save_imagedata) then
+    allocate(imagedata(MAX_NX,MAX_NX,MAX_NX))
+    imagedata = 0
+    nx = 0
+    ny = 0
+    nz = 0
+endif
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -199,18 +226,20 @@ end subroutine
 subroutine create_in(res)
 integer :: res
 integer :: i, j, k, ip(3), indx(3), ix, iy, iz, ierr, kpar=0
-real :: R(3), rsum, xyz(3), v(3)
+real :: R(3), rsum, xyz(3), v(3), tri(3,3)
+logical :: localize = .true.
 
 res = 0
-if (use_sphere) then
-	write(*,'(a,4f8.2)') 'Using sphere: centre, radius: ',sphere_centre,sphere_radius
-	rmin = sphere_centre - sphere_radius
-	rmax = sphere_centre + sphere_radius
-endif
+!if (use_sphere) then
+!	write(*,'(a,4f8.2)') 'Using sphere: centre, radius: ',sphere_centre,sphere_radius
+!	rmin = sphere_centre - sphere_radius
+!	rmax = sphere_centre + sphere_radius
+!endif
 rmin = rmin - 1
 rmax = rmax + 1
 del = grid_dx
 N = (rmax - rmin)/del + 1
+rmax = rmin + N*del
 write(*,*) 'Dimensions of array in(:,:,:): ',N
 allocate(in(N(1),N(2),N(3)),stat=ierr)
 if (ierr /= 0) then
@@ -220,7 +249,7 @@ if (ierr /= 0) then
 endif
 in = .false.
 np_grid = 0
-del = (rmax-rmin)/(N-1)
+!del = (rmax-rmin)/(N-1)
 write(*,*) 'del: ',del
 write(*,*) 'N: ',N
 if (use_sphere) then
@@ -243,22 +272,33 @@ else
 		j = 1
 		! generate three random points from the list of vertices
 		! this creates a triangle that is (almost certainly) completely within the tissue region
-		do
-			ip(j) = random_int(1,Nsegpts,kpar)
-			if (j > 1) then 
-				if (ip(j) == ip(1)) cycle
-				if (j == 3 .and. ip(j) == ip(2)) cycle
-			endif
-			j = j+1
-			if (j == 4) exit
-		enddo
+		! Improve this by requiring that the second two points are in blocks near the first point
+		
+		if (localize) then
+		    call get_triangle(tri)
+		else
+		    do
+			    ip(j) = random_int(1,Nsegpts,kpar)
+			    if (j > 1) then 
+				    if (ip(j) == ip(1)) cycle
+				    if (j == 3 .and. ip(j) == ip(2)) cycle
+			    endif
+			    j = j+1
+			    if (j == 4) exit
+		    enddo
+		    do j = 1,3
+		        tri(j,:) = point(ip(j),:)
+		    enddo
+		endif
+		
 		do k = 1,10
 			xyz = 0
 			rsum = 0
 			do j = 1,3
 				R(j) = par_uni(kpar)
 				rsum = rsum + R(j)
-				xyz = xyz + R(j)*point(ip(j),:)
+!				xyz = xyz + R(j)*point(ip(j),:)
+				xyz = xyz + R(j)*tri(j,:)
 			enddo
 			xyz = xyz/rsum
 			! xyz is a random point inside the triangle
@@ -266,7 +306,7 @@ else
 				indx(j) = (xyz(j)-rmin(j))/del(j) + 1
 				if (indx(j) > N(j)) then
 					write(*,*) 'indx out of range:'
-					write(*,*) 'point: ',point(ip(j),:)
+					write(*,*) 'point: ',tri(j,:)
 					write(*,*) 'R: ',R/rsum
 					write(*,*) 'xyz: ',xyz
 					res = 5
@@ -282,13 +322,48 @@ endif
 end subroutine
 
 !-----------------------------------------------------------------------------------------
+! After selecting the first point randomly from the list, the next two are chosen from
+! the set of neighbour blocks (max 27)
+!-----------------------------------------------------------------------------------------
+subroutine get_triangle(tri)
+real :: tri(3,3)
+integer :: i, j, k, i1, ib(3), ibfrom(3), ibto(3), jb(3), ns, iseg, kpar = 0
+
+i1 = random_int(1,Nsegpts,kpar)
+tri(1,:) = point(i1,:)
+ib(1) = (tri(1,1)-rmin(1))/delb(1) + 1
+ib(2) = (tri(1,2)-rmin(2))/delb(2) + 1
+ib(3) = (tri(1,3)-rmin(3))/delb(3) + 1
+!ib = (tri(1,:)-rmin)/delb + 1
+ibfrom = max(ib-1,1)
+ibto = min(ib+1,NB)
+!write(*,*) tri(1,:)
+!write(*,*) rmin,delb
+!write(*,*) ib
+!write(*,*) ibfrom,ibto
+do
+    do j = 1,3
+        jb(j) = random_int(ibfrom(j),ibto(j),kpar)
+    enddo
+    ns = nseglist(jb(1),jb(2),jb(3))
+    if (ns == 0) cycle
+    k = random_int(1,ns,kpar)
+    exit
+enddo
+iseg = seglist(jb(1),jb(2),jb(3),k)
+tri(2,:) = segment(iseg)%end1
+tri(3,:) = segment(iseg)%end2
+end subroutine
+
+!-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
 subroutine create_random_pts(res)
 integer :: res
 integer :: kpar = 0
 integer :: ntr, i, j, ip(3), k, kp, Nspherepts, nodpts
-real :: xyz(3), rsum, R(3), p(3), r2, sphr2
+real :: xyz(3), rsum, R(3), p(3), r2, sphr2, tri(3,3)
 real, allocatable :: sphere_point(:,:)
+logical :: localize = .true.
 
 if (use_sphere) then        ! Need to create a point list for the sphere
     sphr2 = sphere_radius*sphere_radius
@@ -324,15 +399,20 @@ do i = 1,np_random/ntr
 	j = 1
 	! generate three random points from the list of vertices
 	! this creates a triangle that is (almost certainly) completely within the tissue region
-	do
-		ip(j) = random_int(1,nodpts,kpar)
-		if (j > 1) then 
-			if (ip(j) == ip(1)) cycle
-			if (j == 3 .and. ip(j) == ip(2)) cycle
-		endif
-		j = j+1
-		if (j == 4) exit
-	enddo
+	
+	if (localize .and. .not.use_sphere) then
+	    call get_triangle(tri)
+	else
+	    do
+		    ip(j) = random_int(1,nodpts,kpar)
+		    if (j > 1) then 
+			    if (ip(j) == ip(1)) cycle
+			    if (j == 3 .and. ip(j) == ip(2)) cycle
+		    endif
+		    j = j+1
+		    if (j == 4) exit
+	    enddo
+	endif
 	do k = 1,ntr
 		xyz = 0
 		rsum = 0
@@ -341,6 +421,8 @@ do i = 1,np_random/ntr
 			rsum = rsum + R(j)
 			if (use_sphere) then
     			xyz = xyz + R(j)*sphere_point(ip(j),:)
+			elseif (localize) then
+    			xyz = xyz + R(j)*tri(j,:)
 			else
     			xyz = xyz + R(j)*point(ip(j),:)
             endif
@@ -490,13 +572,13 @@ end subroutine
 ! For each block (as the centre), make list of segments in the neighbourhood (max. 27 blocks),
 ! add midpoints, flag duplicates.
 ! The number of blocks in the three directions is NB(:)
-! The size of a block in each direction is delB = (rmax - rmin)/NB
-! The block index of point p(:) in direction i is p(i)/delb(i) + 1 
+! The size of a block in each direction is delb = (rmax - rmin)/NB
+! The block index of point p(:) in direction i is (p(i)-rmin(i))/delb(i) + 1 
+! The x-range of block(ib1,ib2,ib3) is rmin(1) + (ib1-1)*delb(1) -- rmin(1) + ib1*delb(1)
 !-----------------------------------------------------------------------------------------
 subroutine make_lists
 integer :: iseg, ib(3), nmax
 
-!NB(1) = 40
 NB(1) = (rmax(1) - rmin(1))/blocksize + 1
 NB(2) = NB(1)*(rmax(2) - rmin(2))/(rmax(1) - rmin(1))
 NB(3) = NB(1)*(rmax(3) - rmin(3))/(rmax(1) - rmin(1))
@@ -519,7 +601,7 @@ do iseg = 1,nsegments
 	ib = (segment(iseg)%mid(:) - rmin)/delb + 1
 	if (ib(1) < 1 .or. ib(2) < 1 .or. ib(3) < 1) cycle
 	if (ib(1) > NB(1) .or. ib(2) > NB(2) .or. ib(3) > NB(3)) cycle
-	nseglist(ib(1),ib(2),ib(3))  = nseglist(ib(1),ib(2),ib(3)) + 1
+	nseglist(ib(1),ib(2),ib(3)) = nseglist(ib(1),ib(2),ib(3)) + 1
 	seglist(ib(1),ib(2),ib(3),nseglist(ib(1),ib(2),ib(3))) = iseg
 enddo
 
@@ -586,124 +668,6 @@ endif
 end subroutine
 
 !-----------------------------------------------------------------------------------------
-! For each inside point:
-! 1. Determine the Nbest (10, say) closest segments, using the appropriate segment list.
-! 2. Find the distance from each segment vessel wall.
-! 3. Choose the minumum distance = centreline distance - vessel radius
-!-----------------------------------------------------------------------------------------
-subroutine distribution
-integer, parameter :: npdist = 500
-integer, parameter :: Nbest = 10
-integer :: iseg, ib(3), ix, iy, iz, ibfrom(3), ibto(3), nd, ib1, ib2, ib3, i, j, k, np, id,idmax
-real :: p(3), d2, r(3), rad, r2, d, dmin, d2min, theta, PI
-real, allocatable :: pdist(:)
-type(segdist_type) :: segdist(Nbest)
-logical :: hit
-!real, parameter :: delp = 0.5
-
-allocate(pdist(npdist))
-pdist = 0
-np = 0
-idmax = 0
-do ix = 1,N(1)
-	write(*,'(a,$)') '.'
-	do iy = 1,N(2)			
-		do iz = 1,N(3)
-			if (.not.in(ix,iy,iz)) cycle        ! in(:,:,:) used here
-        	p(1) = rmin(1) + (ix-0.5)*del(1)
-	        ib(1) = (ix-0.5)*del(1)/delb(1) + 1
-		    p(2) = rmin(2) + (iy-0.5)*del(2)
-		    ib(2) = (iy-0.5)*del(2)/delb(2) + 1
-			p(3) = rmin(3) + (iz-0.5)*del(3)
-			ib(3) = (iz-0.5)*del(3)/delb(3) + 1
-			ibfrom = max(ib-1,1)
-			ibto = min(ib+1,NB)
-			nd = 0
-			segdist%d2 = 1.0e10
-			do ib1 = ibfrom(1),ibto(1)
-				do ib2 = ibfrom(2),ibto(2)
-					do ib3 = ibfrom(3),ibto(3)
-						do k = 1,nseglist(ib1,ib2,ib3)
-							iseg = seglist(ib1,ib2,ib3,k)
-							! get min of squared distances to ends, middle
-							d2min = 1.0e10
-							do j = 1,3
-								if (j == 1) then
-									r = p - segment(iseg)%end1
-									rad = segment(iseg)%r1
-								elseif (j == 3) then
-									r = p - segment(iseg)%end2
-									rad = segment(iseg)%r2
-								else
-									r = p - segment(iseg)%mid
-									rad = (segment(iseg)%r1 + segment(iseg)%r2)/2
-								endif
-								d2 = dot_product(r,r)
-								r2 = rad*rad
-								if (d2 < r2) cycle
-								d2min = min(d2min,d2)
-							enddo
-							d2 = d2min
-							if (nd == 0) then
-								nd = 1
-								segdist(nd)%iseg = iseg
-								segdist(nd)%d2 = d2
-							else
-								do i = 1,nd
-									if (d2 < segdist(i)%d2) then
-										if (i < Nbest) then
-											do j = Nbest,i+1,-1
-												segdist(j) = segdist(j-1)
-											enddo
-										endif
-										segdist(i)%iseg = iseg
-										segdist(i)%d2 = d2
-										nd = min(nd+1,Nbest)
-										exit
-									endif
-								enddo
-							endif
-						enddo
-					enddo
-				enddo
-			enddo
-			if (nd == 0) then
-				cycle
-			endif
-			! We have a list of the nd closest segments (mid-points)
-			dmin = 1.0e10
-			hit = .false.
-			do i = 1,nd
-				iseg = segdist(i)%iseg
-				call get_segdist(p,iseg,d)
-				if (d == 0) cycle
-				dmin = min(dmin,d)
-!				write(*,*) i,nd,d,dmin
-				hit = .true.
-			enddo
-			if (.not.hit) cycle
-			np = np+1
-			id = min(npdist,int(dmin/delp + 1))
-!			write(*,*) dmin,delp,id
-			pdist(id) = pdist(id) + 1
-			idmax = max(idmax,id)
-!			if (dmin < 0.5) then
-!				write(*,'(3i5,e12.3,2i4)') ix,iy,iz,dmin,id,idmax	
-!			endif
-		enddo
-	enddo
-enddo
-write(*,*)
-pdist = pdist/np
-
-do i = 1,npdist
-	write(nfdist,'(f6.2,e12.4)') (i-0.5)*delp,pdist(i)
-enddo
-close(nfdist)
-write(*,*) 'Number of points: ',np
-end subroutine
-
-!-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
 subroutine par_distribution
 integer, parameter :: npdist = 500
@@ -716,6 +680,7 @@ real :: rad, theta, PI, d
 
 allocate(pdist(npdist))
 allocate(par_dmin(N(3)))
+dbug = .false.
 pdist = 0
 np = 0
 idmax = 0
@@ -727,6 +692,12 @@ do ix = 1,N(1)
         do iz = 1,N(3) 
 !nth = omp_get_num_threads()
 !write(*,*) 'Threads, max: ',nth,omp_get_max_threads()
+!    if (iy == 40 .and. iz == 50) then
+!        dbug = .true.
+!    else
+!        dbug = .false.
+!    endif
+!    if (dbug) write(*,*) 'ix: ',ix
 			if (.not.in(ix,iy,iz)) cycle        ! in(:,:,:) used here
         	p(1) = rmin(1) + (ix-0.5)*del(1)
 	        ib(1) = (ix-0.5)*del(1)/delb(1) + 1
@@ -737,8 +708,16 @@ do ix = 1,N(1)
 			
             call get_mindist(p, ib, dmin, hit)
             
-            if (.not.hit) cycle
+	        if (save_imagedata) then
+	            if (dmin > threshold_d) then
+!	                call add_voxel(p)
+!                    write(*,*) '-----------------------voxel: ',ix,iy,iz,dmin
+	                call add_ivoxel(ix,iy,iz)
+	            endif
+	        endif
+            if (.not.hit .or. dmin == 0) cycle
 			par_dmin(iz) = dmin
+!			if (dbug) write(*,'(a,f6.1)') 'dmin: ',dmin
 		enddo
 !$omp end parallel do
 				
@@ -776,20 +755,28 @@ real :: d2, r(3), rad, r2, d, d2min
 
 ibfrom = max(ib-1,1)
 ibto = min(ib+1,NB)
+!if (dbug) then
+!write(*,'(3f6.0,3i6,2x,3i6,2x,3i6)') p,ib,ibfrom,ibto
+!write(*,'(a,2f8.0)') 'block x range: ',rmin(1)+(ibfrom(1)-1)*delb(1),rmin(1)+ibto(1)*delb(1)
+!write(*,'(a,2f8.0)') 'block y range: ',rmin(2)+(ibfrom(2)-1)*delb(2),rmin(2)+ibto(2)*delb(2)
+!write(*,'(a,2f8.0)') 'block z range: ',rmin(3)+(ibfrom(3)-1)*delb(3),rmin(3)+ibto(3)*delb(3)
+!endif
 hit = .false.
 dmin = 1.0e10
 do ib1 = ibfrom(1),ibto(1)
 	do ib2 = ibfrom(2),ibto(2)
 		do ib3 = ibfrom(3),ibto(3)
+!		    if (dbug) write(*,*) ib1,ib2,ib3,'   ',nseglist(ib1,ib2,ib3)
+            if (nseglist(ib1,ib2,ib3) == 0) cycle
 			do k = 1,nseglist(ib1,ib2,ib3)
 				iseg = seglist(ib1,ib2,ib3,k)
+	            hit = .true.
 	            call get_segdist(p,iseg,d)
 	            if (d == 0) then
-	                hit = .false.
+	                dmin = 0
 	                return
 	            endif
 	            dmin = min(dmin,d)
-	            hit = .true.
 	        enddo
 	    enddo
 	enddo
@@ -871,6 +858,89 @@ do i = 1,nd
 	dmin = min(dmin,d)
 	hit = .true.
 enddo
+end subroutine
+
+!----------------------------------------------------------------------------------------- 
+!-----------------------------------------------------------------------------------------
+subroutine add_voxel(p)
+real :: p(3)
+integer :: ix, iy, iz
+
+ix = p(1)/grid_dx
+if (ix > MAX_NX) then
+    write(*,*) 'ix > MAX_NX'
+    stop
+endif
+nx = max(nx,ix)
+if (use_random) nx = max(nx,ix+1)
+iy = p(2)/grid_dx
+if (iy > MAX_NX) then
+    write(*,*) 'iy > MAX_NX'
+    stop
+endif
+ny = max(ny,iy)
+if (use_random) ny = max(ny,iy+1)
+iz = p(3)/grid_dx
+if (iz > MAX_NX) then
+    write(*,*) 'iz > MAX_NX'
+    stop
+endif
+nz = max(nz,iz)
+if (use_random) nz = max(nz,iz+1)
+if (use_random) then
+    imagedata(ix-1:ix+1,iy-1:iy+1,iz-1:iz+1) = 255
+else
+    imagedata(ix,iy,iz) = 255
+endif
+end subroutine
+
+!----------------------------------------------------------------------------------------- 
+!-----------------------------------------------------------------------------------------
+subroutine add_ivoxel(ix,iy,iz)
+!real :: p(3)
+integer :: ix, iy, iz
+
+!ix = p(1)/grid_dx
+!if (ix > MAX_NX) then
+!    write(*,*) 'ix > MAX_NX'
+!    stop
+!endif
+nx = max(nx,ix)
+if (use_random) nx = max(nx,ix+1)
+!iy = p(2)/grid_dx
+!if (iy > MAX_NX) then
+!    write(*,*) 'iy > MAX_NX'
+!    stop
+!endif
+ny = max(ny,iy)
+if (use_random) ny = max(ny,iy+1)
+!iz = p(3)/grid_dx
+!if (iz > MAX_NX) then
+!    write(*,*) 'iz > MAX_NX'
+!    stop
+!endif
+nz = max(nz,iz)
+if (use_random) nz = max(nz,iz+1)
+if (use_random) then
+    imagedata(ix-1:ix+1,iy-1:iy+1,iz-1:iz+1) = 255
+else
+    imagedata(ix,iy,iz) = 255
+endif
+end subroutine
+
+!----------------------------------------------------------------------------------------- 
+!#define V(a,b,c)  p[(c)*xysize+(b)*width+(a)] 
+!-----------------------------------------------------------------------------------------
+subroutine write_imagedata
+integer :: ix, iy, iz
+
+nx = nx + 20
+ny = ny + 20
+nz = nz + 20
+open(nfdata, file=tempfile, status='replace', form = 'unformatted', access = 'stream')
+write(nfdata) nx,ny,nz,(((imagedata(ix,iy,iz),ix=1,nx),iy=1,ny),iz=1,nz)
+close(nfdata)
+
 end subroutine
 
 !----------------------------------------------------------------------------------------- 
@@ -1137,6 +1207,7 @@ integer, allocatable :: np_th(:)
 real, allocatable :: pdist(:), pdist_th(:,:)
 logical :: drop, hit
 
+grid_dx = 4     ! for save_imagedata
 allocate(pdist(npdist))
 allocate(pdist_th(npdist,Mnodes))
 allocate(np_th(Mnodes))
@@ -1184,7 +1255,12 @@ do ip = 1,np_random
 !        if (drop) exit
 !	enddo
 !	if (drop .or. .not.hit) cycle
-	if (.not.hit) cycle
+	if (save_imagedata) then
+	    if (dmin > threshold_d) then
+	        call add_voxel(p)
+	    endif
+	endif
+    if (.not.hit .or. dmin == 0) cycle
 	np_th(kthread) = np_th(kthread) + 1
 	id = min(npdist,int(dmin/delp + 1))
 	pdist_th(id,kthread) = pdist_th(id,kthread) + 1
@@ -1230,6 +1306,7 @@ call setup
 !call histology
 !call exit(res)
 
+call make_lists
 if (use_random) then
     call create_random_pts(res)
     write(*,*) 'Generated random points: ',np_random
@@ -1239,13 +1316,16 @@ endif
 if (res /= 0) then
 	call exit(res)
 endif
+!call make_lists
 !call show
-call make_lists
 if (use_random) then
     call random_distribution
 else
     call par_distribution
     !call distribution
+endif
+if (save_imagedata) then
+    call write_imagedata
 endif
 call exit(res)
 end

@@ -26,6 +26,8 @@ MainWindow::MainWindow(QWidget *parent) :
 	}
 	file.close();
 	ui->textEdit->moveCursor(QTextCursor::Start);
+    ui->labelResult->setText("");
+    ui->labelResultImage->setText("");
 }
 
 MainWindow::~MainWindow()
@@ -35,18 +37,32 @@ MainWindow::~MainWindow()
 
 void MainWindow::inFileSelecter()
 {
-	ui->labelResult->setText("");
+    ui->labelInFile->setText("");
 	infileName = QFileDialog::getOpenFileName(this,
                 tr("Input file"), ".", tr("Amira Files (*.am)"));
 	ui->labelInFile->setText(infileName);
+    ui->labelResult->setText("");
+    ui->labelResultImage->setText("");
 }
 
 void MainWindow::outFileSelecter()
 {
-    ui->labelResult->setText("");
+    ui->labelOutFile->setText("");
     outfileName = QFileDialog::getSaveFileName(this,
                 tr("Output file"), ".", tr("Text Files (*.out)"));
     ui->labelOutFile->setText(outfileName);
+    ui->labelResult->setText("");
+    ui->labelResultImage->setText("");
+}
+
+void MainWindow::tiffFileSelecter()
+{
+    ui->labelTiffFile->setText("");
+    tifffileName = QFileDialog::getSaveFileName(this,
+                tr("Tiff file"), ".", tr("Tiff Files (*.tif)"));
+    ui->labelTiffFile->setText(tifffileName);
+    ui->labelResult->setText("");
+    ui->labelResultImage->setText("");
 }
 
 void MainWindow::randomOption()
@@ -56,6 +72,8 @@ void MainWindow::randomOption()
     } else {
         ui->lineEditGrid_dx->setEnabled(true);
     }
+    ui->labelResult->setText("");
+    ui->labelResultImage->setText("");
 }
 
 void MainWindow::sphereOption()
@@ -71,6 +89,21 @@ void MainWindow::sphereOption()
         ui->lineEditZ0->setEnabled(false);
         ui->lineEditRadius->setEnabled(false);
     }
+    ui->labelResult->setText("");
+    ui->labelResultImage->setText("");
+}
+
+void MainWindow::imageOption()
+{
+    if (ui->checkBoxImage->isChecked()) {
+        ui->lineEditThreshold->setEnabled(true);
+        ui->pushButtonTiffFile->setEnabled(true);
+    } else {
+        ui->lineEditThreshold->setEnabled(false);
+        ui->pushButtonTiffFile->setEnabled(false);
+    }
+    ui->labelResult->setText("");
+    ui->labelResultImage->setText("");
 }
 
 void MainWindow::distancer()
@@ -78,6 +111,7 @@ void MainWindow::distancer()
 	int res;
 	QString qstr, resultstr;
 	char cmdstr[256];
+    QString tempfileName = "imagedata.bin";
 
     qstr = QCoreApplication::applicationDirPath() + "/exec/vdistance ";
 	qstr += infileName;
@@ -92,6 +126,15 @@ void MainWindow::distancer()
     qstr += " ";
     qstr += ui->lineEdit_ncpu->text();
     qstr += " 0";
+    qstr += " ";
+
+    if (ui->checkBoxImage->isChecked()) {
+        qstr += ui->lineEditThreshold->text();
+        qstr += " ";
+        qstr += tempfileName;
+    } else {
+        qstr += "0 dummy";
+    }
 
     if (ui->checkBoxSphere->isChecked()) {
         qstr += " ";
@@ -129,6 +172,31 @@ void MainWindow::distancer()
         resultstr = "WTF?";
 
     ui->labelResult->setText(resultstr);
+
+    if (ui->checkBoxImage->isChecked()) {
+        qstr = QCoreApplication::applicationDirPath() + "/exec/maketiff ";
+        qstr += tempfileName;
+        qstr += " ";
+        qstr += tifffileName;
+        if (qstr.size()>(int)sizeof(cmdstr)-1) {
+            printf("Failed to convert qstr->cmdstr since qstr didn't fit\n");
+            resultstr = "FAILED: cmdstr not big enough for the command";
+            ui->labelResultImage->setText(resultstr);
+            return;
+        }
+        strcpy(cmdstr, qstr.toAscii().constData());
+
+        res = system(cmdstr);
+        if (res == 0)
+            resultstr = "Image SUCCESS";
+        else if (res == 1)
+            resultstr = "Image FAILED: wrong number of arguments";
+        else if (res == 2)
+            resultstr = "Image FAILED: reading image data file";
+        else if (res == 3)
+            resultstr = "Image FAILED: writing tiff file";
+        ui->labelResultImage->setText(resultstr);
+    }
 }
 
 

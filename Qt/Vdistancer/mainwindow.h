@@ -18,9 +18,11 @@ public:
 public slots:
 	void inFileSelecter();
     void outFileSelecter();
+    void tiffFileSelecter();
     void distancer();
     void sphereOption();
     void randomOption();
+    void imageOption();
 
 private:
     Ui::MainWindow *ui;
@@ -28,6 +30,7 @@ private:
 public:
 	QString infileName;
     QString outfileName;
+    QString tifffileName;
 
 
 };

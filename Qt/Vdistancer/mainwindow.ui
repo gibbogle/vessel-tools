@@ -43,8 +43,8 @@
    <widget class="QPushButton" name="pushButtonZoom">
     <property name="geometry">
      <rect>
-      <x>220</x>
-      <y>260</y>
+      <x>270</x>
+      <y>280</y>
       <width>75</width>
       <height>23</height>
      </rect>
@@ -89,32 +89,6 @@
      </rect>
     </property>
    </widget>
-   <widget class="QLineEdit" name="lineEditGrid_dx">
-    <property name="geometry">
-     <rect>
-      <x>120</x>
-      <y>140</y>
-      <width>41</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>4</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="labelGrid_dx">
-    <property name="geometry">
-     <rect>
-      <x>30</x>
-      <y>140</y>
-      <width>91</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Grid spacing (um)</string>
-    </property>
-   </widget>
    <widget class="QPushButton" name="pushButtonOutFile">
     <property name="geometry">
      <rect>
@@ -144,9 +118,9 @@
    <widget class="QLineEdit" name="lineEdit_ncpu">
     <property name="geometry">
      <rect>
-      <x>120</x>
-      <y>190</y>
-      <width>41</width>
+      <x>340</x>
+      <y>250</y>
+      <width>21</width>
       <height>20</height>
      </rect>
     </property>
@@ -157,8 +131,8 @@
    <widget class="QLabel" name="label_ncpu">
     <property name="geometry">
      <rect>
-      <x>30</x>
-      <y>190</y>
+      <x>250</x>
+      <y>250</y>
       <width>81</width>
       <height>20</height>
      </rect>
@@ -167,26 +141,13 @@
      <string>Number of CPUs</string>
     </property>
    </widget>
-   <widget class="QCheckBox" name="checkBoxRandom">
-    <property name="geometry">
-     <rect>
-      <x>30</x>
-      <y>110</y>
-      <width>141</width>
-      <height>17</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Random sampling points?</string>
-    </property>
-   </widget>
    <widget class="QGroupBox" name="groupBox_sphere">
     <property name="geometry">
      <rect>
       <x>270</x>
-      <y>90</y>
+      <y>100</y>
       <width>221</width>
-      <height>121</height>
+      <height>131</height>
      </rect>
     </property>
     <property name="title">
@@ -196,7 +157,7 @@
      <property name="geometry">
       <rect>
        <x>150</x>
-       <y>70</y>
+       <y>80</y>
        <width>61</width>
        <height>20</height>
       </rect>
@@ -209,7 +170,7 @@
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>30</y>
+       <y>40</y>
        <width>61</width>
        <height>20</height>
       </rect>
@@ -225,7 +186,7 @@
      <property name="geometry">
       <rect>
        <x>30</x>
-       <y>50</y>
+       <y>60</y>
        <width>41</width>
        <height>20</height>
       </rect>
@@ -238,7 +199,7 @@
      <property name="geometry">
       <rect>
        <x>30</x>
-       <y>90</y>
+       <y>100</y>
        <width>41</width>
        <height>20</height>
       </rect>
@@ -264,7 +225,7 @@
      <property name="geometry">
       <rect>
        <x>30</x>
-       <y>70</y>
+       <y>80</y>
        <width>41</width>
        <height>20</height>
       </rect>
@@ -277,7 +238,7 @@
      <property name="geometry">
       <rect>
        <x>100</x>
-       <y>70</y>
+       <y>80</y>
        <width>41</width>
        <height>20</height>
       </rect>
@@ -287,7 +248,7 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>90</y>
+       <y>100</y>
        <width>21</width>
        <height>21</height>
       </rect>
@@ -300,7 +261,7 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>50</y>
+       <y>60</y>
        <width>21</width>
        <height>21</height>
       </rect>
@@ -313,7 +274,7 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>70</y>
+       <y>80</y>
        <width>21</width>
        <height>21</height>
       </rect>
@@ -322,6 +283,152 @@
       <string>y0</string>
      </property>
     </widget>
+   </widget>
+   <widget class="QGroupBox" name="groupBoxImage">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>100</y>
+      <width>171</width>
+      <height>61</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string/>
+    </property>
+    <widget class="QLabel" name="label_threshold">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>30</y>
+       <width>101</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Threshold distance</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="lineEditThreshold">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>30</y>
+       <width>21</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>60</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="checkBoxImage">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>141</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Image hypoxic regions?</string>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QPushButton" name="pushButtonTiffFile">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>60</y>
+      <width>81</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Tiff  file</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="labelTiffFile">
+    <property name="geometry">
+     <rect>
+      <x>90</x>
+      <y>60</y>
+      <width>391</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QGroupBox" name="groupBoxSampling">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>170</y>
+      <width>171</width>
+      <height>61</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string/>
+    </property>
+    <widget class="QCheckBox" name="checkBoxRandom">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>30</y>
+       <width>141</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Random sampling points?</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="lineEditGrid_dx">
+     <property name="geometry">
+      <rect>
+       <x>100</x>
+       <y>10</y>
+       <width>31</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>4</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="labelGrid_dx">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>91</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Grid spacing (um)</string>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QLabel" name="labelResultImage">
+    <property name="geometry">
+     <rect>
+      <x>80</x>
+      <y>330</y>
+      <width>491</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
@@ -370,8 +477,8 @@
    <slot>distancer()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>272</x>
-     <y>303</y>
+     <x>322</x>
+     <y>335</y>
     </hint>
     <hint type="destinationlabel">
      <x>363</x>
@@ -387,7 +494,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>363</x>
-     <y>141</y>
+     <y>160</y>
     </hint>
     <hint type="destinationlabel">
      <x>436</x>
@@ -418,12 +525,44 @@
    <slot>randomOption()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>148</x>
-     <y>151</y>
+     <x>158</x>
+     <y>253</y>
     </hint>
     <hint type="destinationlabel">
      <x>205</x>
      <y>166</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButtonTiffFile</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>tiffFileSelecter()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>49</x>
+     <y>103</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>235</x>
+     <y>120</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>checkBoxImage</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>imageOption()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>40</x>
+     <y>149</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>51</x>
+     <y>287</y>
     </hint>
    </hints>
   </connection>
@@ -436,5 +575,7 @@
   <slot>distancer()</slot>
   <slot>sphereOption()</slot>
   <slot>randomOption()</slot>
+  <slot>tiffFileSelecter()</slot>
+  <slot>imageOption()</slot>
  </slots>
 </ui>
