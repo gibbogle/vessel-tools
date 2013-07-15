@@ -21,7 +21,7 @@ public slots:
     void tiffFileSelecter();
     void distancer();
     void sphereOption();
-    void randomOption();
+//    void randomOption();
     void imageOption();
 
 private:

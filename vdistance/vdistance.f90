@@ -34,7 +34,7 @@ integer, allocatable :: seglist(:,:,:,:)		! for each (ib,jb,kb), a list of segme
 integer, allocatable :: nseglist(:,:,:)			! for each (ib,jb,kb), number of segments in the seglist
 byte, allocatable :: imagedata(:,:,:)
 
-real :: grid_dx, delp
+real :: grid_dx, delp, pt_factor
 real :: rmin(3), rmax(3), rmid(3), del(3), delb(3), sphere_centre(3), sphere_radius, constant_r, threshold_d
 integer :: Nsegpts, N(3), NB(3), Nsegments, Mnodes, np_random, np_grid, nx, ny, nz
 character*(128) :: amfile, distfile, tempfile
@@ -80,9 +80,9 @@ elseif (cnt == 11) then
 	use_sphere = .true.
 else
 	res = 3
-    write(*,*) 'Use either: ',trim(progname),' amfile distfile grid_dx ncpu constant_radius threshold image_file'
+    write(*,*) 'Use either: ',trim(progname),' amfile distfile grid_dx ncpu pt_factor threshold image_file'
     write(*,*) ' to analyze the whole network'
-    write(*,*) 'or: ',trim(progname),' amfile distfile grid_dx ncpu constant_radius threshold image_file x0 y0 z0 R'
+    write(*,*) 'or: ',trim(progname),' amfile distfile grid_dx ncpu pt_factor threshold image_file x0 y0 z0 R'
     write(*,*) ' to analyze a spherical subregion with centre (x0,y0,z0), radius R'
     write(*,*) ' If grid_dx = 0 the sampling points and randomly placed'
     write(*,*) ' If constant_radius != 0 all vessels are given this radius'
@@ -109,7 +109,7 @@ do i = 1, cnt
     elseif (i == 4) then
         read(c(1:nlen),*) Mnodes																
     elseif (i == 5) then
-        read(c(1:nlen),*) constant_r																
+        read(c(1:nlen),*) pt_factor																
     elseif (i == 6) then
         read(c(1:nlen),*) threshold_d																
     elseif (i == 7) then
@@ -129,6 +129,7 @@ if (grid_dx == 0) then
 else
     use_random = .false.
 endif
+constant_r = 0
 if (constant_r > 0) then
     use_constant_radius = .true.
 else
@@ -151,7 +152,7 @@ integer, allocatable :: zig_seed(:)
 integer :: i
 integer :: npar, grainsize = 32
 
-npar = 1
+npar = Mnodes
 allocate(zig_seed(0:npar-1))
 do i = 0,npar-1
     zig_seed(i) = seed(1)*seed(2)*(i+1)
@@ -225,7 +226,7 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine create_in(res)
 integer :: res
-integer :: i, j, k, ip(3), indx(3), ix, iy, iz, ierr, kpar=0
+integer :: i, j, k, ip(3), indx(3), ix, iy, iz, ierr, Ngridpts, kpar=0
 real :: R(3), rsum, xyz(3), v(3), tri(3,3)
 logical :: localize = .true.
 
@@ -240,7 +241,9 @@ rmax = rmax + 1
 del = grid_dx
 N = (rmax - rmin)/del + 1
 rmax = rmin + N*del
+write(*,*) 'del: ',del
 write(*,*) 'Dimensions of array in(:,:,:): ',N
+write(nfdist,*) 'Dimensions of array in(:,:,:): ',N
 allocate(in(N(1),N(2),N(3)),stat=ierr)
 if (ierr /= 0) then
 	write(*,*) 'Allocation failed on array in(:,:,:).  Increase grid_dx'
@@ -250,8 +253,6 @@ endif
 in = .false.
 np_grid = 0
 !del = (rmax-rmin)/(N-1)
-write(*,*) 'del: ',del
-write(*,*) 'N: ',N
 if (use_sphere) then
 	do ix = 1,N(1)
 		xyz(1) = rmin(1) + (ix-1)*del(1)
@@ -268,7 +269,11 @@ if (use_sphere) then
 		enddo
 	enddo
 else
-	do i = 1,10000000
+    Ngridpts = pt_factor*N(1)*N(2)*N(3)
+    write(*,*) 'Generating interior grid points: ',Ngridpts
+    write(nfdist,*) 'Generating interior grid points: ',Ngridpts
+	do i = 1, Ngridpts/10      ! 10000000
+!	do i = 1, 10000000
 		j = 1
 		! generate three random points from the list of vertices
 		! this creates a triangle that is (almost certainly) completely within the tissue region
@@ -319,6 +324,8 @@ else
 		enddo
 	enddo
 endif
+write(*,*) 'np_grid: ',np_grid
+write(nfdist,*) 'np_grid: ',np_grid
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -671,8 +678,8 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine par_distribution
 integer, parameter :: npdist = 500
-integer :: ib(3), ix, iy, iz, np, id, idmax, i, nth
-real :: p(3), dmin
+integer :: ib(3), ix, iy, iz, np, id, idmax, i, nth, nth0, kpar
+real :: p(3), dmin, R
 real, allocatable :: pdist(:)
 real, allocatable :: par_dmin(:)
 logical :: drop, hit
@@ -684,27 +691,25 @@ dbug = .false.
 pdist = 0
 np = 0
 idmax = 0
+      
 do ix = 1,N(1)
 	write(*,'(a,$)') '.'
 	do iy = 1,N(2)
 		par_dmin = 0
-!$omp parallel do private (p,ib,dmin,hit)
-        do iz = 1,N(3) 
-!nth = omp_get_num_threads()
-!write(*,*) 'Threads, max: ',nth,omp_get_max_threads()
-!    if (iy == 40 .and. iz == 50) then
-!        dbug = .true.
-!    else
-!        dbug = .false.
-!    endif
-!    if (dbug) write(*,*) 'ix: ',ix
-			if (.not.in(ix,iy,iz)) cycle        ! in(:,:,:) used here
+!$omp parallel do private (p,ib,dmin,hit,i,kpar)
+        do iz = 1,N(3)
+			if (.not.in(ix,iy,iz)) cycle 
+            kpar = omp_get_thread_num()
         	p(1) = rmin(1) + (ix-0.5)*del(1)
 	        ib(1) = (ix-0.5)*del(1)/delb(1) + 1
 		    p(2) = rmin(2) + (iy-0.5)*del(2)
 		    ib(2) = (iy-0.5)*del(2)/delb(2) + 1
 			p(3) = rmin(3) + (iz-0.5)*del(3)
 			ib(3) = (iz-0.5)*del(3)/delb(3) + 1
+			! To get off the grid, in case voxel dimensions are integer
+			do i = 1,3
+			    p(i) = p(i) + par_uni(kpar) - 0.5
+			enddo
 			
             call get_mindist(p, ib, dmin, hit)
             
@@ -963,6 +968,7 @@ if (nth < Mnodes) then
     write(*,'(a,i2)') 'Setting Mnodes = max thread count: ',nth
 endif
 
+write(*,*) 'Mnodes: ',Mnodes
 call omp_set_num_threads(Mnodes)
 !!$omp parallel
 !nth = omp_get_num_threads()
@@ -971,7 +977,20 @@ call omp_set_num_threads(Mnodes)
 #endif
 
 write(*,*) 'Did omp_initialisation'
+end subroutine
 
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine test_omp
+integer :: iz,kpar
+real :: R
+
+!$omp parallel do private (R,kpar)
+do iz = 1,1000
+    kpar = omp_get_thread_num()
+    R = par_uni(kpar)
+enddo
+!$end parallel do
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -1216,6 +1235,7 @@ np_th = 0
 !$omp parallel do private (x, y, z, p, ib, dmin, hit, id, kthread)
 do ip = 1,np_random
     kthread = omp_get_thread_num()
+    write(*,*) kthread
     kthread = kthread + 1
     if (kthread == 1 .and. mod(ip,1000) == 0) write(*,'(a,$)') '.'
     x = random_pt(ip,1)

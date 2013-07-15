@@ -20,6 +20,7 @@
 #include <itkBinaryDilateParaImageFilter.h>
 #include <itkMaximumImageFilter.h>
 #include <itkMaskImageFilter.h>
+#include "itkBinaryShapeKeepNObjectsImageFilter.h"
 
 #include <itkSmartPointer.h>
 namespace itk
@@ -170,8 +171,19 @@ void doSeg(const CmdLineType &CmdLineObj)
   Invert->SetInsideValue(0);
   Invert->SetOutsideValue(2);
 
+  // Modification (16/7/2013) to eliminate interior voids in the marker
+  // Note change to Comb->SetInput
+  itk::Instance<itk::BinaryShapeKeepNObjectsImageFilter<MaskImType> > SizeFilter;
+
+  SizeFilter->SetInput(Invert->GetOutput());
+  SizeFilter->SetBackgroundValue(0);
+  SizeFilter->SetForegroundValue(2);
+  SizeFilter->SetNumberOfObjects(1);
+  SizeFilter->SetAttribute("PhysicalSize");
+
   itk::Instance<itk::MaximumImageFilter<MaskImType, MaskImType, MaskImType> > Comb;
-  Comb->SetInput(Invert->GetOutput());
+//  Comb->SetInput(Invert->GetOutput());
+  Comb->SetInput(SizeFilter->GetOutput());
   Comb->SetInput2(KeepBig->GetOutput());
 
   writeImComp<MaskImType>(Comb->GetOutput(), CmdLineObj.OutputImPrefix + "_marker" + CmdLineObj.suffix);

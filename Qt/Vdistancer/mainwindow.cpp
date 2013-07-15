@@ -65,16 +65,16 @@ void MainWindow::tiffFileSelecter()
     ui->labelResultImage->setText("");
 }
 
-void MainWindow::randomOption()
-{
-    if (ui->checkBoxRandom->isChecked()) {
-        ui->lineEditGrid_dx->setEnabled(false);
-    } else {
-        ui->lineEditGrid_dx->setEnabled(true);
-    }
-    ui->labelResult->setText("");
-    ui->labelResultImage->setText("");
-}
+//void MainWindow::randomOption()
+//{
+//    if (ui->checkBoxRandom->isChecked()) {
+//        ui->lineEditGrid_dx->setEnabled(false);
+//    } else {
+//        ui->lineEditGrid_dx->setEnabled(true);
+//    }
+//    ui->labelResult->setText("");
+//    ui->labelResultImage->setText("");
+//}
 
 void MainWindow::sphereOption()
 {
@@ -118,14 +118,15 @@ void MainWindow::distancer()
 	qstr += " ";
     qstr += outfileName;
     qstr += " ";
-    if (!ui->checkBoxRandom->isChecked()) {
+//    if (!ui->checkBoxRandom->isChecked()) {
         qstr += ui->lineEditGrid_dx->text();
-    } else {
-        qstr += "0";
-    }
+//    } else {
+//        qstr += "0";
+//    }
     qstr += " ";
     qstr += ui->lineEdit_ncpu->text();
-    qstr += " 0";
+    qstr += " ";
+    qstr += ui->lineEditFraction->text();
     qstr += " ";
 
     if (ui->checkBoxImage->isChecked()) {

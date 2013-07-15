@@ -37,8 +37,8 @@ int main(int argc, char**argv)
 	fp = fopen(errfile,"w");
 
 	if (argc != 3) {
-		printf("Usage: compress input_tiff output_tiff\n");
-		fprintf(fp,"Usage: compress input_tiff output_tiff\n");
+		printf("Usage: colour input_tiff output_tiff\n");
+		fprintf(fp,"Usage: colour input_tiff output_tiff\n");
 		fprintf(fp,"Submitted command line: argc: %d\n",argc);
 		for (int i=0; i<argc; i++) {
 			fprintf(fp,"argv: %d: %s\n",i,argv[i]);

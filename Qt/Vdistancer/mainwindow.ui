@@ -377,23 +377,10 @@
     <property name="title">
      <string/>
     </property>
-    <widget class="QCheckBox" name="checkBoxRandom">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>30</y>
-       <width>141</width>
-       <height>21</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>Random sampling points?</string>
-     </property>
-    </widget>
     <widget class="QLineEdit" name="lineEditGrid_dx">
      <property name="geometry">
       <rect>
-       <x>100</x>
+       <x>120</x>
        <y>10</y>
        <width>31</width>
        <height>20</height>
@@ -414,6 +401,32 @@
      </property>
      <property name="text">
       <string>Grid spacing (um)</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="lineEditFraction">
+     <property name="geometry">
+      <rect>
+       <x>120</x>
+       <y>30</y>
+       <width>31</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>0.1</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_fraction">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>30</y>
+       <width>101</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Grid number fraction</string>
      </property>
     </widget>
    </widget>
@@ -515,22 +528,6 @@
     <hint type="destinationlabel">
      <x>172</x>
      <y>84</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>checkBoxRandom</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>randomOption()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>158</x>
-     <y>253</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>205</x>
-     <y>166</y>
     </hint>
    </hints>
   </connection>
