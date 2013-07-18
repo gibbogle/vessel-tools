@@ -88,10 +88,10 @@ int main(int argc, char**argv)
 	for (x=0; x<width; x++) {
 		for (y=0; y<height; y++) {
 			for (z=0; z<depth; z++) {
-				if (V_1(x,y,z) == 0)
-					V_255(x,y,z) = 0;
-				else
+				if (V_1(x,y,z) == 1)
 					V_255(x,y,z) = 255;
+				else
+					V_255(x,y,z) = 0;
 			}
 		}
 	}

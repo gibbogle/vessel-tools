@@ -1,5 +1,7 @@
 ! To estimate the probability distribution of distance from tissue to the nearest blood vessel.
 ! Uses points within the convex hull of a random set of points (?)
+!
+! New method: use the marker file from peel2 to determine if a point is inside or outside
 
 module data_mod
 use par_zig_mod
@@ -33,16 +35,19 @@ type(edge_type), allocatable :: edge(:)
 integer, allocatable :: seglist(:,:,:,:)		! for each (ib,jb,kb), a list of segment numbers
 integer, allocatable :: nseglist(:,:,:)			! for each (ib,jb,kb), number of segments in the seglist
 byte, allocatable :: imagedata(:,:,:)
+byte, allocatable :: markerdata(:)
 
 real :: grid_dx, delp, pt_factor
-real :: rmin(3), rmax(3), rmid(3), del(3), delb(3), sphere_centre(3), sphere_radius, constant_r, threshold_d
-integer :: Nsegpts, N(3), NB(3), Nsegments, Mnodes, np_random, np_grid, nx, ny, nz
-character*(128) :: amfile, distfile, tempfile
-logical :: use_sphere, use_random, use_constant_radius, save_imagedata
+real :: rmin(3), rmax(3), rmid(3), del(3), delb(3), voxelsize(3)
+real :: sphere_centre(3), sphere_radius, constant_r, threshold_d
+integer :: Nsegpts, N(3), NB(3), Nsegments, Mnodes, np_random, np_grid
+integer :: nx, ny, nz, nx8, ny8, nz8, nmbytes, nxm, nym, nzm
+character*(128) :: amfile, distfile, datafile, markerfile
+logical :: use_sphere, use_random, use_constant_radius, save_imagedata, use_marker
 
 logical :: dbug
 
-integer, parameter :: nfam = 10, nfdist=11, nfout=12, nfdata=13
+integer, parameter :: nfam = 10, nfdist=11, nfout=12, nfdata=13, nfmarker=14
 real, parameter :: blocksize = 120
 integer, parameter :: seed(2) = (/12345, 67891/)
 integer, parameter :: MAX_NX = 900  ! a guess
@@ -54,7 +59,7 @@ contains
 !-----------------------------------------------------------------------------------------
 subroutine input(res)
 integer :: res
-integer :: nlen, cnt, i, status
+integer :: nlen, cnt, i, k, status
 character*(1024) :: c, progname
 
 call get_command (c, nlen, status)
@@ -74,23 +79,41 @@ progname = c(1:nlen)
 cnt = command_argument_count ()
 write (*,*) 'number of command arguments = ', cnt
 res = 0
-if (cnt == 7) then
+if (cnt == 10) then
 	use_sphere = .false.
+	use_marker = .false.
 elseif (cnt == 11) then
+	use_sphere = .false.
+	use_marker = .true.
+elseif (cnt == 14) then
 	use_sphere = .true.
+	use_marker = .false.
+elseif (cnt == 15) then
+	use_sphere = .true.
+	use_marker = .true.
 else
 	res = 3
-    write(*,*) 'Use either: ',trim(progname),' amfile distfile grid_dx ncpu pt_factor threshold image_file'
+    write(*,*) 'Use either: ',trim(progname), &
+    ' amfile distfile grid_dx ncpu pt_factor threshold datafile vx vy vz' ! 10
     write(*,*) ' to analyze the whole network'
-    write(*,*) 'or: ',trim(progname),' amfile distfile grid_dx ncpu pt_factor threshold image_file x0 y0 z0 R'
+    write(*,*) 'or: ',trim(progname), &
+    ' amfile distfile grid_dx ncpu pt_factor threshold datafile vx vy vz x0 y0 z0 R'  ! 14
     write(*,*) ' to analyze a spherical subregion with centre (x0,y0,z0), radius R'
+    write(*,*) 'or: ',trim(progname), &
+    ' amfile distfile grid_dx ncpu pt_factor threshold datafile vx vy vz marker_file' ! 11
+    write(*,*) ' to analyze the whole network using the marker file to determine insideness'
+    write(*,*) 'or: ',trim(progname), &
+    ' amfile distfile grid_dx ncpu pt_factor threshold datafile vx vy vz x0 y0 z0 R marker_file'  ! 15
+    write(*,*) ' datafile is the temporary file used to pass the distribution data to maketiff which does the conversion'
+    write(*,*) ' to analyze a spherical subregion with centre (x0,y0,z0), radius R, using the marker file'
     write(*,*) ' If grid_dx = 0 the sampling points and randomly placed'
-    write(*,*) ' If constant_radius != 0 all vessels are given this radius'
+!   write(*,*) ' If constant_radius != 0 all vessels are given this radius'
     write(*,*) ' If threshold != 0 the sampling points are used to generate the image_file data, voxel=255 if distance > threshold'
+    write(*,*) ' If the marker files is used, voxel dimensions (um) must be specified: vx, vy, vz'
     return
 endif
 
-do i = 1, cnt
+do i = 1, 10
     call get_command_argument (i, c, nlen, status)
     if (status .ne. 0) then
         write (*,*) 'get_command_argument failed: status = ', status, ' arg = ', i
@@ -113,17 +136,46 @@ do i = 1, cnt
     elseif (i == 6) then
         read(c(1:nlen),*) threshold_d																
     elseif (i == 7) then
-        read(c(1:nlen),*) tempfile																
+        read(c(1:nlen),*) datafile	! amfile distfile grid_dx ncpu pt_factor threshold datafile vx vy vz															
     elseif (i == 8) then
-        read(c(1:nlen),*) sphere_centre(1)																
+        read(c(1:nlen),*) voxelsize(1)																
     elseif (i == 9) then
-        read(c(1:nlen),*) sphere_centre(2)																
+        read(c(1:nlen),*) voxelsize(2)																
     elseif (i == 10) then
-        read(c(1:nlen),*) sphere_centre(3)																
-    elseif (i == 11) then
-        read(c(1:nlen),*) sphere_radius																
+        read(c(1:nlen),*) voxelsize(3)	
     endif
-end do
+enddo
+k = 10
+if (use_sphere) then
+    do i = k+1, k+4
+        call get_command_argument (i, c, nlen, status)
+        if (status .ne. 0) then
+            write (*,*) 'get_command_argument failed: status = ', status, ' arg = ', i
+            res = 1
+            return
+        end if														
+        if (i == k+1) then
+            read(c(1:nlen),*) sphere_centre(1)																
+        elseif (i == k+2) then
+            read(c(1:nlen),*) sphere_centre(2)																
+        elseif (i == k+3) then
+            read(c(1:nlen),*) sphere_centre(3)																
+        elseif (i == k+4) then
+            read(c(1:nlen),*) sphere_radius																
+        endif
+        k = k+4
+    enddo
+endif
+if (use_marker) then
+    i = k+1
+    call get_command_argument (i, c, nlen, status)
+    if (status .ne. 0) then
+        write (*,*) 'get_command_argument failed: status = ', status, ' arg = ', i
+        res = 1
+        return
+    end if
+    markerfile = c(1:nlen)
+endif										
 if (grid_dx == 0) then
     use_random = .true.
 else
@@ -220,6 +272,9 @@ if (save_imagedata) then
     ny = 0
     nz = 0
 endif
+if (use_marker) then
+    call read_markerdata
+endif
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -240,7 +295,7 @@ rmin = rmin - 1
 rmax = rmax + 1
 del = grid_dx
 N = (rmax - rmin)/del + 1
-rmax = rmin + N*del
+rmax = rmin + (N-1)*del
 write(*,*) 'del: ',del
 write(*,*) 'Dimensions of array in(:,:,:): ',N
 write(nfdist,*) 'Dimensions of array in(:,:,:): ',N
@@ -262,71 +317,132 @@ if (use_sphere) then
 				xyz(3) = rmin(3) + (iz-1)*del(3)
 				v = xyz - sphere_centre
 				if (dot_product(v,v) < sphere_radius*sphere_radius) then
-					in(ix,iy,iz) = .true.
-                    np_grid = np_grid + 1
+				    if (use_marker) then
+				        in(ix,iy,iz) = in_marker(xyz)
+				    else
+    					in(ix,iy,iz) = .true.
+                    endif
+                    if (in(ix,iy,iz)) np_grid = np_grid + 1
 				endif
 			enddo
 		enddo
 	enddo
 else
-    Ngridpts = pt_factor*N(1)*N(2)*N(3)
-    write(*,*) 'Generating interior grid points: ',Ngridpts
-    write(nfdist,*) 'Generating interior grid points: ',Ngridpts
-	do i = 1, Ngridpts/10      ! 10000000
-!	do i = 1, 10000000
-		j = 1
-		! generate three random points from the list of vertices
-		! this creates a triangle that is (almost certainly) completely within the tissue region
-		! Improve this by requiring that the second two points are in blocks near the first point
-		
-		if (localize) then
-		    call get_triangle(tri)
-		else
-		    do
-			    ip(j) = random_int(1,Nsegpts,kpar)
-			    if (j > 1) then 
-				    if (ip(j) == ip(1)) cycle
-				    if (j == 3 .and. ip(j) == ip(2)) cycle
-			    endif
-			    j = j+1
-			    if (j == 4) exit
+    if (use_marker) then
+	    do ix = 1,N(1)
+		    xyz(1) = rmin(1) + (ix-1)*del(1)
+		    do iy = 1,N(2)
+			    xyz(2) = rmin(2) + (iy-1)*del(2)
+			    do iz = 1,N(3)
+				    xyz(3) = rmin(3) + (iz-1)*del(3)
+                    in(ix,iy,iz) = in_marker(xyz)
+                    if (in(ix,iy,iz)) np_grid = np_grid + 1
+                enddo
+            enddo
+        enddo
+    else
+        Ngridpts = pt_factor*N(1)*N(2)*N(3)
+        write(*,*) 'Generating random interior grid points: ',Ngridpts
+        write(nfdist,*) 'Generating random interior grid points: ',Ngridpts
+	    do i = 1, Ngridpts/10      ! 10000000
+    !	do i = 1, 10000000
+		    j = 1
+		    ! generate three random points from the list of vertices
+		    ! this creates a triangle that is (almost certainly) completely within the tissue region
+		    ! Improve this by requiring that the second two points are in blocks near the first point
+    		
+		    if (localize) then
+		        call get_triangle(tri)
+		    else
+		        do
+			        ip(j) = random_int(1,Nsegpts,kpar)
+			        if (j > 1) then 
+				        if (ip(j) == ip(1)) cycle
+				        if (j == 3 .and. ip(j) == ip(2)) cycle
+			        endif
+			        j = j+1
+			        if (j == 4) exit
+		        enddo
+		        do j = 1,3
+		            tri(j,:) = point(ip(j),:)
+		        enddo
+		    endif
+    		
+		    do k = 1,10
+			    xyz = 0
+			    rsum = 0
+			    do j = 1,3
+				    R(j) = par_uni(kpar)
+				    rsum = rsum + R(j)
+    !				xyz = xyz + R(j)*point(ip(j),:)
+				    xyz = xyz + R(j)*tri(j,:)
+			    enddo
+			    xyz = xyz/rsum
+			    ! xyz is a random point inside the triangle
+			    do j = 1,3
+				    indx(j) = (xyz(j)-rmin(j))/del(j) + 1
+				    if (indx(j) > N(j)) then
+					    write(*,*) 'indx out of range:'
+					    write(*,*) 'point: ',tri(j,:)
+					    write(*,*) 'R: ',R/rsum
+					    write(*,*) 'xyz: ',xyz
+					    res = 5
+					    return
+				    endif
+			    enddo
+			    ! indx(:) gives the location of the nearest point on the grid to xyz
+			    if (.not.in(indx(1),indx(2),indx(3))) np_grid = np_grid + 1
+			    in(indx(1),indx(2),indx(3)) = .true.
 		    enddo
-		    do j = 1,3
-		        tri(j,:) = point(ip(j),:)
-		    enddo
-		endif
-		
-		do k = 1,10
-			xyz = 0
-			rsum = 0
-			do j = 1,3
-				R(j) = par_uni(kpar)
-				rsum = rsum + R(j)
-!				xyz = xyz + R(j)*point(ip(j),:)
-				xyz = xyz + R(j)*tri(j,:)
-			enddo
-			xyz = xyz/rsum
-			! xyz is a random point inside the triangle
-			do j = 1,3
-				indx(j) = (xyz(j)-rmin(j))/del(j) + 1
-				if (indx(j) > N(j)) then
-					write(*,*) 'indx out of range:'
-					write(*,*) 'point: ',tri(j,:)
-					write(*,*) 'R: ',R/rsum
-					write(*,*) 'xyz: ',xyz
-					res = 5
-					return
-				endif
-			enddo
-			! indx(:) gives the location of the nearest point on the grid to xyz
-			if (.not.in(indx(1),indx(2),indx(3))) np_grid = np_grid + 1
-			in(indx(1),indx(2),indx(3)) = .true.
-		enddo
-	enddo
+	    enddo
+	endif
 endif
 write(*,*) 'np_grid: ',np_grid
 write(nfdist,*) 'np_grid: ',np_grid
 end subroutine
+
+!-----------------------------------------------------------------------------------------
+! Test if the point xyz(:) corresponds to a lit voxel in markerdata(:,:,:)
+! Now using compressed marker data, with each bit corresponding to a voxel
+!-----------------------------------------------------------------------------------------
+logical function in_marker(xyz)
+real :: xyz(3)
+integer :: p(3), kbyte, kbit, nb
+byte :: mbyte
+
+p = xyz/voxelsize + 1
+if (p(1) > nxm .or. p(2) > nym .or. p(3) > nzm) then
+    in_marker = .false.
+!    write(*,*) 'in_marker: p out of range: ',p,xyz
+    return
+endif
+! Need to convert to the byte and bit
+nb = p(1) + (p(2)-1)*nx8 + (p(3)-1)*nx8*ny8
+if (mod(nb,8) == 0) then
+    kbyte = nb/8
+    kbit = 0
+else
+    kbyte = nb/8 + 1
+    kbit = nb  - 8*(kbyte-1)
+endif
+if (kbyte > nmbytes) then
+    write(*,'(a,6i12)') 'Error: kbyte > nmbytes: ',p,nb,kbyte,nmbytes
+    write(*,'(a,3f8.1)') 'xyz: ',xyz
+    stop
+endif
+mbyte = markerdata(kbyte)
+if (btest(mbyte,kbit)) then
+    in_marker = .true.
+else
+    in_marker = .false.
+endif
+    
+!if (markerdata(p(1),p(2),p(3)) == 0) then
+!    in_marker = .false.
+!else
+!    in_marker = .true.
+!endif
+end function
 
 !-----------------------------------------------------------------------------------------
 ! After selecting the first point randomly from the list, the next two are chosen from
@@ -367,10 +483,10 @@ end subroutine
 subroutine create_random_pts(res)
 integer :: res
 integer :: kpar = 0
-integer :: ntr, i, j, ip(3), k, kp, Nspherepts, nodpts
+integer :: ntr, i, j, ip(3), k, kp, Nspherepts, nodpts, ix, iy, iz
 real :: xyz(3), rsum, R(3), p(3), r2, sphr2, tri(3,3)
 real, allocatable :: sphere_point(:,:)
-logical :: localize = .true.
+logical :: hit, localize = .true.
 
 if (use_sphere) then        ! Need to create a point list for the sphere
     sphr2 = sphere_radius*sphere_radius
@@ -379,7 +495,9 @@ if (use_sphere) then        ! Need to create a point list for the sphere
         p = point(i,:)
         R = p - sphere_centre
         r2 = R(1)*R(1) + R(2)*R(2) + R(3)*R(3)
-        if (r2 < sphr2) Nspherepts = Nspherepts + 1
+        if (r2 < sphr2) then
+            Nspherepts = Nspherepts + 1
+        endif
     enddo
     allocate(sphere_point(Nspherepts,3))
     k = 0
@@ -401,45 +519,69 @@ endif
 ntr = 4
 allocate(random_pt(np_random,3))
 
-kp = 0
-do i = 1,np_random/ntr
-	j = 1
-	! generate three random points from the list of vertices
-	! this creates a triangle that is (almost certainly) completely within the tissue region
-	
-	if (localize .and. .not.use_sphere) then
-	    call get_triangle(tri)
-	else
-	    do
-		    ip(j) = random_int(1,nodpts,kpar)
-		    if (j > 1) then 
-			    if (ip(j) == ip(1)) cycle
-			    if (j == 3 .and. ip(j) == ip(2)) cycle
-		    endif
-		    j = j+1
-		    if (j == 4) exit
-	    enddo
-	endif
-	do k = 1,ntr
-		xyz = 0
-		rsum = 0
-		do j = 1,3
-			R(j) = par_uni(kpar)
-			rsum = rsum + R(j)
-			if (use_sphere) then
-    			xyz = xyz + R(j)*sphere_point(ip(j),:)
-			elseif (localize) then
-    			xyz = xyz + R(j)*tri(j,:)
-			else
-    			xyz = xyz + R(j)*point(ip(j),:)
-            endif
-		enddo
-		xyz = xyz/rsum
-		! xyz is a random point inside the triangle
-		kp = kp+1
-		random_pt(kp,:) = xyz
+hit = .false.
+if (use_marker) then
+    hit = in_marker(p)
+else
+    hit = .true.
+endif
+
+if (use_marker) then
+    kp = 0
+    do
+        ix = random_int(1,N(1),kpar)
+        iy = random_int(1,N(2),kpar)
+        iz = random_int(1,N(3),kpar)
+	    xyz(1) = rmin(1) + (ix-1)*del(1)
+        xyz(2) = rmin(2) + (iy-1)*del(2)
+	    xyz(3) = rmin(3) + (iz-1)*del(3)
+	    if (in_marker(xyz)) then
+	        kp = kp+1
+	        random_pt(kp,:) = xyz
+	    endif
+	    if (kp == np_random) exit
 	enddo
-enddo
+else
+    kp = 0
+    do i = 1,np_random/ntr
+	    j = 1
+	    ! generate three random points from the list of vertices
+	    ! this creates a triangle that is (almost certainly) completely within the tissue region
+    	
+	    if (localize .and. .not.use_sphere) then
+	        call get_triangle(tri)
+	    else
+	        do
+		        ip(j) = random_int(1,nodpts,kpar)
+		        if (j > 1) then 
+			        if (ip(j) == ip(1)) cycle
+			        if (j == 3 .and. ip(j) == ip(2)) cycle
+		        endif
+		        j = j+1
+		        if (j == 4) exit
+	        enddo
+	    endif
+	    do k = 1,ntr
+		    xyz = 0
+		    rsum = 0
+		    do j = 1,3
+			    R(j) = par_uni(kpar)
+			    rsum = rsum + R(j)
+			    if (use_sphere) then
+    			    xyz = xyz + R(j)*sphere_point(ip(j),:)
+			    elseif (localize) then
+    			    xyz = xyz + R(j)*tri(j,:)
+			    else
+    			    xyz = xyz + R(j)*point(ip(j),:)
+                endif
+		    enddo
+		    xyz = xyz/rsum
+		    ! xyz is a random point inside the triangle
+		    kp = kp+1
+		    random_pt(kp,:) = xyz
+	    enddo
+    enddo
+endif
 res = 0
 end subroutine
 
@@ -942,10 +1084,55 @@ integer :: ix, iy, iz
 nx = nx + 20
 ny = ny + 20
 nz = nz + 20
-open(nfdata, file=tempfile, status='replace', form = 'unformatted', access = 'stream')
+open(nfdata, file=datafile, status='replace', form = 'unformatted', access = 'stream')
 write(nfdata) nx,ny,nz,(((imagedata(ix,iy,iz),ix=1,nx),iy=1,ny),iz=1,nz)
 close(nfdata)
 
+end subroutine
+
+!----------------------------------------------------------------------------------------- 
+!----------------------------------------------------------------------------------------- 
+subroutine read_markerdata
+integer :: ix, iy, iz, kbit, kbyte, k
+byte :: readbyte, arraybyte
+
+open(nfmarker, file=markerfile, status='old', form = 'unformatted', access = 'stream')
+read(nfmarker) nxm,nym,nzm,nx8,ny8,nz8,nmbytes
+write(*,*) 'markerdata dimensions: ',nxm,nym,nzm,nx8,ny8,nz8,nmbytes
+if (nmbytes /= nx8*ny8*nz8/8) then
+    write(*,*) 'Error: this is not a compressed marker data file'
+    stop
+endif
+!allocate(markerdata(nxm,nym,nzm))
+allocate(markerdata(nmbytes))
+!read(nfmarker) (((markerdata(ix,iy,iz),ix=1,nxm),iy=1,nym),iz=1,nzm)
+read(nfmarker) markerdata
+!write(*,'(20i4)') markerdata(1:1000)
+!kbit = 0
+!kbyte = 0
+!arraybyte = 0
+!do iz = 1,nzm
+!    write(*,*) iz
+!    do iy = 1,nym
+!        do ix = 1,nxm
+!            read(nfmarker) readbyte
+!            kbit = kbit + 1
+!            ! set bit kbit in arraybyte if readbyte != 0
+!            if (kbit == 8) then
+!                kbyte = kbyte + 1
+!                markerdata(kbyte) = arraybyte
+!                kbit = 0
+!                arraybyte = 0
+!            endif
+!        enddo
+!    enddo
+!enddo
+close(nfmarker)
+k = 0
+do kbyte = 1,nmbytes
+    if (markerdata(kbyte) /= 0) k = k + 1
+enddo
+write(*,*) 'markerdata lit voxels: ',k
 end subroutine
 
 !----------------------------------------------------------------------------------------- 

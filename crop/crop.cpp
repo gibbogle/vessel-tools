@@ -41,7 +41,7 @@ int main(int argc, char**argv)
 	bool use_compression;
 
 	if (argc != 10) {
-		printf("Usage: chop input_tiff output_tiff x1 x2 y1 y2 z1 z2 comp\n");
+		printf("Usage: crop input_tiff output_tiff x1 x2 y1 y2 z1 z2 comp\n");
 		printf("       where the ranges (x1,x2), (y1,y2), (z1,z2) define the selected region (0-based)\n");
 		printf("       (any value < 0 implies use full range for this axis)\n");
 		printf("       comp = 'C' to compress image, 'U' otherwise\n");
