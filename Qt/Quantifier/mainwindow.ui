@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Compressing tiff file</string>
+   <string>Quantify histology</string>
   </property>
   <widget class="QWidget" name="centralWidget">
    <widget class="QPushButton" name="pushButtonAmFile">
@@ -72,7 +72,7 @@
       <x>560</x>
       <y>10</y>
       <width>371</width>
-      <height>221</height>
+      <height>331</height>
      </rect>
     </property>
    </widget>
@@ -100,22 +100,6 @@
     </property>
     <property name="text">
      <string/>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="lineEdit_volume">
-    <property name="geometry">
-     <rect>
-      <x>180</x>
-      <y>250</y>
-      <width>51</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string/>
-    </property>
-    <property name="readOnly">
-     <bool>true</bool>
     </property>
    </widget>
    <widget class="QPushButton" name="pushButtonResultFile">
@@ -166,7 +150,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>456</string>
+      <string/>
      </property>
     </widget>
     <widget class="QLabel" name="label_slice">
@@ -384,29 +368,13 @@
      </property>
     </widget>
    </widget>
-   <widget class="QPushButton" name="pushButton_volume">
-    <property name="enabled">
-     <bool>true</bool>
-    </property>
-    <property name="geometry">
-     <rect>
-      <x>160</x>
-      <y>220</y>
-      <width>91</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Compute volume</string>
-    </property>
-   </widget>
    <widget class="QGroupBox" name="groupBox_voxel">
     <property name="geometry">
      <rect>
-      <x>130</x>
+      <x>90</x>
       <y>100</y>
-      <width>131</width>
-      <height>111</height>
+      <width>171</width>
+      <height>141</height>
      </rect>
     </property>
     <property name="title">
@@ -456,12 +424,12 @@
       <rect>
        <x>30</x>
        <y>10</y>
-       <width>91</width>
+       <width>121</width>
        <height>16</height>
       </rect>
      </property>
      <property name="text">
-      <string>Voxel            Image</string>
+      <string>Voxel              Image Size</string>
      </property>
     </widget>
     <widget class="QLabel" name="label_z">
@@ -508,12 +476,12 @@
       <rect>
        <x>20</x>
        <y>20</y>
-       <width>101</width>
+       <width>141</width>
        <height>16</height>
       </rect>
      </property>
      <property name="text">
-      <string>Size (um)          Size</string>
+      <string>Size (um)        (voxels)   (um)</string>
      </property>
     </widget>
     <widget class="QLineEdit" name="lineEdit_nx">
@@ -555,19 +523,87 @@
       <bool>true</bool>
      </property>
     </widget>
-   </widget>
-   <widget class="QLabel" name="label_unitsmm3">
-    <property name="geometry">
-     <rect>
-      <x>190</x>
-      <y>270</y>
-      <width>31</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>mm3</string>
-    </property>
+    <widget class="QLineEdit" name="lineEdit_umx">
+     <property name="geometry">
+      <rect>
+       <x>130</x>
+       <y>40</y>
+       <width>31</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="readOnly">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="lineEdit_umy">
+     <property name="geometry">
+      <rect>
+       <x>130</x>
+       <y>60</y>
+       <width>31</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="readOnly">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="lineEdit_umz">
+     <property name="geometry">
+      <rect>
+       <x>130</x>
+       <y>80</y>
+       <width>31</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="readOnly">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="lineEdit_volume">
+     <property name="geometry">
+      <rect>
+       <x>60</x>
+       <y>110</y>
+       <width>51</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="readOnly">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_unitsmm3">
+     <property name="geometry">
+      <rect>
+       <x>120</x>
+       <y>110</y>
+       <width>31</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>mm3</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_volume">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>110</y>
+       <width>41</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Volume</string>
+     </property>
+    </widget>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
@@ -638,22 +674,6 @@
     <hint type="destinationlabel">
      <x>183</x>
      <y>91</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>pushButton_volume</sender>
-   <signal>clicked()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>computeVolume()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>188</x>
-     <y>264</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>69</x>
-     <y>185</y>
     </hint>
    </hints>
   </connection>

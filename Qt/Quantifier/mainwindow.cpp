@@ -40,7 +40,7 @@ MainWindow::MainWindow(QWidget *parent) :
     is_resultfile = false;
     ui->pushButton_area->setEnabled(false);
     ui->pushButton_vessels->setEnabled(false);
-    ui->pushButton_volume->setEnabled(false);
+//    ui->pushButton_volume->setEnabled(false);
     checkReady();
     reset();
 }
@@ -85,9 +85,8 @@ void MainWindow::resultFileSelecter()
 
 void MainWindow::voxelChanged()
 {
-    checkReady();
     reset();
-
+    checkReady();
 }
 
 void MainWindow::checkReady()
@@ -104,12 +103,11 @@ void MainWindow::checkReady()
         is_ready = true;
         ui->pushButton_area->setEnabled(true);
         ui->pushButton_vessels->setEnabled(true);
-        ui->pushButton_volume->setEnabled(true);
+        doSetup();
     } else {
         is_ready = false;
         ui->pushButton_area->setEnabled(false);
         ui->pushButton_vessels->setEnabled(false);
-        ui->pushButton_volume->setEnabled(false);
     }
 }
 
@@ -154,11 +152,15 @@ void MainWindow::computeArea()
     if (ui->radioButton_microns->isChecked())
         islice = (int)(islice/voxelsize[axis]);
     err = checkSlice(axis,islice);
-    if (err !=0) return;
-    err = getArea(axis,islice,&area);
+    if (err == 0)
+        err = getArea(axis,islice,&area);
+    else
+        area = 0;
     area = 1.0e-6*area;   // convert um2 -> mm2
     areastr = QString::number(area,'f',3);
     ui->lineEdit_area->setText(areastr);
+    ui->lineEdit_count->setText("");
+    ui->lineEdit_density->setText("");
 }
 
 void MainWindow::computeVessels()
@@ -184,21 +186,28 @@ void MainWindow::computeVessels()
     if (ui->radioButton_microns->isChecked())
         islice = (int)(islice/voxelsize[axis]);
     err = checkSlice(axis,islice);
-    if (err !=0) return;
-    err = histology(axis,islice,&count,&area);
+    if (err == 0) {
+        err = histology(axis,islice,&count,&area);
+    } else {
+        area = 0;
+        count = 0;
+    }
     area = 1.0e-6*area;   // convert um2 -> mm2
     areastr = QString::number(area,'f',3);
     ui->lineEdit_area->setText(areastr);
     countstr = QString::number(count);
     ui->lineEdit_count->setText(countstr);
-    density = (int)(count/area + 0.5);
+    if (area > 0)
+        density = (int)(count/area + 0.5);
+    else
+        density = 0;
     densitystr = QString::number(density);
     ui->lineEdit_density->setText(densitystr);
 }
 
 int MainWindow::checkSlice(int axis, int islice)
 {
-    if (islice > nvoxels[axis]) {
+    if (islice < 1 || islice > nvoxels[axis]) {
         // need a message to the user
         return 1;
     } else {
@@ -209,6 +218,7 @@ int MainWindow::checkSlice(int axis, int islice)
 void MainWindow::doSetup()
 {
     int err;
+    int um;
     QString numstr, resultstr;
     char input_amfile[1024], close_file[1024], result_file[1024];
 
@@ -225,7 +235,16 @@ void MainWindow::doSetup()
     ui->lineEdit_ny->setText(numstr);
     numstr = QString::number(nvoxels[2]);
     ui->lineEdit_nz->setText(numstr);
-
+    um = (int)(nvoxels[0]*voxelsize[0] + 0.5);
+    numstr = QString::number(um);
+    ui->lineEdit_umx->setText(numstr);
+    um = (int)(nvoxels[1]*voxelsize[1] + 0.5);
+    numstr = QString::number(um);
+    ui->lineEdit_umy->setText(numstr);
+    um = (int)(nvoxels[2]*voxelsize[2] + 0.5);
+    numstr = QString::number(um);
+    ui->lineEdit_umz->setText(numstr);
+    computeVolume();
     //	res = system(cmdstr);
 //	if (res == 0)
 //		resultstr = "SUCCESS";
