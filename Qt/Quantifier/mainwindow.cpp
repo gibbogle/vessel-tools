@@ -40,7 +40,6 @@ MainWindow::MainWindow(QWidget *parent) :
     is_resultfile = false;
     ui->pushButton_area->setEnabled(false);
     ui->pushButton_vessels->setEnabled(false);
-//    ui->pushButton_volume->setEnabled(false);
     checkReady();
     reset();
 }

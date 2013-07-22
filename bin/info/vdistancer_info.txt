@@ -10,11 +10,6 @@ Grid spacing (grid_dx).  This is the spacing of the regular 3D grid of points wh
 Note that a value that is too small will cause the program to exceed available memory and fail. 
 For the whole network a value in the range 3 - 5 um is usually appropriate.  For a subregion a smaller value can be used.
 
-Grid number fraction (pt_fraction).  This sets the fraction of the total grid from which interior points will be randomly selected.
-The size of the grid is determined by grid_dx.  Note that some fraction of these grid points will lie outside the tissue.
-Choosing a large value of pt_fraction will result in a long execution time, but more dense points.
-Very dense points are not needed for computing the vessel distance distribution (this is readily checked by comparing the distributions generated with different values of pt_fraction) but the hypoxic region image is improved by higher density of points.
- 
 If the sphere subregion option is selected:
 
 (x0,y0,z0) is the centre of the sphere with the specified radius.  In this case all grid points within the sphere are used.

@@ -45,6 +45,16 @@ void MainWindow::inFileSelecter()
     ui->labelResultImage->setText("");
 }
 
+void MainWindow::closeFileSelecter()
+{
+    ui->labelCloseFile->setText("");
+    closefileName = QFileDialog::getOpenFileName(this,
+                tr("Close file"), ".", tr("Bin Files (*.bin)"));
+    ui->labelCloseFile->setText(closefileName);
+    ui->labelResult->setText("");
+    ui->labelResultImage->setText("");
+}
+
 void MainWindow::outFileSelecter()
 {
     ui->labelOutFile->setText("");
@@ -110,23 +120,20 @@ void MainWindow::distancer()
 {
 	int res;
 	QString qstr, resultstr;
-	char cmdstr[256];
+    char cmdstr[2048];
     QString tempfileName = "imagedata.bin";
 
-    qstr = QCoreApplication::applicationDirPath() + "/exec/vdistance ";
+    qstr = QCoreApplication::applicationDirPath() + "/exec/vdistancef ";
 	qstr += infileName;
 	qstr += " ";
     qstr += outfileName;
     qstr += " ";
-//    if (!ui->checkBoxRandom->isChecked()) {
-        qstr += ui->lineEditGrid_dx->text();
-//    } else {
-//        qstr += "0";
-//    }
+    qstr += ui->lineEditGrid_dx->text();
     qstr += " ";
     qstr += ui->lineEdit_ncpu->text();
     qstr += " ";
-    qstr += ui->lineEditFraction->text();
+//    qstr += ui->lineEditFraction->text();
+    qstr += "0";    // always use the close file, no need for random grid points
     qstr += " ";
 
     if (ui->checkBoxImage->isChecked()) {
@@ -136,6 +143,12 @@ void MainWindow::distancer()
     } else {
         qstr += "0 dummy";
     }
+    qstr += " ";
+    qstr += ui->lineEditVx->text();
+    qstr += " ";
+    qstr += ui->lineEditVy->text();
+    qstr += " ";
+    qstr += ui->lineEditVz->text();
 
     if (ui->checkBoxSphere->isChecked()) {
         qstr += " ";
@@ -147,6 +160,9 @@ void MainWindow::distancer()
         qstr += " ";
         qstr += ui->lineEditRadius->text();
     }
+    // always use close file
+    qstr += " ";
+    qstr += closefileName;
 
     if (qstr.size()>(int)sizeof(cmdstr)-1) {
 		printf("Failed to convert qstr->cmdstr since qstr didn't fit\n");

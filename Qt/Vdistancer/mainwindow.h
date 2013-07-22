@@ -17,6 +17,7 @@ public:
 
 public slots:
 	void inFileSelecter();
+    void closeFileSelecter();
     void outFileSelecter();
     void tiffFileSelecter();
     void distancer();
@@ -29,6 +30,7 @@ private:
 
 public:
 	QString infileName;
+    QString closefileName;
     QString outfileName;
     QString tifffileName;
 
