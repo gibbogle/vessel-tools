@@ -1,0 +1,12 @@
+Am_cutter information
+
+This program enables a network (SpatialGraph) to be cut into 2, 4 or 8 blocks.
+Cuts are made at the specified locations on the X, Y and Z axes.
+If a cut value of 0 is specified, no cut is made on that axis.
+
+The cut values are in terms of the units of the .am file, i.e. um.
+
+All vessel segments with a vertex that falls within the block are selected for that block (note that this implies that a vessel may be put in two blocks).
+The resulting networks (which are not necessarily connected) are saved to .am files, with names prefixed by the specified base name.
+E.g. if the base name is BLK, the files are BLK_x1_y1_z1.am, BLK_x2_y1_z1.am, BLK_x1_y2_z1.am ...
+

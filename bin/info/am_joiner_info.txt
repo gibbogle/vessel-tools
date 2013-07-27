@@ -1,0 +1,7 @@
+Am_joiner information
+
+This program reassembles a network from 2, 4 or 8 pieces (these were created by am_cutter, and possibly modified by the removal of vessels.)
+The user must specify the block base name that was used when the pieces were created by am_cutter.  This is the file prefix shared by the blocks.
+In addition, the user must specify which axes were cut, i.e. which cut values were non-zero when am_cutter was executed.
+
+

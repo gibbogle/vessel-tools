@@ -1,0 +1,4 @@
+am_smoother information
+
+The network is simplified somewhat by reducing the number of points along an edge.
+The criterion is that points are skipped if the length of the segment from the previous accepted point is less than the vessel diameter.

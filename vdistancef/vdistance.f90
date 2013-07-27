@@ -136,7 +136,7 @@ do i = 1, 10
     elseif (i == 6) then
         read(c(1:nlen),*) threshold_d																
     elseif (i == 7) then
-        read(c(1:nlen),*) datafile	! amfile distfile grid_dx ncpu pt_factor threshold datafile vx vy vz															
+        read(c(1:nlen),*) datafile															
     elseif (i == 8) then
         read(c(1:nlen),*) voxelsize(1)																
     elseif (i == 9) then
