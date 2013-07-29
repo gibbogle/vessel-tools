@@ -9,6 +9,7 @@
 //#include <string>
 //#include <sstream>
 
+#include "MainWindow.h"
 #include "quantify.h"
 
 /*
@@ -43,7 +44,7 @@ bool is_setup = false;
 //-----------------------------------------------------------------------------------------------------
 // Read Amira SpatialGraph file
 //-----------------------------------------------------------------------------------------------------
-int ReadAmiraFile(char *amFile, NETWORK *net)
+int MainWindow::ReadAmiraFile(char *amFile, NETWORK *net)
 {
 	int i, j, k, kp, npts;
 	int np_used, ne_used;
@@ -233,11 +234,11 @@ int ReadAmiraFile(char *amFile, NETWORK *net)
 
 //--------------------------------------------------------------------
 //--------------------------------------------------------------------
-int ReadCloseFile(char *filename)
+int MainWindow::ReadCloseFile(char *filename)
 {
 	FILE *fpdata;
 
-	printf("Reading close data file: %s\n",filename);
+    fprintf(fpout,"Reading close data file: %s\n",filename);
 	fpdata = fopen(filename,"rb");
 	if (fpdata == NULL) {
 		printf("fopen failed\n");
@@ -267,10 +268,15 @@ int ReadCloseFile(char *filename)
 }
 
 //-----------------------------------------------------------------------------------------
-// Test if the point xyz(:) corresponds to a lit voxel in closedata(:,:,:)
+// Test if the point p[] corresponds to a lit voxel in closedata(:,:,:)
 // Now using compressed close data, with each bit corresponding to a voxel
-// Need to check indexing (now 0-based)
-// This need to be tested by comparison with vdistance.f90
+// Need to check indexing.  Note that p[] uses 1-based indexing.
+// Consider a test case with nxc = nyc = nzc = 64
+// In this case nx8 = ny8 = 64
+// p[] = (1,1,1) should give kbyte=0, kbit=0
+//   nb = 0
+//   kbyte = 0
+//   kbit = 0
 //-----------------------------------------------------------------------------------------
 bool in_close(int p[3]) 
 {
@@ -280,40 +286,27 @@ bool in_close(int p[3])
 	typedef std::bitset<sizeof(unsigned char)> ByteBits;
 
 	// Need to convert to the byte and bit
-	nb = p[0] + (p[1]-1)*nx8 + (p[2]-1)*nx8*ny8;
-//	nb--;	// for 0-based indexing
-	if (nb%8 == 0) {
-		kbyte = nb/8;
-		kbit = 0;
-	} else {
-		kbyte = nb/8 + 1;
-		kbit = nb  - 8*(kbyte-1);
-	}
-	if (kbyte > nbytes) {
-		printf("Error: kbyte > nbytes: %d %d %d  %d %d %d\n",p[0],p[1],p[2],nb,kbyte,nbytes);
-		exit(1);
-	}
-	kbyte--;	// for 0-based indexing
-	if (kbyte >= nbytes) {
-		printf("kbyte >= nbytes: %d %d\n",kbyte, nbytes);
+    nb = p[0]-1 + (p[1]-1)*nx8 + (p[2]-1)*nx8*ny8;    // nb = 0,1,2,3,4,5,6,7,   8,9,10,11,12,13,14,15,
+                                                      // kbit 0,1,2,3,4,5,6,7    0,1, 2, 3, 4, 5, 6, 7
+                                                      //      kbyte = 0          kbyte = 1
+    kbyte = nb/8;
+    kbit = nb  - 8*kbyte;
+    if (kbyte > nbytes-1) {
+        printf("Error: kbyte > nbytes-1: %d %d %d  %d %d %d\n",p[0],p[1],p[2],nb,kbyte,nbytes-1);
 		exit(1);
 	}
 	mbyte = closedata[kbyte];
-	//if (btest(mbyte,kbit))	// need equiv of btest()
-	//	return true;
-	//else
-	//	return false;
 //	printf("p, kbyte, mbyte, kbit: %d %d %d  %d  %d  %d\n",p[0], p[1], p[2], kbyte, mbyte, kbit);
 //	in = ByteBits(mbyte).test(kbit);
 	in = ((1 << kbit) & mbyte);
-//	printf("in: %d\n",in);
 	return (in != 0);
 }
     
 
 //--------------------------------------------------------------------
+// This uses 1-based indexing!
 //--------------------------------------------------------------------
-int getArea(int axis, int islice, float *area)
+int MainWindow::getArea(int axis, int islice, float *area)
 {
 	int ix, iy, iz, p[3];
 	double darea, total;
@@ -323,7 +316,7 @@ int getArea(int axis, int islice, float *area)
 		darea = voxelsize[1]*voxelsize[2];
 		for (iy=1; iy<=nyc; iy++) {	// this is taken care of in in_close() anyway
 			for (iz=1; iz<=nzc; iz++) {
-				p[0] = islice;
+                p[0] = islice;
 				p[1] = iy;
 				p[2] = iz;
 				if (in_close(p)) {
@@ -337,7 +330,7 @@ int getArea(int axis, int islice, float *area)
 		for (ix=1; ix<=nxc; ix++) {	// this is taken care of in in_close() anyway
 			for (iz=1; iz<=nzc; iz++) {
 				p[0] = ix;
-				p[1] = islice;
+                p[1] = islice;
 				p[2] = iz;
 				if (in_close(p)) {
 					total += darea;
@@ -351,7 +344,7 @@ int getArea(int axis, int islice, float *area)
 			for (iy=1; iy<=nyc; iy++) {
 				p[0] = ix;
 				p[1] = iy;
-				p[2] = islice;
+                p[2] = islice;
 				if (in_close(p)) {
 					total += darea;
 				}
@@ -363,8 +356,9 @@ int getArea(int axis, int islice, float *area)
 }
 
 //--------------------------------------------------------------------
+// This uses 1-based indexing!
 //--------------------------------------------------------------------
-int getVolume(float *volume)
+int MainWindow::getVolume(float *volume)
 {
 	int ix, iy, iz, p[3];
 	double total, dvol;
@@ -390,7 +384,7 @@ int getVolume(float *volume)
 
 //--------------------------------------------------------------------
 //--------------------------------------------------------------------
-int histology(int axis, int islice, int *np, float *area)
+int MainWindow::histology(int axis, int islice, int *np, float *area)
 {
 	int iseg, cnt;
 	float d;
@@ -427,7 +421,50 @@ int histology(int axis, int islice, int *np, float *area)
 
 //--------------------------------------------------------------------
 //--------------------------------------------------------------------
-int getCloseSize(int nvoxels[])
+int MainWindow::average_histology(int *np, float *area)
+{
+    int islice, iseg, cnt, axis;
+    float d, darea, totarea;
+    POINT pos1, pos2;
+
+    cnt = 0;
+    totarea = 0;
+    for (axis=0; axis<3; axis++) {
+        fprintf(fpout,"axis: %d\n",axis);
+        fflush(fpout);
+        for (islice=range[axis][0]; islice <=range[axis][1]; islice++) {
+            d = islice*voxelsize[axis];
+//            fprintf(fpout,"islice: %d  d: %f\n",islice,d);
+//            fflush(fpout);
+            for (iseg=0; iseg<nsegments;iseg++) {
+                pos1 = segment[iseg].end1;
+                pos2 = segment[iseg].end2;
+                if (axis == 0 && ((pos1.x <= d  && d <= pos2.x) || (pos2.x <= d && d <= pos1.x))) {
+                    cnt++;
+                }
+                if (axis == 1 && ((pos1.y <= d  && d <= pos2.y) || (pos2.y <= d && d <= pos1.y))) {
+                    cnt++;
+                }
+                if (axis == 2 && ((pos1.z <= d  && d <= pos2.z) || (pos2.z <= d && d <= pos1.z))) {
+                    cnt++;
+                }
+            }
+            getArea(axis,islice,&darea);
+            totarea += darea;
+//            fprintf(fpout,"%d %d  %6.1f\n",axis,islice,darea);
+//            fflush(fpout);
+        }
+    }
+    fprintf(fpout,"cnt: %d  totarea: %f\n",cnt,totarea);
+    fflush(fpout);
+    *np = cnt;
+    *area = totarea;
+    return 0;
+}
+
+//--------------------------------------------------------------------
+//--------------------------------------------------------------------
+int MainWindow::getCloseSize(int nvoxels[])
 {
     nvoxels[0] = nxc;
     nvoxels[1] = nyc;
@@ -451,17 +488,17 @@ void free_all()
 		free(net->edgeList);
 		free(net->point);
 	}
-	if (closedata != NULL) free(closedata);
+    if (closedata != NULL) free(closedata);
 	if (segment != NULL) free(segment);
 }
 
 //--------------------------------------------------------------------
 //--------------------------------------------------------------------
-int setup(char *input_amfile, char *close_file, char *result_file, float vsize[])
+int MainWindow::setup(char *input_amfile, char *close_file, char *result_file, float vsize[])
 {
 	int err;
 
-	printf("setup\n");
+    fprintf(fpout,"setup\n");
 	free_all();
 	printf("did free_all\n");
 	if (fperr == NULL) fperr = fopen("quantify_error.out","w");
@@ -485,14 +522,14 @@ int setup(char *input_amfile, char *close_file, char *result_file, float vsize[]
 
 //--------------------------------------------------------------------
 //--------------------------------------------------------------------
-bool isSetup()
+bool MainWindow::isSetup()
 {
 	return is_setup;
 }
 
 //--------------------------------------------------------------------
 //--------------------------------------------------------------------
-void reset()
+void MainWindow::reset()
 {
 	is_setup = false;
 }

@@ -1,3 +1,6 @@
+#ifndef QUANTIFY_H
+#define QUANTIFY_H
+
 #include <bitset>
 #include <stdio.h>
 
@@ -14,7 +17,7 @@ typedef segment_str SEGMENT_TYPE;
 #define STR_LEN 128
 #define BIG 1.0e6
 
-FILE *fperr=NULL, *fpout=NULL;
+FILE *fperr=NULL;
 
 int nxc, nyc, nzc, nx8, ny8, nz8, nbytes;
 float voxelsize[3];
@@ -24,3 +27,5 @@ SEGMENT_TYPE *segment = NULL;
 NETWORK *NP0 = NULL;
 
 bool is_setup = false;
+
+#endif

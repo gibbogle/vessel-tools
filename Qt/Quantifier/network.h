@@ -1,3 +1,7 @@
+#ifndef NETWORK_H
+#define NETWORK_H
+
+
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
@@ -46,3 +50,4 @@ struct network_str
 };
 typedef network_str NETWORK;
 
+#endif

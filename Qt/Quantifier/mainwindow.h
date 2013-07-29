@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include "network.h"
 
 namespace Ui {
     class MainWindow;
@@ -26,11 +27,35 @@ public slots:
     void voxelChanged();
     void checkReady();
     void doSetup();
+    void sliceChanged();
+    void averageChanged();
+    void checkBox_x();
+    void checkBox_y();
+    void checkBox_z();
+    void getRanges();
+    void getCentredRanges();
+    void getAveragingRanges();
+    void checkRanges();
+
+private slots:
+    void on_radioButton_centre_toggled(bool checked);
 
 private:
     Ui::MainWindow *ui;
 
 public:
+    int getArea(int axis, int islice, float *area);
+    int getVolume(float *volume);
+    int histology(int axis, int islice, int *np, float *area);
+    int average_histology(int *np, float *area);
+    int setup(char *input_amfile, char *close_file, char *result_file, float vsize[]);
+    int getCloseSize(int nvoxels[]);
+    bool isSetup();
+    void reset();
+    int ReadAmiraFile(char *, NETWORK *);
+    int ReadCloseFile(char *);
+
+    FILE *fpout;
     float voxelsize[3];
     int nvoxels[3];
     QString amFileName;
@@ -40,6 +65,15 @@ public:
     bool is_closefile;
     bool is_resultfile;
     bool is_ready;
+    bool is_slice;
+    bool is_average;
+    int range_x1;
+    int range_x2;
+    int range_y1;
+    int range_y2;
+    int range_z1;
+    int range_z2;
+    int range[3][2];
 };
 
 #endif // MAINWINDOW_H

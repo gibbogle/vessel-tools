@@ -6,14 +6,16 @@
 
 QT       += core gui
 
-TARGET = quantifier
-TEMPLATE = app
+TARGET    = quantifier
+TEMPLATE  = app
 
 
-SOURCES += main.cpp mainwindow.cpp quantify.cpp
+SOURCES  += main.cpp mainwindow.cpp quantify.cpp
 
-HEADERS  += mainwindow.h quantify.h
+HEADERS  += mainwindow.h quantify.h network.h
 
 FORMS    += mainwindow.ui
 
-DESTDIR = ../../bin
+DEFINES  += _CRT_SECURE_NO_DEPRECATE
+
+DESTDIR   = ../../bin
