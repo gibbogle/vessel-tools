@@ -1,0 +1,11 @@
+To link to 64-bit ITK libraries, a 64-bit Qt program must be built with cmake in QtCreator.
+The CMakeLists.txt file is processed by cmake selecting the MSVC++ 2010 (x64) generator, and 
+the release build is selected by setting the parameter:
+
+-DCMAKE_BUILD_TYPE=Release
+
+To ensure that the 64-bit Qt libraries are found the PATH variable must be set.
+This is done by executing runQtCreator64.bat first.
+
+Note that for the 32-bit Qt Creator build to work the 32-bit libraries must appear in the PATH
+before the 64-bit versions.

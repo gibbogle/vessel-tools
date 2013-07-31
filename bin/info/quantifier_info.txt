@@ -11,4 +11,9 @@ No computations are possible until all input data are supplied.
 
 The user can select the histology slice by axis and cut location on the axis, which can be specified either by voxel number or by distance (um).  No results will be computed if the supplied slice location is outside the tissue range.
 
+There is the option of computing average histology results.  In this case the user specifies a range in each axis direction, and the results are determined and aggregated for a collection of slices within the specified ranges.
+To be precise, for each axis slices over the whole sample are made at each voxel within the range given for that axis.
+
 The results are shown as: tissue area of the slice, number of vessels intersecting the slice, density of vessels (count/area).
+If averaging is selected the counts and areas of all slices are summed, and the resulting density is (total count)/(total area).
+
