@@ -118,8 +118,8 @@
    <widget class="QCheckBox" name="checkBoxCreateCmgui">
     <property name="geometry">
      <rect>
-      <x>140</x>
-      <y>130</y>
+      <x>210</x>
+      <y>140</y>
       <width>121</width>
       <height>18</height>
      </rect>
@@ -129,6 +129,58 @@
     </property>
     <property name="checked">
      <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="lineEdit_ddiam">
+    <property name="geometry">
+     <rect>
+      <x>210</x>
+      <y>70</y>
+      <width>41</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>0.5</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="lineEdit_dlen">
+    <property name="geometry">
+     <rect>
+      <x>210</x>
+      <y>100</y>
+      <width>41</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>1.0</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_ddiam">
+    <property name="geometry">
+     <rect>
+      <x>260</x>
+      <y>70</y>
+      <width>151</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Vessel diameter box width (um)</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_dlen">
+    <property name="geometry">
+     <rect>
+      <x>260</x>
+      <y>100</y>
+      <width>141</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Vessel length box width (um)</string>
     </property>
    </widget>
   </widget>

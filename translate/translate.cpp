@@ -49,12 +49,13 @@ int inlist(int *list, int n, int k)
 // The average diameter of a vessel (edge) is now estimated by dividing the volume by the length.
 // All distances in the .am file are in um.
 //-----------------------------------------------------------------------------------------------------
-int CreateDistributions()
+int CreateDistributions(double delta_diam, double delta_len)
 {
 	int adbox[NBOX], lvbox[NBOX];
 	int segadbox[NBOX];
 	double lsegadbox[NBOX];
-	double ad, len, ddiam, dlen, ltot, lsum, dsum, dvol, r2, r2prev, lsegdtot;
+//	double ddiam, dlen;
+	double ad, len, dlen, ltot, lsum, dsum, dvol, r2, r2prev, lsegdtot;
 	double ave_len, volume, d95;
 	double ave_pt_diam, ave_seg_diam;
 	int ie, ip, k, ka, kp, kpprev, ndpts, nlpts, ndtot, nsegdtot;
@@ -70,7 +71,7 @@ int CreateDistributions()
 	printf("Compute diameter distributions\n");
 	fprintf(fperr,"Compute diameter distributions\n");
 	// Diameters
-	ddiam = 0.5;
+//	ddiam = 0.5;
 	ndtot = 0;
 	nsegdtot = 0;
 	lsegdtot = 0;
@@ -95,8 +96,8 @@ int CreateDistributions()
 //			ad = avediameter[kp];
 			ave_pt_diam += ad;
 			if (dbug) {
-				printf("%d  %d  %f  %f\n",ip,kp,ad,ddiam);
-				fprintf(fperr,"%d  %d  %f  %f\n",ip,kp,ad,ddiam);
+				printf("%d  %d  %f  %f\n",ip,kp,ad,delta_diam);
+				fprintf(fperr,"%d  %d  %f  %f\n",ip,kp,ad,delta_diam);
 			}
 			fflush(fperr);
 //			dsum += ad;
@@ -105,7 +106,7 @@ int CreateDistributions()
 				fprintf(fperr,"Zero point diameter: edge: %d point: %d ad: %f\n",ie,ip,ad);
 				return 1;
 			}
-			ka = int(ad/ddiam + 0.5);
+			ka = int(ad/delta_diam + 0.5);
 			if (ka >= NBOX) {
 				printf("Vessel too wide (point): d: %f k: %d\n",ad,ka);
 				fprintf(fperr,"Vessel too wide (point): d: %f k: %d\n",ad,ka);
@@ -138,7 +139,8 @@ int CreateDistributions()
 			fprintf(fperr,"Zero segment diameter: edge: %d ad: %f\n",ie,ad);
 			return 1;
 		}
-		ka = int(ad/ddiam + 0.5);
+//		ka = int(ad/ddiam + 0.5);
+		ka = int(ad/delta_diam );
 		if (ka >= NBOX) {
 			printf("Vessel too wide (segment ave): d: %f k: %d\n",ad,ka);
 			fprintf(fperr,"Vessel too wide (segment ave): d: %f k: %d\n",ad,ka);
@@ -154,22 +156,23 @@ int CreateDistributions()
 	for (k=0; k<NBOX; k++) {
 		dsum += adbox[k]/float(ndtot);
 		if (dsum > 0.05) {
-			d95 = (k-1)*ddiam;
+			d95 = (k-1)*delta_diam;
 			break;
 		}
 	}
 	printf("Compute length distributions: lower limit = %6.1f um\n",lenlimit);
 	fprintf(fperr,"Compute length distributions: lower limit = %6.1f um\n",lenlimit);
 	// Lengths
-	dlen = 1;
+//	dlen = 1;
 	ltot = 0;
 	ave_len = 0;
 	for (ie=0; ie<ne; ie++) {
 		edge = edgeList[ie];
 		if (!edge.used) continue;
 		len = edge.length_um;
-		k = int(len/dlen + 0.5);
-		if (k*dlen <= lenlimit) continue;
+//		k = int(len/dlen + 0.5);
+		k = int(len/delta_len);
+		if (k*delta_len <= lenlimit) continue;
 		if (k >= NBOX) {
 			printf("Edge too long: len: %d  %f  k: %d\n",ie,len,k);
 			fprintf(fperr,"Edge too long: len: %d  %f  k: %d\n",ie,len,k);
@@ -200,9 +203,9 @@ int CreateDistributions()
 	}
 	ndpts = k+2;
 	fprintf(fpout,"Vessel diameter distribution\n");
-	fprintf(fpout,"   um    number  fraction    length  fraction\n");
+	fprintf(fpout,"'um'    number  fraction    length  fraction\n");
 	for (k=0; k<ndpts; k++) {
-		fprintf(fpout,"%6.2f %8d %9.5f  %8.0f %9.5f\n",k*ddiam,segadbox[k],segadbox[k]/float(nsegdtot),
+		fprintf(fpout,"'%6.2f -%6.2f' %8d %9.5f  %8.0f %9.5f\n",k*delta_diam,(k+1)*delta_diam,segadbox[k],segadbox[k]/float(nsegdtot),
 			lsegadbox[k],lsegadbox[k]/lsegdtot);
 	}
 
@@ -216,10 +219,10 @@ int CreateDistributions()
 		if (lvbox[k] > 0) break;
 	}
 	nlpts = k+2;
-	fprintf(fpout,"Vessel length distribution\n");
-	fprintf(fpout,"   um    number  fraction\n");
+	fprintf(fpout,"\nVessel length distribution\n");
+	fprintf(fpout,"'um'    number  fraction\n");
 	for (k=0; k<nlpts; k++) {
-		fprintf(fpout,"%6.2f %8d %9.5f\n",k*dlen,lvbox[k],lvbox[k]/ltot);
+		fprintf(fpout,"'%6.2f -%6.2f' %8d %9.5f\n",k*delta_len,(k+1)*delta_len,lvbox[k],lvbox[k]/ltot);
 	}
 	return 0;
 }
@@ -767,12 +770,13 @@ int main(int argc, char **argv)
 	char drive[32], dir[128],filename[256], ext[32];
 	char errfilename[256], output_amfile[256], outfilename[256], result_file[256];
 	int cmgui_flag;
+	double ddiam, dlen;
 
 
-	if (argc != 4) {
-		printf("Usage: translate input_amfile output_file cmgui_flag\n");
+	if (argc != 6) {
+		printf("Usage: translate input_amfile output_file cmgui_flag ddiam dlen\n");
 		fperr = fopen("translate_error.log","w");
-		fprintf(fperr,"Usage: translate input_amfile output_file cmgui_flag\n");
+		fprintf(fperr,"Usage: translate input_amfile output_file cmgui_flag ddiam dlen\n");
 		fprintf(fperr,"Submitted command line: argc: %d\n",argc);
 		for (int i=0; i<argc; i++) {
 			fprintf(fperr,"argv: %d: %s\n",i,argv[i]);
@@ -785,6 +789,8 @@ int main(int argc, char **argv)
 	strcpy(outfilename,argv[2]);
 	strcpy(output_amfile,"zzz.am");
 	sscanf(argv[3],"%d",&cmgui_flag);
+	sscanf(argv[4],"%lf",&ddiam);
+	sscanf(argv[5],"%lf",&dlen);
 	_splitpath(outfilename,drive,dir,filename,ext);
 	strcpy(output_basename,drive);
 	strcat(output_basename,dir);
@@ -806,7 +812,7 @@ int main(int argc, char **argv)
 
 	err = WriteAmiraFile(output_amfile,input_amfile);
 	if (err != 0) return 7;
-	err = CreateDistributions();
+	err = CreateDistributions(ddiam,dlen);
 	if (err != 0) return 8;
 	if (cmgui_flag == 1) {
 		err = WriteCmguiData(output_basename);

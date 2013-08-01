@@ -33,7 +33,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
 
     ui->textEdit->setReadOnly(true);
-    QString infoFile = QCoreApplication::applicationDirPath() + "/info/dead_info.txt";
+    QString infoFile = QCoreApplication::applicationDirPath() + "/info/deadends_info.txt";
     QFile file(infoFile);
     bool ok = file.open(QIODevice::ReadOnly | QIODevice::Text);
     if (!ok) {

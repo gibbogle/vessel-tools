@@ -61,10 +61,13 @@ void MainWindow::translater()
 	qstr += outputFileName;
 	qstr += " ";
 	if (ui->checkBoxCreateCmgui->isChecked())
-		qstr += "1";
+        qstr += "1 ";
 	else
-		qstr += "0";
-	if (qstr.size()>(int)sizeof(cmdstr)-1) {
+        qstr += "0 ";
+    qstr += ui->lineEdit_ddiam->text();
+    qstr += " ";
+    qstr += ui->lineEdit_dlen->text();
+    if (qstr.size()>(int)sizeof(cmdstr)-1) {
 		printf("Failed to convert qstr->cmdstr since qstr didn't fit\n");
 		resultstr = "FAILED: cmdstr not big enough for the command";
 		ui->labelResult->setText(resultstr);
