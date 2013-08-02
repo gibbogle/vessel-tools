@@ -57,13 +57,15 @@ MainWindow::MainWindow(QWidget *parent) :
     deadlist = NULL;
     ndead = 0;
     isSphere = false;
-    is_am = false;
-    is_tiff = false;
-    is_output = false;
+    is_am_in = false;
+    is_tiff_in = false;
+    is_am_out = false;
+    is_tiff_out = false;
     am_read = false;
     tiff_read = false;
     detected = false;
     evaluated = false;
+    margin = 0;
     voxelsize[0] = voxelsize[1] = voxelsize[2] = 2;
     checkReady();
 
@@ -81,51 +83,57 @@ MainWindow::~MainWindow()
 
 //----------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------
-void MainWindow::amFileSelecter()
+void MainWindow::inputAmiraFileSelecter()
 {
     ui->labelResult->setText("");
-    amFileName = QFileDialog::getOpenFileName(this,
+    inputAmiraFileName = QFileDialog::getOpenFileName(this,
         tr("Input Amira file"), ".", tr("Amira Files (*.am)"));
-    if (amFileName.compare(ui->labelAmFile->text()) != 0) {
+    if (inputAmiraFileName.compare(ui->labelInputAmiraFile->text()) != 0) {
         am_read = false;
     }
-    ui->labelAmFile->setText(amFileName);
-    is_am = true;
+    ui->labelInputAmiraFile->setText(inputAmiraFileName);
+    is_am_in = true;
     checkReady();
 }
 
 //----------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------
-void MainWindow::tiffFileSelecter()
+void MainWindow::inputTiffFileSelecter()
 {
     ui->labelResult->setText("");
-    tiffFileName = QFileDialog::getOpenFileName(this,
+    inputTiffFileName = QFileDialog::getOpenFileName(this,
         tr("Input TIFF file"), ".", tr("TIFF Files (*.tif)"));
-    if (tiffFileName.compare(ui->labelTiffFile->text()) != 0) {
+    if (inputTiffFileName.compare(ui->labelInputTiffFile->text()) != 0) {
         tiff_read = false;
-        printf("%s\n",tiffFileName.toAscii().constData());
-        printf("%s\n",ui->labelTiffFile->text().toAscii().constData());
+        printf("%s\n",inputTiffFileName.toAscii().constData());
+        printf("%s\n",ui->labelInputTiffFile->text().toAscii().constData());
     }
-    ui->labelTiffFile->setText(tiffFileName);
-    is_tiff = true;
-    //Testing
-//    int err = readTiff(tiffFileName.toAscii().constData(),&width,&height,&depth);
-//    if (err != 0) {
-//        return;
-//    }
-
+    ui->labelInputTiffFile->setText(inputTiffFileName);
+    is_tiff_in = true;
     checkReady();
 }
 
 //----------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------
-void MainWindow::outputFileSelecter()
+void MainWindow::outputAmiraFileSelecter()
 {
     ui->labelResult->setText("");
-    outputFileName = QFileDialog::getSaveFileName(this,
+    outputAmiraFileName = QFileDialog::getSaveFileName(this,
         tr("Output Amira file"), ".", tr("Amira Files (*.am)"));
-    ui->labelOutputFile->setText(outputFileName);
-    is_output = true;
+    ui->labelOutputAmiraFile->setText(outputAmiraFileName);
+    is_am_out = true;
+    checkReady();
+}
+
+//----------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
+void MainWindow::outputTiffFileSelecter()
+{
+    ui->labelResult->setText("");
+    outputTiffFileName = QFileDialog::getSaveFileName(this,
+        tr("Output tiff file"), ".", tr("Tiff Files (*.tif)"));
+    ui->labelOutputTiffFile->setText(outputTiffFileName);
+    is_tiff_out = true;
     checkReady();
 }
 
@@ -180,7 +188,7 @@ void MainWindow::checkReady()
         voxelOK = true;
     else
         voxelOK = false;
-    if (voxelOK && is_am && is_tiff && is_output) {
+    if (voxelOK && is_am_in && is_tiff_in && is_am_out && is_tiff_out) {
         ready = true;
         ui->pushButtonDeadends->setEnabled(true);
         ui->pushButtonEvaluateAll->setEnabled(true);
@@ -221,7 +229,7 @@ void MainWindow::detectDeadends()
         resultstr = "reading network file...";
         ui->labelResult->setText(resultstr);
         QCoreApplication::processEvents();
-        err = readNetwork(&network, amFileName.toAscii().constData());
+        err = readNetwork(&network, inputAmiraFileName.toAscii().constData());
         if (err != 0) {
             resultstr = "FAILED: read_network";
             ui->labelResult->setText(resultstr);
@@ -232,7 +240,7 @@ void MainWindow::detectDeadends()
         resultstr = "reading image file...";
         ui->labelResult->setText(resultstr);
         QCoreApplication::processEvents();
-        err = readTiff(tiffFileName.toAscii().constData(),&width,&height,&depth);
+        err = readTiff(inputTiffFileName.toAscii().constData(),&width,&height,&depth);
         if (err != 0) {
             resultstr = "FAILED: read_tiff";
             ui->labelResult->setText(resultstr);
@@ -377,7 +385,7 @@ void MainWindow::getAllIntensities()
         resultstr = "reading network file...";
         ui->labelResult->setText(resultstr);
         QCoreApplication::processEvents();
-        err = readNetwork(&network, amFileName.toAscii().constData());
+        err = readNetwork(&network, inputAmiraFileName.toAscii().constData());
         if (err != 0) {
             resultstr = "FAILED: read_network";
             ui->labelResult->setText(resultstr);
@@ -388,7 +396,7 @@ void MainWindow::getAllIntensities()
         resultstr = "reading image file...";
         ui->labelResult->setText(resultstr);
         QCoreApplication::processEvents();
-        err = readTiff(tiffFileName.toAscii().constData(),&width,&height,&depth);
+        err = readTiff(inputTiffFileName.toAscii().constData(),&width,&height,&depth);
         if (err != 0) {
             resultstr = "FAILED: read_tiff";
             ui->labelResult->setText(resultstr);
@@ -528,10 +536,108 @@ void MainWindow::getMaxIntensity(int nv, int v[][3], int *maxval)
 //----------------------------------------------------------------------------------------
 void MainWindow::saveDeadendFile()
 {
+    int err;
+    QString resultstr;
+
     createNetwork(&network, &deadnetwork, deadlist, ndead);
-    writeAmiraFile(outputFileName.toAscii().constData(), amFileName.toAscii().constData(), &deadnetwork);
+    writeAmiraFile(outputAmiraFileName.toAscii().constData(), inputAmiraFileName.toAscii().constData(), &deadnetwork);
+    resultstr = "creating image file...";
+    ui->labelResult->setText(resultstr);
+    QCoreApplication::processEvents();
+    err = createTiffData(&deadnetwork);
+    if (err != 0) {
+        resultstr = "FAILED: createTiffData";
+        ui->labelResult->setText(resultstr);
+        return;
+    }
+    err = createTiff(outputTiffFileName.toAscii().constData(),p_im,width,height,depth);
+    if (err != 0) {
+        resultstr = "FAILED: createTiff";
+        ui->labelResult->setText(resultstr);
+        return;
+    }
 }
 
+//----------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
+int MainWindow::createTiffData(NETWORK *net)
+{
+    int ie, ip, x0, y0, z0, ix, iy, iz, nx, ny, nz, x, y, z;
+    float r, r2, dx, dy, dz, wx, wy, wz, d2;
+    EDGE edge;
+    APOINT p;
+
+    printf("ne: %d\n",net->ne);
+    fprintf(fpout,"ne: %d\n",net->ne);
+    // First determine the required buffer size to hold the voxels
+    wx = 0;
+    wy = 0;
+    wz = 0;
+    for (ie=0; ie<net->ne; ie++) {
+        edge = net->edgeList[ie];
+        for (ip=0; ip<edge.npts; ip++) {
+//            printf("%d %d %d %d\n",ie,edge.npts,ip,edge.pt[ip]);
+//            fprintf(fpout,"%d %d %d %d\n",ie,edge.npts,ip,edge.pt[ip]);
+//            fflush(fpout);
+            p = net->point[edge.pt[ip]];
+//            printf("%6.1f %6.1f %6.1f  %6.2f\n",p.x,p.y,p.z,p.d);
+//            fprintf(fpout,"%6.1f %6.1f %6.1f  %6.2f\n",p.x,p.y,p.z,p.d);
+//            fflush(fpout);
+            wx = MAX(wx,(p.x + p.d/2));
+            wy = MAX(wy,(p.y + p.d/2));
+            wz = MAX(wz,(p.z + p.d/2));
+        }
+    }
+    width = (int)((wx+margin)/voxelsize[0]+10);
+    height = (int)((wy+margin)/voxelsize[1]+10);
+    depth = (int)((wz+margin)/voxelsize[2]+10);
+    xysize = width*height;
+    printf("width, height, depth: %d %d %d\n",width, height, depth);
+    fprintf(fpout,"width, height, depth: %d %d %d\n",width, height, depth);
+    fflush(fpout);
+    if (p_im != NULL) free(p_im);
+    p_im = (unsigned char *)malloc(width*height*depth*sizeof(unsigned char));
+    memset(p_im,0,width*height*depth);
+    for (ie=0; ie<net->ne; ie++) {
+        edge = network.edgeList[ie];
+        for (ip=0; ip<edge.npts; ip++) {
+//            fprintf(fpout,"ie, npts,ip: %d %d %d\n",ie,edge.npts,ip);
+//            fflush(fpout);
+            p = net->point[edge.pt[ip]];
+            x0 = p.x/voxelsize[0];   // voxel nearest to the point
+            y0 = p.y/voxelsize[1];
+            z0 = p.z/voxelsize[2];
+            r = p.d/2 + margin;
+//            fprintf(fpout,"point: %d  %6.1f %6.1f %6.1f  %d %d %d  %6.2f\n",ip,p.x,p.y,p.z,x0,y0,z0,r);
+//            fflush(fpout);
+            r2 = r*r;
+            nx = r/voxelsize[0] + 1;
+            ny = r/voxelsize[1] + 1;
+            nz = r/voxelsize[2] + 1;
+//            printf("nx,ny,nz,x1,y1,z1: %d %d %d  %d %d %d\n",nx,ny,nz,x1,y1,z1);
+            for (ix = -nx; ix <= nx; ix++) {
+                dx = ix*voxelsize[0];
+                x = x0+ix;
+                if (x < 0 || x >= width) continue;
+                for (iy = -ny; iy<=ny; iy++) {
+                    dy = iy*voxelsize[1];
+                    y = y0+iy;
+                    if (y < 0 || y >= height) continue;
+                    for (iz = -nz; iz<=nz; iz++) {
+                        dz = iz*voxelsize[2];
+                        z = z0+iz;
+                        if (z < 0 || z >= depth) continue;
+                        d2 = dx*dx+dy*dy+dz*dz;
+                        if (d2 < r2) {
+                            V(x0+ix,y0+iy,z0+iz) = 255;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return 0;
+}
 
 
 // Need to add:

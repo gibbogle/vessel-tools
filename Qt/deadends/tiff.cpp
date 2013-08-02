@@ -45,7 +45,7 @@ int MainWindow::readTiff(const char *tifffile, int *width, int *height, int *dep
     return 0;
 }
 
-int MainWindow::createTiff(char *tifffile, unsigned char *buffer, int width, int height, int depth)
+int MainWindow::createTiff(const char *tifffile, unsigned char *buffer, int width, int height, int depth)
 {
     bool use_compression = true;
     unsigned char *p_u8;

@@ -39,7 +39,7 @@ public:
     int readAmiraFile(const char *amFile, NETWORK *net);
     int writeAmiraFile(const char *amFileOut, const char *amFileIn, NETWORK *net);
     int readTiff(const char *, int *, int *, int *);
-    int createTiffData();
+    int createTiffData(NETWORK *net);
     int createTiff(const char *, unsigned char *, int, int, int);
     int readNetwork(NETWORK *, const char *);
     int createNetwork(NETWORK *, NETWORK *, DEADEND *, int);

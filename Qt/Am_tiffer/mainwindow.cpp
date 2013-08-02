@@ -162,26 +162,26 @@ void MainWindow::checkReady()
 
 //----------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------
-int MainWindow::createTiffData()
+int MainWindow::createTiffData(NETWORK *net)
 {
     int ie, ip, x0, y0, z0, ix, iy, iz, nx, ny, nz, x, y, z;
     float r, r2, dx, dy, dz, wx, wy, wz, d2;
     EDGE edge;
     APOINT p;
 
-    printf("ne: %d\n",network.ne);
-    fprintf(fpout,"ne: %d\n",network.ne);
+    printf("ne: %d\n",net->ne);
+    fprintf(fpout,"ne: %d\n",net->ne);
     // First determine the required buffer size to hold the voxels
     wx = 0;
     wy = 0;
     wz = 0;
-    for (ie=0; ie<network.ne; ie++) {
-        edge = network.edgeList[ie];
+    for (ie=0; ie<net->ne; ie++) {
+        edge = net->edgeList[ie];
         for (ip=0; ip<edge.npts; ip++) {
 //            printf("%d %d %d %d\n",ie,edge.npts,ip,edge.pt[ip]);
 //            fprintf(fpout,"%d %d %d %d\n",ie,edge.npts,ip,edge.pt[ip]);
 //            fflush(fpout);
-            p = network.point[edge.pt[ip]];
+            p = net->point[edge.pt[ip]];
 //            printf("%6.1f %6.1f %6.1f  %6.2f\n",p.x,p.y,p.z,p.d);
 //            fprintf(fpout,"%6.1f %6.1f %6.1f  %6.2f\n",p.x,p.y,p.z,p.d);
 //            fflush(fpout);
@@ -199,12 +199,12 @@ int MainWindow::createTiffData()
     fflush(fpout);
     p_im = (unsigned char *)malloc(width*height*depth*sizeof(unsigned char));
     memset(p_im,0,width*height*depth);
-    for (ie=0; ie<network.ne; ie++) {
-        edge = network.edgeList[ie];
+    for (ie=0; ie<net->ne; ie++) {
+        edge = net->edgeList[ie];
         for (ip=0; ip<edge.npts; ip++) {
 //            fprintf(fpout,"ie, npts,ip: %d %d %d\n",ie,edge.npts,ip);
 //            fflush(fpout);
-            p = network.point[edge.pt[ip]];
+            p = net->point[edge.pt[ip]];
             x0 = p.x/voxelsize[0];   // voxel nearest to the point
             y0 = p.y/voxelsize[1];
             z0 = p.z/voxelsize[2];
@@ -266,7 +266,7 @@ void MainWindow::am_tiffer()
     resultstr = "creating image file...";
     ui->labelResult->setText(resultstr);
     QCoreApplication::processEvents();
-    err = createTiffData();
+    err = createTiffData(&network);
     if (err != 0) {
         resultstr = "FAILED: createTiffData";
         ui->labelResult->setText(resultstr);

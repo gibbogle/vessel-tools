@@ -14,7 +14,7 @@
    <string>Investigating dead ends in the vessel network</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <widget class="QPushButton" name="pushButtonAmFile">
+   <widget class="QPushButton" name="pushButtonInputAmiraFile">
     <property name="geometry">
      <rect>
       <x>0</x>
@@ -24,10 +24,10 @@
      </rect>
     </property>
     <property name="text">
-     <string>Input network file</string>
+     <string>Input Amira file</string>
     </property>
    </widget>
-   <widget class="QLabel" name="labelAmFile">
+   <widget class="QLabel" name="labelInputAmiraFile">
     <property name="geometry">
      <rect>
       <x>100</x>
@@ -89,7 +89,7 @@
      </rect>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButtonOutputFile">
+   <widget class="QPushButton" name="pushButtonOutputAmiraFile">
     <property name="geometry">
      <rect>
       <x>0</x>
@@ -102,7 +102,7 @@
      <string>Output Amira file</string>
     </property>
    </widget>
-   <widget class="QLabel" name="labelOutputFile">
+   <widget class="QLabel" name="labelOutputAmiraFile">
     <property name="geometry">
      <rect>
       <x>100</x>
@@ -115,7 +115,7 @@
      <string/>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButtonImageFile">
+   <widget class="QPushButton" name="pushButtonInputTiffFile">
     <property name="geometry">
      <rect>
       <x>0</x>
@@ -128,7 +128,7 @@
      <string>Input image file</string>
     </property>
    </widget>
-   <widget class="QLabel" name="labelTiffFile">
+   <widget class="QLabel" name="labelInputTiffFile">
     <property name="geometry">
      <rect>
       <x>100</x>
@@ -450,7 +450,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>Save dead-end file</string>
+     <string>Save dead-end files</string>
     </property>
    </widget>
    <widget class="QLabel" name="label_rlimit">
@@ -479,6 +479,32 @@
      <string>10</string>
     </property>
    </widget>
+   <widget class="QLabel" name="labelOutputTiffFile">
+    <property name="geometry">
+     <rect>
+      <x>100</x>
+      <y>90</y>
+      <width>451</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButtonOutputTiffFile">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>90</y>
+      <width>101</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Output image file</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
@@ -504,7 +530,7 @@
  <resources/>
  <connections>
   <connection>
-   <sender>pushButtonAmFile</sender>
+   <sender>pushButtonInputAmiraFile</sender>
    <signal>clicked()</signal>
    <receiver>MainWindow</receiver>
    <slot>amFileSelecter()</slot>
@@ -520,7 +546,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>pushButtonImageFile</sender>
+   <sender>pushButtonInputTiffFile</sender>
    <signal>clicked()</signal>
    <receiver>MainWindow</receiver>
    <slot>tiffFileSelecter()</slot>
@@ -536,7 +562,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>pushButtonOutputFile</sender>
+   <sender>pushButtonOutputAmiraFile</sender>
    <signal>clicked()</signal>
    <receiver>MainWindow</receiver>
    <slot>outputFileSelecter()</slot>

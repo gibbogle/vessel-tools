@@ -1,0 +1,9 @@
+Importing distribution data into Excel.
+
+Copy and paste block of data (including header line) into the spreadsheet
+
+Data > Text to columns
+
+Delimited
+
+Tick "Space" and "Treat consecutive delimiters as one", for "Text qualifier" select '
