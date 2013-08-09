@@ -1,0 +1,517 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ImageViewer</class>
+ <widget class="QMainWindow" name="ImageViewer">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>990</width>
+    <height>723</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>ImageViewer</string>
+  </property>
+  <widget class="QWidget" name="centralWidget">
+   <widget class="QMdiArea" name="mdiArea1">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>100</y>
+      <width>480</width>
+      <height>480</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QMdiArea" name="mdiArea2">
+    <property name="geometry">
+     <rect>
+      <x>500</x>
+      <y>100</y>
+      <width>480</width>
+      <height>480</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QGroupBox" name="groupBoxFrame">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>400</x>
+      <y>0</y>
+      <width>171</width>
+      <height>71</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string/>
+    </property>
+    <widget class="QPushButton" name="pushButtonPrevFrame">
+     <property name="geometry">
+      <rect>
+       <x>130</x>
+       <y>40</y>
+       <width>31</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Prev</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="pushButtonUpdate">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>30</y>
+       <width>51</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Update</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="pushButtonNextFrame">
+     <property name="geometry">
+      <rect>
+       <x>130</x>
+       <y>10</y>
+       <width>31</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Next</string>
+     </property>
+    </widget>
+    <widget class="QSpinBox" name="spinBoxFrame">
+     <property name="geometry">
+      <rect>
+       <x>70</x>
+       <y>30</y>
+       <width>51</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_frame">
+     <property name="geometry">
+      <rect>
+       <x>70</x>
+       <y>0</y>
+       <width>41</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Frame</string>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QGroupBox" name="groupBoxModify">
+    <property name="geometry">
+     <rect>
+      <x>320</x>
+      <y>580</y>
+      <width>341</width>
+      <height>91</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string/>
+    </property>
+    <widget class="QRadioButton" name="radioButtonImage1">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>0</y>
+       <width>61</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Image 1</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="radioButtonImage2">
+     <property name="geometry">
+      <rect>
+       <x>270</x>
+       <y>0</y>
+       <width>61</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Image 2</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="lineEditNumber">
+     <property name="geometry">
+      <rect>
+       <x>200</x>
+       <y>0</y>
+       <width>31</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>0</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="pushButtonSubtractValue">
+     <property name="geometry">
+      <rect>
+       <x>110</x>
+       <y>0</y>
+       <width>75</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Subtract</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="pushButtonSubtractImage">
+     <property name="geometry">
+      <rect>
+       <x>110</x>
+       <y>30</y>
+       <width>121</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Subtract Image 2</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="pushButtonSaveImage">
+     <property name="geometry">
+      <rect>
+       <x>110</x>
+       <y>60</y>
+       <width>121</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Save Image 1</string>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QLabel" name="label1">
+    <property name="geometry">
+     <rect>
+      <x>220</x>
+      <y>60</y>
+      <width>51</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string>Image 1</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label2">
+    <property name="geometry">
+     <rect>
+      <x>730</x>
+      <y>60</y>
+      <width>51</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string>Image 2</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="labelImage1">
+    <property name="geometry">
+     <rect>
+      <x>70</x>
+      <y>80</y>
+      <width>421</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QLabel" name="labelImage2">
+    <property name="geometry">
+     <rect>
+      <x>550</x>
+      <y>80</y>
+      <width>431</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_frame1">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>80</y>
+      <width>16</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>#</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="lineEditFrame1">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>80</y>
+      <width>31</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="readOnly">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_frame2">
+    <property name="geometry">
+     <rect>
+      <x>500</x>
+      <y>80</y>
+      <width>16</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>#</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="lineEditFrame2">
+    <property name="geometry">
+     <rect>
+      <x>510</x>
+      <y>80</y>
+      <width>31</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="readOnly">
+     <bool>true</bool>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>990</width>
+     <height>21</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QToolBar" name="mainToolBar">
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QStatusBar" name="statusBar"/>
+ </widget>
+ <layoutdefault spacing="6" margin="11"/>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>pushButtonPrevFrame</sender>
+   <signal>clicked()</signal>
+   <receiver>ImageViewer</receiver>
+   <slot>prevFrame()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>524</x>
+     <y>83</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>760</x>
+     <y>211</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButtonNextFrame</sender>
+   <signal>clicked()</signal>
+   <receiver>ImageViewer</receiver>
+   <slot>nextFrame()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>537</x>
+     <y>50</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>829</x>
+     <y>103</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButtonUpdate</sender>
+   <signal>clicked()</signal>
+   <receiver>ImageViewer</receiver>
+   <slot>updateImages()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>500</x>
+     <y>104</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>362</x>
+     <y>76</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>spinBoxFrame</sender>
+   <signal>editingFinished()</signal>
+   <receiver>ImageViewer</receiver>
+   <slot>updateImages()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>494</x>
+     <y>70</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>385</x>
+     <y>49</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButtonSubtractValue</sender>
+   <signal>clicked()</signal>
+   <receiver>ImageViewer</receiver>
+   <slot>subtracter()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>465</x>
+     <y>635</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>171</x>
+     <y>670</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButtonSubtractImage</sender>
+   <signal>clicked()</signal>
+   <receiver>ImageViewer</receiver>
+   <slot>subtractImage()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>439</x>
+     <y>650</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>204</x>
+     <y>705</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>radioButtonImage2</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>ImageViewer</receiver>
+   <slot>imageSelecter()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>639</x>
+     <y>617</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>673</x>
+     <y>661</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>radioButtonImage1</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>ImageViewer</receiver>
+   <slot>imageSelecter()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>356</x>
+     <y>620</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>677</x>
+     <y>695</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButtonSaveImage</sender>
+   <signal>clicked()</signal>
+   <receiver>ImageViewer</receiver>
+   <slot>saveImageFile()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>545</x>
+     <y>681</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>826</x>
+     <y>675</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>outputFileSelecter()</slot>
+  <slot>inputFileSelecter()</slot>
+  <slot>nextFrame()</slot>
+  <slot>prevFrame()</slot>
+  <slot>updateImages()</slot>
+  <slot>subtracter()</slot>
+  <slot>subtractImage()</slot>
+  <slot>imageSelecter()</slot>
+  <slot>saveImageFile()</slot>
+ </slots>
+</ui>
