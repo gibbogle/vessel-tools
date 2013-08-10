@@ -150,6 +150,7 @@ int WriteCmguiData(char *basename)
 	EDGE edge;
 	char exelemname[256], exnodename[256], dotcomname[256];
 	FILE *exelem, *exnode, *dotcom;
+	bool is_end;
 
 	printf("WriteCmguiData: %s %d %d\n",basename,ne,np);
 	fprintf(fperr,"WriteCmguiData: %s\n",basename);
@@ -213,12 +214,12 @@ int WriteCmguiData(char *basename)
 		}
 	}
 	printf("wrote elem data\n");
-	if (vertex_case ==1 || vertex_case == 3)
-		iv = 0;
-	else
-		iv = 1;
+	int nbmaxx = nbmax[0];
+	if (nbmax[1] > nbmaxx) nbmaxx = nbmax[1];
 	for (k=0; k<np; k++) {
 		if (point[k].used) {
+			is_end = false;
+			if (k == 9164 || k == 7562) is_end = true;
 			rgb[0] = rgb[1] = rgb[2] = 0;
 			fprintf(exnode, "Node: %d\n", k+1);
 			fprintf(exnode, "%6.1f %6.1f %6.1f\n", point[k].x,point[k].y,point[k].z);
@@ -227,22 +228,41 @@ int WriteCmguiData(char *basename)
 				printf("Error: zero diameter: %d\n",k);
 				return 1;
 			}
+			if (vertex_case == 1 || vertex_case == 3)
+				iv = 0;
+			else
+				iv = 1;
 			fprintf(exnode, "%d\n", point[k].nb[iv]);		// currently only a single nb value is stored
 			if (vertex_case == 1 || vertex_case == 3) {
-				if (use_nb)
-					fraction = float(nbmax[iv] - point[k].nb[0])/nbmax[iv];
-				else {
-					fraction = (distmax[iv] - point[k].distance[0])/distmax[iv];
-					fprintf(fpout,"%6d %6.1f %6.1f %6.3f\n",k,point[k].distance[0],distmax[iv],fraction);
+				iv = 0;
+				if (use_nb) {
+					fraction = float(nbmax[iv] - point[k].nb[iv])/nbmax[iv];
+//					fraction = float(nbmaxx - point[k].nb[iv])/nbmaxx;
+					fraction = fraction*fraction;
+					if (is_end) {
+						fprintf(fpout,"end: iv,k,nbmax,nb: %3d %6d %4d %4d %6.3f\n",iv,k,nbmaxx,point[k].nb[iv],fraction);
+						printf("end: iv,k,nbmax,nb: %3d %6d %4d %4d %6.3f\n",iv,k,nbmaxx,point[k].nb[iv],fraction);
+					}
+				} else {
+					fraction = (distmax[iv] - point[k].distance[iv])/distmax[iv];
+//					fprintf(fpout,"%6d %6.1f %6.1f %6.3f\n",k,point[k].distance[0],distmax[iv],fraction);
 				}
 				for (i=0; i<3; i++)
 					rgb[i] += fraction*artery_col[i];
 			}
 			if (vertex_case == 2 || vertex_case == 3) {
-				if (use_nb)
-					fraction = float(nbmax[iv] - point[k].nb[1])/nbmax[iv];
-				else
-					fraction = (distmax[iv] - point[k].distance[1])/distmax[iv];
+				iv = 1;
+				if (use_nb) {
+					fraction = float(nbmax[iv] - point[k].nb[iv])/nbmax[iv];
+//					fraction = float(nbmaxx - point[k].nb[iv])/nbmaxx;
+					fraction = fraction*fraction;
+					if (is_end) {
+						fprintf(fpout,"end: iv,k,nbmax,nb: %3d %6d %4d %4d %6.3f\n",iv,k,nbmaxx,point[k].nb[iv],fraction);
+						printf("end: iv,k,nbmax,nb: %3d %6d %4d %4d %6.3f\n",iv,k,nbmaxx,point[k].nb[iv],fraction);
+					}
+				} else {
+					fraction = (distmax[iv] - point[k].distance[iv])/distmax[iv];
+				}
 				for (i=0; i<3; i++)
 					rgb[i] += fraction*vein_col[i];
 			}

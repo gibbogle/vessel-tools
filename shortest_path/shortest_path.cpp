@@ -535,6 +535,9 @@ int squeezer(void)
 }
 
 //-----------------------------------------------------------------------------------------------------
+// For edge i, computes the distance from one vertex to the other.  This distance is muliplied by 10
+// and stored as an integer value edgeList[i].dist10
+// The maximum node number is also determined
 //-----------------------------------------------------------------------------------------------------
 int getdist(int i, int *ndmax)
 {
@@ -583,6 +586,10 @@ int getdist(int i, int *ndmax)
 }
 
 //-----------------------------------------------------------------------------------------------------
+// Creates the SP input file containing for each edge with non-negative .dist10 a pair of entries:
+// nd1, nd1, kd
+// nd2, nd1, kd
+// where nd1 qnd nd2 are the vertex node numbers and kd = dist10 (= 10*edge length)
 //-----------------------------------------------------------------------------------------------------
 int	WriteSPfile(char *spfile, int iv0, int ndmax, int narcs)
 {
@@ -923,6 +930,8 @@ int main(int argc, char **argv)
 	path = (int *)malloc(ndmax*sizeof(int));
 	distance10 = (int *)malloc((ndmax+1)*sizeof(int));
 
+	nbmax[0] = 0;
+	nbmax[1] = 0;
 	vertex_case = 0;
 	if (artery_vertex_no != 0) {
 		ivtype = 0;
@@ -946,7 +955,7 @@ int main(int argc, char **argv)
 		err = quantify(path, ivtype, vein_vertex_no-1);
 		if (err != 0) return 4;
 	}
-
+	fprintf(fpout,"nbmax: %3d %3d\n",nbmax[0],nbmax[1]);
 	err = WriteCmguiData(output_basename);
 	if (err != 0) {
 		fprintf(fpout,"Error writing CMGUI files: %d\n",err);

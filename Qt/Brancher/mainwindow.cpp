@@ -61,7 +61,10 @@ void MainWindow::brancher()
 	qstr += " ";
 	qstr += outfileName;
 	qstr += " ";
-    qstr += ui->lineEditArteryVertex->text();
+    if (ui->lineEditArteryVertex->text().compare("") == 0)
+        qstr += "0";
+    else
+        qstr += ui->lineEditArteryVertex->text();
     qstr += " ";
     qstr += ui->lineEdit_aR->text();
     qstr += " ";
@@ -69,7 +72,10 @@ void MainWindow::brancher()
     qstr += " ";
     qstr += ui->lineEdit_aB->text();
     qstr += " ";
-    qstr += ui->lineEditVeinVertex->text();
+    if (ui->lineEditVeinVertex->text().compare("") == 0)
+        qstr += "0";
+    else
+     qstr += ui->lineEditVeinVertex->text();
     qstr += " ";
     qstr += ui->lineEdit_vR->text();
     qstr += " ";

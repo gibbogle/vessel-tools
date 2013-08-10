@@ -141,7 +141,7 @@
      <enum>Qt::LeftToRight</enum>
     </property>
     <property name="text">
-     <string>6262</string>
+     <string>9165</string>
     </property>
     <property name="alignment">
      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -199,7 +199,7 @@
      <enum>Qt::LeftToRight</enum>
     </property>
     <property name="text">
-     <string>10811</string>
+     <string>7563</string>
     </property>
     <property name="alignment">
      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -350,7 +350,7 @@
      <x>0</x>
      <y>0</y>
      <width>963</width>
-     <height>18</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>
