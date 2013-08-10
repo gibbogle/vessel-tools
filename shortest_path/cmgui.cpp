@@ -238,7 +238,6 @@ int WriteCmguiData(char *basename)
 				if (use_nb) {
 					fraction = float(nbmax[iv] - point[k].nb[iv])/nbmax[iv];
 //					fraction = float(nbmaxx - point[k].nb[iv])/nbmaxx;
-					fraction = fraction*fraction;
 					if (is_end) {
 						fprintf(fpout,"end: iv,k,nbmax,nb: %3d %6d %4d %4d %6.3f\n",iv,k,nbmaxx,point[k].nb[iv],fraction);
 						printf("end: iv,k,nbmax,nb: %3d %6d %4d %4d %6.3f\n",iv,k,nbmaxx,point[k].nb[iv],fraction);
@@ -247,6 +246,7 @@ int WriteCmguiData(char *basename)
 					fraction = (distmax[iv] - point[k].distance[iv])/distmax[iv];
 //					fprintf(fpout,"%6d %6.1f %6.1f %6.3f\n",k,point[k].distance[0],distmax[iv],fraction);
 				}
+				fraction = fraction*fraction;
 				for (i=0; i<3; i++)
 					rgb[i] += fraction*artery_col[i];
 			}
@@ -255,7 +255,6 @@ int WriteCmguiData(char *basename)
 				if (use_nb) {
 					fraction = float(nbmax[iv] - point[k].nb[iv])/nbmax[iv];
 //					fraction = float(nbmaxx - point[k].nb[iv])/nbmaxx;
-					fraction = fraction*fraction;
 					if (is_end) {
 						fprintf(fpout,"end: iv,k,nbmax,nb: %3d %6d %4d %4d %6.3f\n",iv,k,nbmaxx,point[k].nb[iv],fraction);
 						printf("end: iv,k,nbmax,nb: %3d %6d %4d %4d %6.3f\n",iv,k,nbmaxx,point[k].nb[iv],fraction);
@@ -263,6 +262,7 @@ int WriteCmguiData(char *basename)
 				} else {
 					fraction = (distmax[iv] - point[k].distance[iv])/distmax[iv];
 				}
+				fraction = fraction*fraction;
 				for (i=0; i<3; i++)
 					rgb[i] += fraction*vein_col[i];
 			}
