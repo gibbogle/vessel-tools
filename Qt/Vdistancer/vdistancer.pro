@@ -17,4 +17,6 @@ HEADERS  += mainwindow.h
 
 FORMS    += mainwindow.ui
 
+DEFINES  += _CRT_SECURE_NO_DEPRECATE
+
 DESTDIR = ../../bin

@@ -21,6 +21,7 @@ public slots:
     void outFileSelecter();
     void tiffFileSelecter();
     void distancer();
+    void tiffer();
     void sphereOption();
 //    void randomOption();
     void imageOption();
@@ -33,8 +34,9 @@ public:
     QString closefileName;
     QString outfileName;
     QString tifffileName;
-
-
+    bool is_tiff;
+    bool tiff_ready;
+    QString tempfileName;
 };
 
 #endif // MAINWINDOW_H

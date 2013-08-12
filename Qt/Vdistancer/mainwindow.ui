@@ -69,9 +69,9 @@
    <widget class="QLabel" name="labelResult">
     <property name="geometry">
      <rect>
-      <x>70</x>
-      <y>370</y>
-      <width>491</width>
+      <x>60</x>
+      <y>350</y>
+      <width>711</width>
       <height>16</height>
      </rect>
     </property>
@@ -371,9 +371,9 @@
    <widget class="QLabel" name="labelResultImage">
     <property name="geometry">
      <rect>
-      <x>70</x>
-      <y>350</y>
-      <width>491</width>
+      <x>60</x>
+      <y>370</y>
+      <width>711</width>
       <height>16</height>
      </rect>
     </property>
@@ -528,6 +528,22 @@
      </property>
     </widget>
    </widget>
+   <widget class="QPushButton" name="pushButtonMakeTiff">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>400</x>
+      <y>320</y>
+      <width>75</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Create tiff</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
@@ -640,7 +656,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>40</x>
-     <y>299</y>
+     <y>332</y>
     </hint>
     <hint type="destinationlabel">
      <x>51</x>
@@ -664,6 +680,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>pushButtonMakeTiff</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>tiffer()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>439</x>
+     <y>369</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>487</x>
+     <y>338</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>buttonClickHandler()</slot>
@@ -677,5 +709,6 @@
   <slot>imageOption()</slot>
   <slot>closeFileSelecter()</slot>
   <slot>closeOption()</slot>
+  <slot>tiffer()</slot>
  </slots>
 </ui>

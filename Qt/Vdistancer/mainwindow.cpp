@@ -28,6 +28,10 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui->textEdit->moveCursor(QTextCursor::Start);
     ui->labelResult->setText("");
     ui->labelResultImage->setText("");
+    tiff_ready = false;
+    ui->pushButtonMakeTiff->setEnabled(false);
+    tempfileName = "imagedata.bin";
+    is_tiff = false;
 }
 
 MainWindow::~MainWindow()
@@ -73,6 +77,7 @@ void MainWindow::tiffFileSelecter()
     ui->labelTiffFile->setText(tifffileName);
     ui->labelResult->setText("");
     ui->labelResultImage->setText("");
+    is_tiff = true;
 }
 
 //void MainWindow::randomOption()
@@ -108,6 +113,7 @@ void MainWindow::imageOption()
     if (ui->checkBoxImage->isChecked()) {
         ui->lineEditThreshold->setEnabled(true);
         ui->pushButtonTiffFile->setEnabled(true);
+        if (tiff_ready) ui->pushButtonMakeTiff->setEnabled(true);
     } else {
         ui->lineEditThreshold->setEnabled(false);
         ui->pushButtonTiffFile->setEnabled(false);
@@ -121,7 +127,6 @@ void MainWindow::distancer()
 	int res;
 	QString qstr, resultstr;
     char cmdstr[2048];
-    QString tempfileName = "imagedata.bin";
 
     qstr = QCoreApplication::applicationDirPath() + "/exec/vdistancef ";
 	qstr += infileName;
@@ -176,44 +181,60 @@ void MainWindow::distancer()
 	if (res == 0)
 		resultstr = "SUCCESS";
 	else if (res == 1)
-        resultstr = "FAILED: get_command";
+        resultstr = "FAILED: Command line error (1)";
     else if (res == 2)
-        resultstr = "FAILED: program name";
+        resultstr = "FAILED: Command line error (2)";
     else if (res == 3)
-        resultstr = "FAILED: wrong number of arguments";
+        resultstr = "FAILED: Command line error (3)";
     else if (res == 4)
-        resultstr = "FAILED: allocate error: increase grid spacing";
+        resultstr = "FAILED: Allocate error: increase grid spacing";
     else if (res == 5)
         resultstr = "FAILED: indx out of range";
+    else if (res == 6)
+        resultstr = "FAILED: Open failure on close file";
+    else if (res == 7)
+        resultstr = "FAILED: Supplied close file has incorrect format";
     else
         resultstr = "WTF?";
 
     ui->labelResult->setText(resultstr);
-
-    if (ui->checkBoxImage->isChecked()) {
-        qstr = QCoreApplication::applicationDirPath() + "/exec/maketiff ";
-        qstr += tempfileName;
-        qstr += " ";
-        qstr += tifffileName;
-        if (qstr.size()>(int)sizeof(cmdstr)-1) {
-            printf("Failed to convert qstr->cmdstr since qstr didn't fit\n");
-            resultstr = "FAILED: cmdstr not big enough for the command";
-            ui->labelResultImage->setText(resultstr);
-            return;
-        }
-        strcpy(cmdstr, qstr.toAscii().constData());
-
-        res = system(cmdstr);
-        if (res == 0)
-            resultstr = "Image SUCCESS";
-        else if (res == 1)
-            resultstr = "Image FAILED: wrong number of arguments";
-        else if (res == 2)
-            resultstr = "Image FAILED: reading image data file";
-        else if (res == 3)
-            resultstr = "Image FAILED: writing tiff file";
-        ui->labelResultImage->setText(resultstr);
+    if (res == 0) {
+        tiff_ready = true;
     }
+    if (ui->checkBoxImage->isChecked() && is_tiff && tiff_ready){
+        ui->pushButtonMakeTiff->setEnabled(true);
+    }
+}
+
+void MainWindow::tiffer() {
+    int res;
+    QString qstr, resultstr;
+    char cmdstr[2048];
+
+    qstr = QCoreApplication::applicationDirPath() + "/exec/maketiff ";
+    qstr += tempfileName;
+    qstr += " ";
+    qstr += tifffileName;
+    qstr += " 1";
+    if (qstr.size()>(int)sizeof(cmdstr)-1) {
+        printf("Failed to convert qstr->cmdstr since qstr didn't fit\n");
+        resultstr = "FAILED: cmdstr not big enough for the command";
+        ui->labelResultImage->setText(resultstr);
+        return;
+    }
+//    ui->labelResult->setText(qstr);
+    strcpy(cmdstr, qstr.toAscii().constData());
+
+    res = system(cmdstr);
+    if (res == 0)
+        resultstr = "Image SUCCESS";
+    else if (res == 1)
+        resultstr = "Image FAILED: wrong number of arguments";
+    else if (res == 2)
+        resultstr = "Image FAILED: reading image data file";
+    else if (res == 3)
+        resultstr = "Image FAILED: writing tiff file";
+    ui->labelResultImage->setText(resultstr);
 }
 
 

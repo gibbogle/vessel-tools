@@ -65,10 +65,12 @@ character*(1024) :: c, progname
 call get_command (c, nlen, status)
 if (status .ne. 0) then
     write (*,*) 'get_command failed with status = ', status
+    write (nfout,*) 'get_command failed with status = ', status
     res = 1
     return
 end if
 write (*,*) 'command line = ', c(1:nlen)
+write (nfout,*) 'command line = ', c(1:nlen)
 call get_command_argument (0, c, nlen, status)
 if (status .ne. 0) then
     write (*,*) 'Getting command name failed with status = ', status
@@ -92,6 +94,7 @@ elseif (cnt == 15) then
 	use_sphere = .true.
 	use_close = .true.
 else
+    write(nfout,*) 'Bad command line'
 	res = 3
     write(*,*) 'Use either: ',trim(progname), &
     ' amfile distfile grid_dx ncpu pt_factor threshold datafile vx vy vz' ! 10
@@ -117,6 +120,7 @@ do i = 1, 10
     call get_command_argument (i, c, nlen, status)
     if (status .ne. 0) then
         write (*,*) 'get_command_argument failed: status = ', status, ' arg = ', i
+        write (nfout,*) 'get_command_argument failed: status = ', status, ' arg = ', i
         res = 1
         return
     end if
@@ -151,6 +155,7 @@ if (use_sphere) then
         call get_command_argument (i, c, nlen, status)
         if (status .ne. 0) then
             write (*,*) 'get_command_argument failed: status = ', status, ' arg = ', i
+            write (nfout,*) 'get_command_argument failed: status = ', status, ' arg = ', i
             res = 1
             return
         end if														
@@ -171,6 +176,7 @@ if (use_close) then
     call get_command_argument (i, c, nlen, status)
     if (status .ne. 0) then
         write (*,*) 'get_command_argument failed: status = ', status, ' arg = ', i
+        write (nfout,*) 'get_command_argument failed: status = ', status, ' arg = ', i
         res = 1
         return
     end if
@@ -234,8 +240,9 @@ end function
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-subroutine setup
-integer :: k, i, ierr
+subroutine setup(res)
+integer res
+integer :: k, i
 real :: rng
 
 call rng_initialisation
@@ -264,7 +271,6 @@ endif
 rmid = (rmin + rmax)/2
 write(*,'(a,3f8.2)') 'rmin: ',rmin
 write(*,'(a,3f8.2)') 'rmax: ',rmax
-open(nfout, file='histo.out', status='replace')
 if (save_imagedata) then
     allocate(imagedata(MAX_NX,MAX_NX,MAX_NX))
     imagedata = 0
@@ -273,7 +279,7 @@ if (save_imagedata) then
     nz = 0
 endif
 if (use_close) then
-    call read_closedata
+    call read_closedata(res)
 endif
 end subroutine
 
@@ -302,6 +308,7 @@ write(nfdist,*) 'Dimensions of array in(:,:,:): ',N
 allocate(in(N(1),N(2),N(3)),stat=ierr)
 if (ierr /= 0) then
 	write(*,*) 'Allocation failed on array in(:,:,:).  Increase grid_dx'
+	write(nfout,*) 'Allocation failed on array in(:,:,:).  Increase grid_dx'
 	res = 4
 	return
 endif
@@ -382,6 +389,7 @@ else
 			    do j = 1,3
 				    indx(j) = (xyz(j)-rmin(j))/del(j) + 1
 				    if (indx(j) > N(j)) then
+					    write(nfout,*) 'indx out of range:'
 					    write(*,*) 'indx out of range:'
 					    write(*,*) 'point: ',tri(j,:)
 					    write(*,*) 'R: ',R/rsum
@@ -1092,16 +1100,19 @@ end subroutine
 
 !----------------------------------------------------------------------------------------- 
 !----------------------------------------------------------------------------------------- 
-subroutine read_closedata
+subroutine read_closedata(res)
+integer res
 integer :: ix, iy, iz, kbit, kbyte, k
 byte :: readbyte, arraybyte
 
-open(nfclose, file=closefile, status='old', form = 'unformatted', access = 'stream')
+res = 0
+open(nfclose, file=closefile, status='old', form = 'unformatted', access = 'stream', err=99)
 read(nfclose) nxm,nym,nzm,nx8,ny8,nz8,nmbytes
 write(*,*) 'closedata dimensions: ',nxm,nym,nzm,nx8,ny8,nz8,nmbytes
 if (nmbytes /= nx8*ny8*nz8/8) then
     write(*,*) 'Error: this is not a compressed close data file'
-    stop
+    res = 7
+    return
 endif
 !allocate(closedata(nxm,nym,nzm))
 allocate(closedata(nmbytes))
@@ -1128,6 +1139,9 @@ read(nfclose) closedata
 !    enddo
 !enddo
 close(nfclose)
+return
+99 continue
+res = 6
 !k = 0
 !do kbyte = 1,nmbytes
 !    if (closedata(kbyte) /= 0) k = k + 1
@@ -1494,6 +1508,14 @@ end subroutine
 end module
 
 !-----------------------------------------------------------------------------------------
+! Return error codes:
+! 1  Command line error (1)
+! 2  Command line error (2)
+! 3  Command line error (3)
+! 4  Allocation failure on array in(), increase grid_dx
+! 5  Indx out of range
+! 6  Open failure on close file
+! 7  Supplied close file has incorrect format - did you specify .bin file?
 !-----------------------------------------------------------------------------------------
 program main
 use data_mod
@@ -1502,13 +1524,17 @@ logical :: ok
 
 res = 0
 
+open(nfout, file='histo.out', status='replace')
 call input(res)
 if (res /= 0) then
 	call exit(res)
 endif
 call omp_initialisation(ok)
 call read_network
-call setup
+call setup(res)
+if (res /= 0) then
+    call exit(res)
+endif
 !call test_delaunay
 !call histology
 !call exit(res)
