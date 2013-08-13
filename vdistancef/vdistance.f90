@@ -40,7 +40,7 @@ byte, allocatable :: closedata(:)
 real :: grid_dx, delp, pt_factor
 real :: rmin(3), rmax(3), rmid(3), del(3), delb(3), voxelsize(3)
 real :: sphere_centre(3), sphere_radius, constant_r, threshold_d
-integer :: Nsegpts, N(3), NB(3), Nsegments, Mnodes, np_random, np_grid
+integer :: Nsegpts, N(3), NB(3), Nsegments, Mnodes, np_random, np_grid, offset(3)
 integer :: nx, ny, nz, nx8, ny8, nz8, nmbytes, nxm, nym, nzm
 character*(128) :: amfile, distfile, datafile, closefile
 logical :: use_sphere, use_random, use_constant_radius, save_imagedata, use_close
@@ -52,6 +52,7 @@ real, parameter :: blocksize = 120
 integer, parameter :: seed(2) = (/12345, 67891/)
 integer, parameter :: MAX_NX = 900  ! a guess
 integer, parameter :: test = 0
+logical, parameter :: jiggle = .true.
 
 contains
 
@@ -246,11 +247,13 @@ integer :: k, i
 real :: rng
 
 call rng_initialisation
+if (use_close) then
+    call read_closedata(res)
+    if (res /= 0) return
+endif
 
 Nsegpts = 2*nsegments
 allocate(point(Nsegpts,3))
-rmin = 1.0e10
-rmax = -1.0e10
 k = 0
 do i = 1,nsegments
 	k = k+1
@@ -262,7 +265,11 @@ if (use_sphere) then
 	write(*,'(a,4f8.2)') 'Using sphere: centre, radius: ',sphere_centre,sphere_radius
 	rmin = sphere_centre - sphere_radius
 	rmax = sphere_centre + sphere_radius
+elseif (use_close) then     ! get ranges from the close file
+    call getcloseranges
 else
+    rmin = 1.0e10
+    rmax = -1.0e10
     do k = 1,Nsegpts
 	    rmin = min(rmin,point(k,:))
 	    rmax = max(rmax,point(k,:))
@@ -278,9 +285,7 @@ if (save_imagedata) then
     ny = 0
     nz = 0
 endif
-if (use_close) then
-    call read_closedata(res)
-endif
+res = 0
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -302,7 +307,9 @@ rmax = rmax + 1
 del = grid_dx
 N = (rmax - rmin)/del + 1
 rmax = rmin + (N-1)*del
+offset = rmin/del + 0.001
 write(*,*) 'del: ',del
+write(*,*) 'offset: ',offset
 write(*,*) 'Dimensions of array in(:,:,:): ',N
 write(nfdist,*) 'Dimensions of array in(:,:,:): ',N
 allocate(in(N(1),N(2),N(3)),stat=ierr)
@@ -426,13 +433,15 @@ if (p(1) > nxm .or. p(2) > nym .or. p(3) > nzm) then
 endif
 ! Need to convert to the byte and bit
 nb = p(1) + (p(2)-1)*nx8 + (p(3)-1)*nx8*ny8
-if (mod(nb,8) == 0) then
-    kbyte = nb/8
-    kbit = 0
-else
-    kbyte = nb/8 + 1
-    kbit = nb  - 8*(kbyte-1)
-endif
+!if (mod(nb,8) == 0) then
+!    kbyte = nb/8
+!    kbit = 0
+!else
+!    kbyte = nb/8 + 1
+!    kbit = nb  - 8*(kbyte-1)
+!endif
+kbyte = (nb-1)/8 + 1
+kbit = nb - 8*(kbyte-1) - 1
 if (kbyte > nmbytes) then
     write(*,'(a,6i12)') 'Error: kbyte > nmbytes: ',p,nb,kbyte,nmbytes
     write(*,'(a,3f8.1)') 'xyz: ',xyz
@@ -451,6 +460,39 @@ endif
 !    in_close = .true.
 !endif
 end function
+
+!-----------------------------------------------------------------------------------------
+! Deduce ranges from the closedata
+!-----------------------------------------------------------------------------------------
+subroutine getcloseranges
+integer :: ix, iy, iz, k, kbyte, kbit
+real :: xyz(3)
+byte :: mbyte
+
+rmin = 1.0e10
+rmax = -1.0e10
+k = 0
+do iz = 1,nz8
+    do iy = 1,ny8
+        do ix = 1,nx8
+            k = k + 1
+            kbyte = (k-1)/8 + 1
+            kbit = k-1 - 8*(kbyte-1)
+            mbyte = closedata(kbyte)
+            if (btest(mbyte,kbit)) then
+                xyz(1) = (ix-1)*voxelsize(1)
+                xyz(2) = (iy-1)*voxelsize(2)
+                xyz(3) = (iz-1)*voxelsize(3)
+                rmin = min(rmin,xyz)
+                rmax = max(rmax,xyz)
+            endif
+        enddo
+    enddo
+enddo
+write(*,*) 'getcloseranges: '
+write(*,*) 'rmin: ',rmin
+write(*,*) 'rmax: ',rmax
+end subroutine
 
 !-----------------------------------------------------------------------------------------
 ! After selecting the first point randomly from the list, the next two are chosen from
@@ -737,11 +779,20 @@ subroutine make_lists
 integer :: iseg, ib(3), nmax
 
 NB(1) = (rmax(1) - rmin(1))/blocksize + 1
-NB(2) = NB(1)*(rmax(2) - rmin(2))/(rmax(1) - rmin(1))
-NB(3) = NB(1)*(rmax(3) - rmin(3))/(rmax(1) - rmin(1))
+if (NB(1) == 1) then
+    NB(2) = 1
+    NB(3) = 1
+else
+    NB(2) = NB(1)*(rmax(2) - rmin(2))/(rmax(1) - rmin(1))
+    NB(3) = NB(1)*(rmax(3) - rmin(3))/(rmax(1) - rmin(1))
+endif
 write(*,*) 'NB: ',NB
 allocate(nseglist(NB(1),NB(2),NB(3)))
-delb = (rmax - rmin)/NB
+if (NB(1) == 1) then
+    delb = blocksize
+else
+    delb = (rmax - rmin)/NB
+endif
 write(*,*) 'Block size delb: ',delb
 
 nseglist = 0
@@ -857,9 +908,11 @@ do ix = 1,N(1)
 			p(3) = rmin(3) + (iz-0.5)*del(3)
 			ib(3) = (iz-0.5)*del(3)/delb(3) + 1
 			! To get off the grid, in case voxel dimensions are integer
-			do i = 1,3
-			    p(i) = p(i) + par_uni(kpar) - 0.5
-			enddo
+			if (jiggle) then
+			    do i = 1,3
+			        p(i) = p(i) + par_uni(kpar) - 0.5
+			    enddo
+			endif
 			
             call get_mindist(p, ib, dmin, hit)
             
@@ -1021,21 +1074,21 @@ subroutine add_voxel(p)
 real :: p(3)
 integer :: ix, iy, iz
 
-ix = p(1)/grid_dx
+ix = p(1)/grid_dx + offset(1)
 if (ix > MAX_NX) then
     write(*,*) 'ix > MAX_NX'
     stop
 endif
 nx = max(nx,ix)
 if (use_random) nx = max(nx,ix+1)
-iy = p(2)/grid_dx
+iy = p(2)/grid_dx + offset(2)
 if (iy > MAX_NX) then
     write(*,*) 'iy > MAX_NX'
     stop
 endif
 ny = max(ny,iy)
 if (use_random) ny = max(ny,iy+1)
-iz = p(3)/grid_dx
+iz = p(3)/grid_dx + offset(3)
 if (iz > MAX_NX) then
     write(*,*) 'iz > MAX_NX'
     stop
@@ -1054,32 +1107,36 @@ end subroutine
 subroutine add_ivoxel(ix,iy,iz)
 !real :: p(3)
 integer :: ix, iy, iz
+integer :: ixx, iyy, izz
 
+ixx = ix + offset(1)
+iyy = iy + offset(2)
+izz = iz + offset(3)
 !ix = p(1)/grid_dx
 !if (ix > MAX_NX) then
 !    write(*,*) 'ix > MAX_NX'
 !    stop
 !endif
-nx = max(nx,ix)
-if (use_random) nx = max(nx,ix+1)
+nx = max(nx,ixx)
+if (use_random) nx = max(nx,ixx+1)
 !iy = p(2)/grid_dx
 !if (iy > MAX_NX) then
 !    write(*,*) 'iy > MAX_NX'
 !    stop
 !endif
-ny = max(ny,iy)
-if (use_random) ny = max(ny,iy+1)
+ny = max(ny,iyy)
+if (use_random) ny = max(ny,iyy+1)
 !iz = p(3)/grid_dx
 !if (iz > MAX_NX) then
 !    write(*,*) 'iz > MAX_NX'
 !    stop
 !endif
-nz = max(nz,iz)
-if (use_random) nz = max(nz,iz+1)
+nz = max(nz,izz)
+if (use_random) nz = max(nz,izz+1)
 if (use_random) then
-    imagedata(ix-1:ix+1,iy-1:iy+1,iz-1:iz+1) = 255
+    imagedata(ixx-1:ixx+1,iyy-1:iyy+1,izz-1:izz+1) = 255
 else
-    imagedata(ix,iy,iz) = 255
+    imagedata(ixx,iyy,izz) = 255
 endif
 end subroutine
 
@@ -1087,15 +1144,28 @@ end subroutine
 !#define V(a,b,c)  p[(c)*xysize+(b)*width+(a)] 
 !-----------------------------------------------------------------------------------------
 subroutine write_imagedata
-integer :: ix, iy, iz
+integer :: ix, iy, iz, offset(3)
+integer :: x0, z0
 
+x0 = 100
+z0 = 100
+do ix = 1,nx
+    do iy = 1,ny
+        do iz = 1,nz
+            if (imagedata(ix,iy,iz) /= 0) then
+                x0 = min(x0,ix)
+                z0 = min(z0,iz)
+            endif
+        enddo
+    enddo
+enddo
+write(*,*) 'write_imagedata: first ix, iy: ',x0,z0
 nx = nx + 20
 ny = ny + 20
 nz = nz + 20
 open(nfdata, file=datafile, status='replace', form = 'unformatted', access = 'stream')
 write(nfdata) nx,ny,nz,(((imagedata(ix,iy,iz),ix=1,nx),iy=1,ny),iz=1,nz)
 close(nfdata)
-
 end subroutine
 
 !----------------------------------------------------------------------------------------- 

@@ -1,0 +1,12 @@
+To determine a node number using CMGUI (note the numbering is 1-based)
+
+Open the network in cmgui
+On the Command Window, select Graphics >Scene Editor
+Click on Vessels in the left panel
+In the right panel, under Cylinders, untick 1. cylinders..  Now only 2. node-points is ticked
+Click on 2. node-points.. (leave it ticked)
+You will observe that now the scene is showing only nodal spheres of different sizes.  We want to display the node numbers.
+Go down to Label: (currently showing "-" selected) and select cmiss_number
+Note the artistic effect created :)
+It is a bit hard to see the numbers unless the spheres are made smaller.  It helps to change Scale factors 
+to something small, like 0.1

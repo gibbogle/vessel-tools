@@ -1,7 +1,10 @@
 /*
  * Make a tiff file from data (direction = 1)
+ * This direction does not convert voxel values - if the data is (0,1) the tiff will be (0,1)
  * or
- * make a data file from a tiff file (direction = 0)
+ * Make a data file from a tiff file (direction = 0)
+ * This direction is currently hard-wired to generate a compressed (0,1) data file from a binary (0,255) tiff.
+ * This is the format of a close (hull) file.
  */
 
 #include <cstdio>
