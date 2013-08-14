@@ -61,12 +61,12 @@ contains
 subroutine input(res)
 integer :: res
 integer :: nlen, cnt, i, k, status
-character*(1024) :: c, progname
+character*(2048) :: c, progname
 
 call get_command (c, nlen, status)
 if (status .ne. 0) then
-    write (*,*) 'get_command failed with status = ', status
-    write (nfout,*) 'get_command failed with status = ', status
+    write (*,*) 'get_command failed to get command line with status = ', status
+    write (nfout,*) 'get_command failed to get command line with status = ', status
     res = 1
     return
 end if
@@ -74,13 +74,15 @@ write (*,*) 'command line = ', c(1:nlen)
 write (nfout,*) 'command line = ', c(1:nlen)
 call get_command_argument (0, c, nlen, status)
 if (status .ne. 0) then
-    write (*,*) 'Getting command name failed with status = ', status
-    res = 2
+    write (*,*) 'Getting command progname failed with status = ', status
+    write (nfout,*) 'Getting command progname failed with status = ', status
+    res = 1
     return
 end if
 progname = c(1:nlen)
 cnt = command_argument_count ()
 write (*,*) 'number of command arguments = ', cnt
+write (nfout,*) 'number of command arguments = ', cnt
 res = 0
 if (cnt == 10) then
 	use_sphere = .false.
@@ -95,8 +97,9 @@ elseif (cnt == 15) then
 	use_sphere = .true.
 	use_close = .true.
 else
-    write(nfout,*) 'Bad command line'
-	res = 3
+    write(*,*) 'Bad command line argument count'
+    write(nfout,*) 'Bad command line argument count'
+	res = 2
     write(*,*) 'Use either: ',trim(progname), &
     ' amfile distfile grid_dx ncpu pt_factor threshold datafile vx vy vz' ! 10
     write(*,*) ' to analyze the whole network'
@@ -122,32 +125,49 @@ do i = 1, 10
     if (status .ne. 0) then
         write (*,*) 'get_command_argument failed: status = ', status, ' arg = ', i
         write (nfout,*) 'get_command_argument failed: status = ', status, ' arg = ', i
-        res = 1
+        res = 3
         return
     end if
     if (i == 1) then
         amfile = c(1:nlen)
         write(*,*) 'Network file: ',amfile
+        write(nfout,*) 'Network file: ',amfile
     elseif (i == 2) then
         distfile = c(1:nlen)
         write(*,*) 'Distribution file: ',distfile
+        write(nfout,*) 'Distribution file: ',distfile
     elseif (i == 3) then
         read(c(1:nlen),*) grid_dx																
         write(*,*) 'grid_dx: ',grid_dx
+        write(nfout,*) 'grid_dx: ',grid_dx
     elseif (i == 4) then
-        read(c(1:nlen),*) Mnodes																
+        read(c(1:nlen),*) Mnodes
+        write(*,*) 'Mnodes: ',Mnodes															
+        write(nfout,*) 'Mnodes: ',Mnodes															
     elseif (i == 5) then
-        read(c(1:nlen),*) pt_factor																
+        read(c(1:nlen),*) pt_factor
+        write(*,*) 'pt_factor: ',pt_factor
+        write(nfout,*) 'pt_factor: ',pt_factor
     elseif (i == 6) then
-        read(c(1:nlen),*) threshold_d																
+        read(c(1:nlen),*) threshold_d
+        write(*,*) 'threshold_d: ',threshold_d
+        write(nfout,*) 'threshold_d: ',threshold_d
     elseif (i == 7) then
-        read(c(1:nlen),*) datafile															
+        read(c(1:nlen),*) datafile		
+        write(*,*) 'datafile: ',datafile													
+        write(nfout,*) 'datafile: ',datafile													
     elseif (i == 8) then
         read(c(1:nlen),*) voxelsize(1)																
+        write(*,*) 'voxelsize(1): ',voxelsize(1)
+        write(nfout,*) 'voxelsize(1): ',voxelsize(1)
     elseif (i == 9) then
         read(c(1:nlen),*) voxelsize(2)																
+        write(*,*) 'voxelsize(2): ',voxelsize(2)
+        write(nfout,*) 'voxelsize(2): ',voxelsize(2)
     elseif (i == 10) then
         read(c(1:nlen),*) voxelsize(3)	
+        write(*,*) 'voxelsize(3): ',voxelsize(3)
+        write(nfout,*) 'voxelsize(3): ',voxelsize(3)
     endif
 enddo
 k = 10
@@ -157,20 +177,28 @@ if (use_sphere) then
         if (status .ne. 0) then
             write (*,*) 'get_command_argument failed: status = ', status, ' arg = ', i
             write (nfout,*) 'get_command_argument failed: status = ', status, ' arg = ', i
-            res = 1
+            res = 3
             return
         end if														
         if (i == k+1) then
-            read(c(1:nlen),*) sphere_centre(1)																
+            read(c(1:nlen),*) sphere_centre(1)
+            write(*,*) 'sphere_centre(1): ',sphere_centre(1)																
+            write(nfout,*) 'sphere_centre(1): ',sphere_centre(1)																
         elseif (i == k+2) then
             read(c(1:nlen),*) sphere_centre(2)																
+            write(*,*) 'sphere_centre(2): ',sphere_centre(2)																
+            write(nfout,*) 'sphere_centre(2): ',sphere_centre(2)																
         elseif (i == k+3) then
             read(c(1:nlen),*) sphere_centre(3)																
+            write(*,*) 'sphere_centre(3): ',sphere_centre(3)																
+            write(nfout,*) 'sphere_centre(3): ',sphere_centre(3)																
         elseif (i == k+4) then
-            read(c(1:nlen),*) sphere_radius																
+            read(c(1:nlen),*) sphere_radius
+            write(*,*) 'sphere_radius: ',sphere_radius
+            write(nfout,*) 'sphere_radius: ',sphere_radius
         endif
-        k = k+4
     enddo
+    k = k+4
 endif
 if (use_close) then
     i = k+1
@@ -178,10 +206,12 @@ if (use_close) then
     if (status .ne. 0) then
         write (*,*) 'get_command_argument failed: status = ', status, ' arg = ', i
         write (nfout,*) 'get_command_argument failed: status = ', status, ' arg = ', i
-        res = 1
+        res = 3
         return
     end if
     closefile = c(1:nlen)
+    write(*,*) 'closefile: ',closefile
+    write(nfout,*) 'closefile: ',closefile
 endif										
 if (grid_dx == 0) then
     use_random = .true.
@@ -201,6 +231,7 @@ else
 endif
 if (use_sphere) then
 	write(*,'(a,4f8.2)') 'Sphere centre, radius: ',sphere_centre,sphere_radius
+	write(nfout,'(a,4f8.2)') 'Sphere centre, radius: ',sphere_centre,sphere_radius
 endif
 end subroutine
 
@@ -296,14 +327,16 @@ integer :: i, j, k, ip(3), indx(3), ix, iy, iz, ierr, Ngridpts, kpar=0
 real :: R(3), rsum, xyz(3), v(3), tri(3,3)
 logical :: localize = .true.
 
+write(*,*) 'create_in'
 res = 0
 !if (use_sphere) then
 !	write(*,'(a,4f8.2)') 'Using sphere: centre, radius: ',sphere_centre,sphere_radius
 !	rmin = sphere_centre - sphere_radius
 !	rmax = sphere_centre + sphere_radius
 !endif
-rmin = rmin - 1
-rmax = rmax + 1
+
+!rmin = rmin - 1
+!rmax = rmax + 1
 del = grid_dx
 N = (rmax - rmin)/del + 1
 rmax = rmin + (N-1)*del
@@ -445,7 +478,7 @@ kbit = nb - 8*(kbyte-1) - 1
 if (kbyte > nmbytes) then
     write(*,'(a,6i12)') 'Error: kbyte > nmbytes: ',p,nb,kbyte,nmbytes
     write(*,'(a,3f8.1)') 'xyz: ',xyz
-    stop
+    call exit(8)
 endif
 mbyte = closedata(kbyte)
 if (btest(mbyte,kbit)) then
@@ -1077,21 +1110,21 @@ integer :: ix, iy, iz
 ix = p(1)/grid_dx + offset(1)
 if (ix > MAX_NX) then
     write(*,*) 'ix > MAX_NX'
-    stop
+    call exit(9)
 endif
 nx = max(nx,ix)
 if (use_random) nx = max(nx,ix+1)
 iy = p(2)/grid_dx + offset(2)
 if (iy > MAX_NX) then
     write(*,*) 'iy > MAX_NX'
-    stop
+    call exit(9)
 endif
 ny = max(ny,iy)
 if (use_random) ny = max(ny,iy+1)
 iz = p(3)/grid_dx + offset(3)
 if (iz > MAX_NX) then
     write(*,*) 'iz > MAX_NX'
-    stop
+    call exit(9)
 endif
 nz = max(nz,iz)
 if (use_random) nz = max(nz,iz+1)

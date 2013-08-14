@@ -696,6 +696,118 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>lineEditGrid_dx</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>imageChange()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>158</x>
+     <y>281</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>191</x>
+     <y>225</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>lineEditThreshold</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>imageChange()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>57</x>
+     <y>352</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>88</x>
+     <y>376</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>lineEditRadius</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>imageChange()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>374</x>
+     <y>263</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>451</x>
+     <y>305</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>lineEditX0</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>imageChange()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>310</x>
+     <y>238</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>230</x>
+     <y>239</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>lineEditY0</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>imageChange()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>305</x>
+     <y>262</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>214</x>
+     <y>263</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>lineEditZ0</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>imageOption()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>302</x>
+     <y>281</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>239</x>
+     <y>280</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>checkBoxSphere</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>imageChange()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>293</x>
+     <y>190</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>166</x>
+     <y>172</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>buttonClickHandler()</slot>
@@ -710,5 +822,6 @@
   <slot>closeFileSelecter()</slot>
   <slot>closeOption()</slot>
   <slot>tiffer()</slot>
+  <slot>imageChange()</slot>
  </slots>
 </ui>

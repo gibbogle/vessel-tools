@@ -122,6 +122,11 @@ void MainWindow::imageOption()
     ui->labelResultImage->setText("");
 }
 
+void MainWindow::imageChange(){
+    tiff_ready = false;
+    ui->pushButtonMakeTiff->setEnabled(false);
+}
+
 void MainWindow::distancer()
 {
 	int res;
@@ -183,9 +188,9 @@ void MainWindow::distancer()
 	else if (res == 1)
         resultstr = "FAILED: Command line error (1)";
     else if (res == 2)
-        resultstr = "FAILED: Command line error (2)";
+        resultstr = "FAILED: Command line argument count error (2)";
     else if (res == 3)
-        resultstr = "FAILED: Command line error (3)";
+        resultstr = "FAILED: Command line argument error (3)";
     else if (res == 4)
         resultstr = "FAILED: Allocate error: increase grid spacing";
     else if (res == 5)
@@ -194,6 +199,10 @@ void MainWindow::distancer()
         resultstr = "FAILED: Open failure on close file";
     else if (res == 7)
         resultstr = "FAILED: Supplied close file has incorrect format";
+    else if (res == 8)
+        resultstr = "FAILED: Access error in closedata: kbytes > nmbytes";
+    else if (res == 9)
+        resultstr = "FAILED: Exceeded dimension of array imagedata";
     else
         resultstr = "WTF?";
 

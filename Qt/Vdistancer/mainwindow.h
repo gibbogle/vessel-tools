@@ -25,6 +25,7 @@ public slots:
     void sphereOption();
 //    void randomOption();
     void imageOption();
+    void imageChange();
 
 private:
     Ui::MainWindow *ui;
