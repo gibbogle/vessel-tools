@@ -10,7 +10,7 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 	ui->textEdit->setReadOnly(true);
-        QString infoFile = QCoreApplication::applicationDirPath() + "/info/distancer_info.txt";
+        QString infoFile = QCoreApplication::applicationDirPath() + "/info/L_distancer_info.txt";
 	QFile file(infoFile);
 	bool ok = file.open(QIODevice::ReadOnly | QIODevice::Text);
 	if (!ok) {

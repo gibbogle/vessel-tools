@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Create distance distribution</string>
+   <string>Create distance distribution: vessel - lymphatics</string>
   </property>
   <widget class="QWidget" name="centralWidget">
    <widget class="QPushButton" name="pushButtonInFile">
@@ -85,7 +85,7 @@
       <x>520</x>
       <y>10</y>
       <width>441</width>
-      <height>221</height>
+      <height>311</height>
      </rect>
     </property>
    </widget>
