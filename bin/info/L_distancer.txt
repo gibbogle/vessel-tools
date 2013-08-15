@@ -1,0 +1,18 @@
+L_distancer generates a probability distribution of the distance from points along the centreline of the vascular network to the nearest lymphatic boundary.
+
+The program proceeds by two stages.  
+
+Stage 1. The binary tiff image of the lymphatics is processed to generate a text file containing the locations of all the boundary voxels.
+
+Stage 2. The information in the network file is combined with the lymphatic boundary data previously generated to compute the distribution of distance.
+
+Files:
+
+Vascular network file (.am)
+Lymphatic binary image (.tif)
+Output distribution file (.out)
+Boundary data file (.dat) (Note that either this is created or an existing file is used)
+
+Voxel dimensions (um) must be provided.
+
+Note that the option of defining a spherical subregion is currently not implemented.
