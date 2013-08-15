@@ -26,16 +26,15 @@ integer, allocatable :: bdrylist(:,:,:,:)		! for each (ib,jb,kb), a list of segm
 integer, allocatable :: nbdrylist(:,:,:)			! for each (ib,jb,kb), number of segments in the seglist
 
 real :: delp
-real :: rmin(3), rmax(3), del(3), delb(3), centre(3), radius
+real :: rmin(3), rmax(3), del(3), delb(3), centre(3), radius, voxelsize(3)
 integer :: Npts, N(3), NB(3), Nsegments, Nbdry
 character*(1024) :: amfile, bdryfile, distfile
 logical :: use_sphere
 
-integer, parameter :: nfam = 10, nfdist=11, nfbdry=12
+integer, parameter :: nfam = 10, nfdist=11, nfbdry=12, nfout=13
 real, parameter :: blocksize = 60
 integer, parameter :: seed(2) = (/12345, 67891/)
 integer, parameter :: test = 0
-integer, parameter :: voxelsize = 1
 
 contains
 
@@ -46,34 +45,40 @@ integer :: res
 integer :: nlen, cnt, i, status
 character*(2048) :: c, progname
 
+open(nfout,file='lymphatic.out',status='replace')
 call get_command (c, nlen, status)
 if (status .ne. 0) then
     write (*,*) 'get_command failed with status = ', status
     res = 1
     return
 end if
-!write (*,*) 'command line = ', c(1:len)
+write (*,*) 'command line = ', c(1:nlen)
+write (nfout,*) 'command line = ', c(1:nlen)
 call get_command_argument (0, c, nlen, status)
 if (status .ne. 0) then
     write (*,*) 'Getting command name failed with status = ', status
-    res = 2
+    res = 1
     return
 end if
-write (*,*) 'command name = ', c(1:nlen)
 progname = c(1:nlen)
 cnt = command_argument_count ()
 write (*,*) 'number of command arguments = ', cnt
+write (nfout,*) 'number of command arguments = ', cnt
 res = 0
-if (cnt == 3) then
+if (cnt == 6) then
 	use_sphere = .false.
-elseif (cnt == 7) then
+elseif (cnt == 10) then
 	use_sphere = .true.
 else
-	res = 3
-    write(*,*) 'Use either: ',trim(progname),' amfile bdryfile distfile'
+	res = 2
+    write(*,*) 'Use either: ',trim(progname),' amfile bdryfile distfile voxel_x voxel_y voxel_z'
     write(*,*) ' to analyze the whole network'
-    write(*,*) 'or: ',trim(progname),' amfile bdryfile distfile x0 y0 z0 R'
+    write(*,*) 'or: ',trim(progname),' amfile bdryfile distfile voxel_x voxel_y voxel_z x0 y0 z0 R'
     write(*,*) ' to analyze a spherical subregion with centre (x0,y0,z0), radius R'
+    write(nfout,*) 'Use either: ',trim(progname),' amfile bdryfile distfile voxel_x voxel_y voxel_z'
+    write(nfout,*) ' to analyze the whole network'
+    write(nfout,*) 'or: ',trim(progname),' amfile bdryfile distfile voxel_x voxel_y voxel_z x0 y0 z0 R'
+    write(nfout,*) ' to analyze a spherical subregion with centre (x0,y0,z0), radius R'
     return
 endif
 
@@ -81,26 +86,50 @@ do i = 1, cnt
     call get_command_argument (i, c, nlen, status)
     if (status .ne. 0) then
         write (*,*) 'get_command_argument failed: status = ', status, ' arg = ', i
-        res = 1
+        write (nfout,*) 'get_command_argument failed: status = ', status, ' arg = ', i
+        res = 3
         return
     end if
     if (i == 1) then
-        amfile = c(1:nlen)
-        write(*,*) 'Network file: ',amfile
+        amfile = trim(c(1:nlen))
+        write(*,*) 'Network file: ',trim(amfile)
+        write(nfout,*) 'Network file: ',trim(amfile)
     elseif (i == 2) then
-        bdryfile = c(1:nlen)
-        write(*,*) 'Lymphatic boundary file: ',bdryfile
+        bdryfile = trim(c(1:nlen))
+        write(*,*) 'Lymphatic boundary file: ',trim(bdryfile)
+        write(nfout,*) 'Lymphatic boundary file: ',trim(bdryfile)
     elseif (i == 3) then
-        distfile = c(1:nlen)
-        write(*,*) 'Distribution file: ',distfile
+        distfile = trim(c(1:nlen))
+        write(*,*) 'Distribution file: ',trim(distfile)
+        write(nfout,*) 'Distribution file: ',trim(distfile)
     elseif (i == 4) then
-        read(c(1:nlen),*) centre(1)																
+        read(c(1:nlen),*) voxelsize(1)																
+        write(*,*) 'voxelsize(1): ',voxelsize(1)
+        write(nfout,*) 'voxelsize(1): ',voxelsize(1)
     elseif (i == 5) then
-        read(c(1:nlen),*) centre(2)																
+        read(c(1:nlen),*) voxelsize(2)																
+        write(*,*) 'voxelsize(2): ',voxelsize(2)
+        write(nfout,*) 'voxelsize(2): ',voxelsize(2)
     elseif (i == 6) then
-        read(c(1:nlen),*) centre(3)																
+        read(c(1:nlen),*) voxelsize(3)																
+        write(*,*) 'voxelsize(3): ',voxelsize(3)
+        write(nfout,*) 'voxelsize(3): ',voxelsize(3)
     elseif (i == 7) then
+        read(c(1:nlen),*) centre(1)																
+        write(*,*) 'centre(1): ',centre(1)
+        write(nfout,*) 'centre(1): ',centre(1)
+    elseif (i == 8) then
+        read(c(1:nlen),*) centre(2)																
+        write(*,*) 'centre(2): ',centre(2)
+        write(nfout,*) 'centre(2): ',centre(2)
+    elseif (i == 9) then
+        read(c(1:nlen),*) centre(3)																
+        write(*,*) 'centre(3): ',centre(3)
+        write(nfout,*) 'centre(3): ',centre(3)
+    elseif (i == 10) then
         read(c(1:nlen),*) radius																
+        write(*,*) 'radius: ',radius
+        write(nfout,*) 'radius: ',radius
     endif
 end do
 if (use_sphere) then
@@ -188,6 +217,7 @@ enddo
 end subroutine
 
 !-----------------------------------------------------------------------------------------
+! The boundary data is stored in a text file.
 !-----------------------------------------------------------------------------------------
 subroutine read_boundary
 integer :: k, ixyz(3)
@@ -206,7 +236,6 @@ do k = 1,Nbdry
 	bdry(k,:) = voxelsize*ixyz
 enddo
 write(*,*) 'nbdry: ',nbdry
-stop
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -343,7 +372,7 @@ do iseg = 1,nsegments
 	if (ib(1) < 1 .or. ib(2) < 1 .or. ib(3) < 1) cycle
 	if (ib(1) > NB(1) .or. ib(2) > NB(2) .or. ib(3) > NB(3)) cycle
 	nseglist(ib(1),ib(2),ib(3))  = nseglist(ib(1),ib(2),ib(3)) + 1
-	seglist(ib(1),ib(2),ib(3),nseglist(ib(1),ib(2),ib(3))) = k
+	seglist(ib(1),ib(2),ib(3),nseglist(ib(1),ib(2),ib(3))) = iseg
 enddo
 nbdrylist = 0
 do k = 1,Nbdry
@@ -550,10 +579,10 @@ do ixb = 1,NB(1)
 
 				dmin = sqrt(d2min)
 				np = np+1
-				totweight = totweight + segment(iseg)%len
+!				totweight = totweight + segment(iseg)%len
 				id = min(npdist,int(dmin/delp + 1))
 	!			write(*,*) dmin,delp,id
-				pdist(id) = pdist(id) + segment(iseg)%len
+				pdist(id) = pdist(id) + 1
 				idmax = max(idmax,id)
 	!			if (dmin < 0.5) then
 	!				write(*,'(3i5,e12.3,2i4)') ix,iy,iz,dmin,id,idmax	
@@ -563,8 +592,11 @@ do ixb = 1,NB(1)
 	enddo
 enddo
 write(*,*)
+totweight = sum(pdist)
 pdist = pdist/totweight
 open(nfdist,file=distfile,status='replace')
+write(nfdist,*) 'totweight: ',totweight
+write(nfdist,*)
 do i = 1,npdist
 	write(nfdist,'(f6.2,e12.4)') (i-0.5)*delp,pdist(i)
 enddo
@@ -585,11 +617,16 @@ call input(res)
 if (res /= 0) then
 	call exit(res)
 endif
+write(*,*) 'Reading boundary file'
 call read_boundary
+write(*,*) 'Reading network file'
 call read_network
+write(*,*) 'Setup'
 call setup
 !call show
+write(*,*) 'Making lists'
 call make_lists
+write(*,*) 'Computing distance distribution'
 call distribution
 call exit(res)
 end

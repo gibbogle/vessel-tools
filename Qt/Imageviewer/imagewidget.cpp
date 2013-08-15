@@ -21,6 +21,7 @@
 //#include <itkVectorGradientAnisotropicDiffusionImageFilter.h>
 
 #include <vtkInteractorStyleImage.h>
+#include <vtkObjectFactory.h>
 
 #include "imagewidget.h"
 //#include "medianFilterDialog.h"
@@ -513,13 +514,30 @@ void ImageWidget::gradientAnisotropicDiffusionFilter()
 }
 */
 
+// Define interaction style
+class MouseInteractorStyle4 : public vtkInteractorStyleImage
+{
+  public:
+    static MouseInteractorStyle4* New();
+    vtkTypeMacro(MouseInteractorStyle4, vtkInteractorStyleImage);
+
+    virtual void OnLeftButtonDown() 
+    {
+      //std::cout << "Pressed left mouse button." << std::endl;
+      // Forward events
+	  int shifted = this->Interactor->GetShiftKey();
+	  if (shifted != 0) vtkInteractorStyleImage::OnLeftButtonDown();
+    }
+};
+vtkStandardNewMacro(MouseInteractorStyle4);
+
 void ImageWidget::displayImage(vtkImageData *image)
 {
 
     int *dim = image->GetDimensions();
     double *spacing = image->GetSpacing(); 
     double *origin = image->GetOrigin();  
-    
+
     float Cx = (dim[0] * spacing[0])/2. + origin[0];
     float Cy = (dim[1] * spacing[1])/2. + origin[1];
     camera->ParallelProjectionOn();
@@ -538,11 +556,12 @@ void ImageWidget::displayImage(vtkImageData *image)
     renderer->ResetCamera();
 
 //	qvtkWidget->SetRenderWindow(renderWindow); // moved to constructor
-//    printf("returning from displayImage\n");    // apparently not necessary to set interactor style - default OK
+//    printf("returning from displayImage\n");    // apparently not necessary to set interactor style - default OK 
 //    return;
 
     // window interactor style for display images 
-	vtkSmartPointer<vtkInteractorStyleImage> style = vtkSmartPointer<vtkInteractorStyleImage>::New();
+//	vtkSmartPointer<vtkInteractorStyleImage> style = vtkSmartPointer<vtkInteractorStyleImage>::New();
+    vtkSmartPointer<MouseInteractorStyle4> style = vtkSmartPointer<MouseInteractorStyle4>::New();
 	// set interactor style to the qvtkWidget Interactor
 	qvtkWidget->GetInteractor()->SetInteractorStyle(style);
 

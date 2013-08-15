@@ -136,7 +136,6 @@ void MainWindow::L_distancer()
         qstr += lymphaticFileName;
         qstr += " ";
         qstr += bdryFileName;
-
         if (qstr.size()>(int)sizeof(cmdstr)-1) {
             printf("Failed to convert qstr->cmdstr since qstr didn't fit\n");
             resultstr = "FAILED: cmdstr not big enough for the boundary command";
@@ -151,9 +150,9 @@ void MainWindow::L_distancer()
         else if (res == 1)
             resultstr = "FAILED: boundary: get_command";
         else if (res == 2)
-            resultstr = "FAILED: boundary: program name";
-        else if (res == 3)
             resultstr = "FAILED: boundary: wrong number of arguments";
+        else if (res == 3)
+            resultstr = "FAILED: boundary: argument";
         else if (res == 4)
             resultstr = "FAILED: boundary: allocate error: increase grid spacing";
         else if (res == 5)
@@ -170,7 +169,12 @@ void MainWindow::L_distancer()
     qstr += bdryFileName;
     qstr += " ";
     qstr += outFileName;
-
+    qstr += " ";
+    qstr += ui->lineEditVoxel_x->text();
+    qstr += " ";
+    qstr += ui->lineEditVoxel_y->text();
+    qstr += " ";
+    qstr += ui->lineEditVoxel_z->text();
     if (qstr.size()>(int)sizeof(cmdstr)-1) {
         printf("Failed to convert qstr->cmdstr since qstr didn't fit\n");
         resultstr = "FAILED: cmdstr not big enough for the lymphatic command";
