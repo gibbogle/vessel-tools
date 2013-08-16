@@ -3,6 +3,7 @@
 #include <QFileDialog>
 #include <QFile>
 #include <QTextStream>
+#include <QMessageBox>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -56,11 +57,26 @@ void MainWindow::am_smoother()
 	QString qstr, resultstr;
 	char cmdstr[256];
 
+    double fraction = ui->lineEditFraction->text().toDouble();
+    double diameter = ui->lineEditDiameter->text().toDouble();
+    if (fraction == 0 && diameter == 0) {
+        QMessageBox msgBox;
+        msgBox.setText("Since both faction and diameter are zero, no changes will be made to the network");
+        msgBox.setInformativeText("Do you wish to continue?");
+        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        msgBox.setDefaultButton(QMessageBox::No);
+        int ret = msgBox.exec();
+        if (ret == QMessageBox::No) return;
+    }
     qstr = QCoreApplication::applicationDirPath() + "/exec/am_smooth ";
 	qstr += infileName;
 	qstr += " ";
 	qstr += outfileName;
 	qstr += " ";
+    qstr += ui->lineEditFraction->text();
+    qstr += " ";
+    qstr += ui->lineEditDiameter->text();
+    qstr += " ";
     if (ui->checkBoxCmgui->isChecked())
         qstr += "1 ";
     else
@@ -82,10 +98,8 @@ void MainWindow::am_smoother()
 	else if (res == 2)
             resultstr = "FAILED: Read error on input AM file";
     else if (res == 3)
-            resultstr = "FAILED: CreateZoomNet error";
-    else if (res == 4)
             resultstr = "FAILED: Write error on output AM file";
-    else if (res == 5)
+    else if (res == 3)
             resultstr = "FAILED: Write error on output CMGUI files";
     ui->labelResult->setText(resultstr);
 }

@@ -6,7 +6,7 @@
 
 QT       += core gui
 
-TARGET = zoomer
+TARGET = am_smoother
 TEMPLATE = app
 
 

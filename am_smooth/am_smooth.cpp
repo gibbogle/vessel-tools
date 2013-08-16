@@ -18,7 +18,8 @@ int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[]);
 #define STR_LEN 128
 
 FILE *fperr, *fpout;
-
+float diameter;		// if != 0, this is the fixed diameter given to every vessel
+float fraction;		// the lower limit on segment length is fraction*(average vessel diameter of that segment)
 #define EPSILON 0.001
 #define PTEQU(a,b) (((a).x==(b).x)  && ((a).y==(b).y) && ((a).z==(b).z))
 #define PTEQUIV(a,b) (fabs((a).x-(b).x) < EPSILON && fabs((a).y-(b).y) < EPSILON && fabs((a).z-(b).z) < EPSILON)
@@ -397,7 +398,7 @@ int amsmooth(NETWORK *net0, NETWORK *net1)
 		for (ip0=1; ip0<edge0.npts; ip0++) {
 			int k2 = edge0.pt[ip0];
 			double d = dist(net0,kfrom,k2);
-			if (d > 0.5*(net0->point[kfrom].d/2 + net0->point[k2].d/2) || ip0 == edge0.npts-1) {
+			if (d > fraction*(net0->point[kfrom].d/2 + net0->point[k2].d/2) || ip0 == edge0.npts-1) {
 				net1->point[net1->np] = net0->point[net0->edgeList[ie].pt[ip0]];
 				net1->point[net1->np].used = true;
 				net1->edgeList[ie].pt[ip1] = net1->np;
@@ -407,6 +408,10 @@ int amsmooth(NETWORK *net0, NETWORK *net1)
 			}
 		}
 		net1->edgeList[ie].npts = ip1;
+	}
+	if (diameter != 0) {
+		for (ip1=0; ip1<net1->np; ip1++)
+			net1->point[ip1].d = diameter;
 	}
 	printf("done: np: %d\n",net1->np);
 	return 0;
@@ -433,10 +438,15 @@ int main(int argc, char **argv)
 	int cmgui_flag=1;
 	NETWORK *NP0, *NP1;
 
-	if (argc != 4) {
-		printf("Usage: am_check input_amfile output_amfile cmgui_flag\n");
-		fperr = fopen("am_check_error.log","w");
-		fprintf(fperr,"Usage: am_check input_amfile output_amfile cmgui_flag\n");
+	if (argc != 6) {
+		printf("Usage: am_smooth input_amfile output_amfile fraction diameter cmgui_flag\n");
+		printf("       segments are concatenated until total length exceeds fraction*(average diameter)\n");
+		printf("       if diameter != 0 every vessel is given this diameter\n\n");
+		printf("Submitted command line: argc: %d\n",argc);
+		fperr = fopen("am_smooth_error.log","w");
+		fprintf(fperr,"Usage: am_smooth input_amfile output_amfile fraction diameter cmgui_flag\n");
+		fprintf(fperr,"       segments are concatenated until total length exceeds fraction*(average diameter)\n");
+		fprintf(fperr,"       if diameter != 0 every vessel is given this diameter\n\n");
 		fprintf(fperr,"Submitted command line: argc: %d\n",argc);
 		for (int i=0; i<argc; i++) {
 			fprintf(fperr,"argv: %d: %s\n",i,argv[i]);
@@ -447,13 +457,15 @@ int main(int argc, char **argv)
 
 	input_amfile = argv[1];
 	output_amfile = argv[2];
-	sscanf(argv[3],"%d",&cmgui_flag);
+	sscanf(argv[3],"%f",&fraction);
+	sscanf(argv[4],"%f",&diameter);
+	sscanf(argv[5],"%d",&cmgui_flag);
 	_splitpath(output_amfile,drive,dir,filename,ext);
 	strcpy(output_basename,drive);
 	strcat(output_basename,dir);
 	strcat(output_basename,filename);
-	sprintf(errfilename,"%s_am_check.log",output_basename);
-	sprintf(result_file,"%s_am_check.out",output_basename);
+	sprintf(errfilename,"%s_am_smooth.log",output_basename);
+	sprintf(result_file,"%s_am_smooth.out",output_basename);
 	fperr = fopen(errfilename,"w");
 
 	fpout = fopen(result_file,"w");	
@@ -461,19 +473,17 @@ int main(int argc, char **argv)
 	NP1 = (NETWORK *)malloc(sizeof(NETWORK));
 	err = ReadAmiraFile(input_amfile,NP0);
 	if (err != 0) return 2;
-//	amcheck(NP0);
 	amsmooth(NP0,NP1);
-
 	origin_shift[0] = 0;
 	origin_shift[1] = 0;
 	origin_shift[2] = 0;
 //	fprintf(fperr,"origin_shift: %f %f %f\n",origin_shift[0],origin_shift[1],origin_shift[2]);
 
 	err = WriteAmiraFile(output_amfile,input_amfile,NP1,origin_shift);
-	if (err != 0) return 4;
+	if (err != 0) return 3;
 	if (cmgui_flag == 1) {
 		err = WriteCmguiData(output_basename,NP1,origin_shift);
-		if (err != 0) return 5;
+		if (err != 0) return 4;
 	}
 	return 0;
 }

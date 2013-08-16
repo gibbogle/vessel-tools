@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Selection of a sphere-bounded sub-network</string>
+   <string>Simplify a network</string>
   </property>
   <widget class="QWidget" name="centralWidget">
    <widget class="QPushButton" name="pushButtonInFile">
@@ -131,6 +131,58 @@
      <bool>true</bool>
     </property>
    </widget>
+   <widget class="QLineEdit" name="lineEditFraction">
+    <property name="geometry">
+     <rect>
+      <x>260</x>
+      <y>110</y>
+      <width>31</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>0</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_fraction">
+    <property name="geometry">
+     <rect>
+      <x>210</x>
+      <y>110</y>
+      <width>41</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>fraction</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_diameter">
+    <property name="geometry">
+     <rect>
+      <x>210</x>
+      <y>140</y>
+      <width>41</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>diameter</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="lineEditDiameter">
+    <property name="geometry">
+     <rect>
+      <x>260</x>
+      <y>140</y>
+      <width>31</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>0</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
@@ -191,24 +243,22 @@
    <sender>pushButtonZoom</sender>
    <signal>clicked()</signal>
    <receiver>MainWindow</receiver>
-   <slot>zoomer()</slot>
+   <slot>am_smoother()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>282</x>
-     <y>255</y>
+     <x>279</x>
+     <y>306</y>
     </hint>
     <hint type="destinationlabel">
-     <x>412</x>
-     <y>255</y>
+     <x>373</x>
+     <y>323</y>
     </hint>
    </hints>
   </connection>
  </connections>
  <slots>
-  <slot>buttonClickHandler()</slot>
   <slot>inFileSelecter()</slot>
   <slot>outFileSelecter()</slot>
-  <slot>zoomer()</slot>
-  <slot>radioButtonHandler()</slot>
+  <slot>am_smoother()</slot>
  </slots>
 </ui>
