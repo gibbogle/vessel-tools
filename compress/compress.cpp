@@ -16,13 +16,9 @@
 #include "itkImage.h"
 #include "itkImageFileReader.h"
 #include "itkImageFileWriter.h"
-#include <itkDanielssonDistanceMapImageFilter.h>
 #include "itkSize.h"
-#include "itkThresholdImageFilter.h"
-#include "itkBinaryThresholdImageFilter.h"
-#include "itkMeanImageFilter.h"
 
-typedef itk::Image<unsigned char,3> ImageType;
+typedef itk::Image<unsigned char,3> ImageType; 
 ImageType::Pointer im;
 int width, height, depth;
 unsigned char *p;

@@ -18,6 +18,8 @@
 #include "itkImageFileWriter.h"
 #include "itkSize.h"
 
+#define USE_NEW false
+
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
@@ -137,11 +139,12 @@ int nb, branchlist[MAXBRANCHES];
 //double voxelsize_xy, voxelsize_z;	// in um
 double vsize[3];	// in um
 float FIXED_DIAMETER;
-int volume;
+//int volume;
 VECSET plane[9];
 FILE *fperr, *fpout;
 FILE *exelem, *exnode, *dotcom;
 char output_basename[512];
+bool dbug = false;
 
 #define PI 3.14159
 
@@ -278,6 +281,31 @@ double Q(double *e0, double *e1, double p0[], double p1[], double Vx[], double V
 	alpha3 = acos(cosa);
 	return alpha1*alpha1 + alpha2*alpha2 + alpha3*alpha3;
 }
+
+//-----------------------------------------------------------------------------------------------------
+// mode = 'D' to print diameters, 'N' to print node numbers
+//-----------------------------------------------------------------------------------------------------
+void showedge(int ie, char mode) {
+	EDGE *edge;
+	int npts, k, kp;
+
+	edge = &edgeList[ie];
+	npts = edge->npts;
+	printf("edge: %5d  npts: %2d: ",ie,npts);
+	if (!edge->used) {
+		printf("NOT USED\n");
+		return;
+	}
+	for (k=0; k<npts; k++) {
+		kp = edge->pt[k];
+		if (mode == 'N')
+			printf("%6d",kp);
+		else
+			printf("%6.1f",avediameter[kp]);
+	}
+	printf("\n");
+}
+
 //-----------------------------------------------------------------------------------------------------
 // If the value k is found in list (list[0] ... list[n-1]) then the index is returned,
 // otherwise -1 is returned.
@@ -562,9 +590,9 @@ int WriteAmiraFile(char *outFile, char *vessFile, char *skelFile)
 //			double segavediam = edgeList[i].segavediam;
 			diam = avediameter[j];
 			if (diam < 1.0) {
-				printf("d < 1.0: edge: %d npts: %d pt: %d %d  %f\n",i,edgeList[i].npts,k,j,diam);
-				fprintf(fperr,"d < 0.5: edge: %d npts: %d pt: %d %d  %f\n",i,edgeList[i].npts,k,j,diam);
-				diam = 0.5;
+//				printf("d < 1.0: edge: %d npts: %d pt: %d %d  %f\n",i,edgeList[i].npts,k,j,diam);
+				fprintf(fperr,"d < 1.0: edge: %d npts: %d pt: %d %d  %f\n",i,edgeList[i].npts,k,j,diam);
+				diam = 1.0;
 			}
 			fprintf(fpam,"%6.2f\n",avediameter[j]);
 //			fprintf(fpam,"%6.2f\n",vsize*diam);
@@ -945,6 +973,7 @@ double pointdiameter(int kp)
 	int xyz[3];
 	int i, iplane, ivec, k, dx, dy, dz, x, y, z;
 	double r2min, r2sum, dr2, diam;
+	float delta = 1.3;	// increment to subtract from distance to zero voxel
 
 	for (i=0; i<3; i++)
 		xyz[i] = voxel[kp].pos[i];
@@ -976,12 +1005,10 @@ double pointdiameter(int kp)
 					break;
 				}
 				if (V3D(x,y,z) == 0) {
-					r2sum += k*k*dr2;		//FIXED
+//					r2sum += k*k*dr2;		//FIXED
+					r2sum += (k-delta)*(k-delta)*dr2;		//FIXED
 					break;
 				}
-			}
-			if (kp == 447832) {
-				fprintf(fperr,"iplane: %d  ivec: %d  k: %d  dr: %6.1f  r2sum: %6.1f\n",iplane,ivec,k, k*k*dr2,r2sum);
 			}
 		}
 		if (r2sum < r2min)
@@ -989,9 +1016,6 @@ double pointdiameter(int kp)
 	}
 	if (r2min <= 0) {
 		return 1.0;
-	}
-	if (kp == 447832) {
-		fprintf(fperr,"r2min: %6.2f\n",r2min);
 	}
 	diam = 2*sqrt(r2min/8);
 	return diam;
@@ -1415,9 +1439,63 @@ int GetNumberOfNeighbors(int x0, int y0, int z0)
 	return n;
 }
 
+// Look for another member of tmplist[] that is a neighbour of k
+// If such a member has smaller d2, k is dominated
+bool dominated1(int k, int ntmp, int tmplist[][3], bool drop[], int d2[]) {
+	int j;
+
+	for (j=0; j<ntmp; j++) {
+		if (j == k) continue;
+		if (abs(tmplist[k][0]-tmplist[j][0]) <= 1 &&
+		    abs(tmplist[k][1]-tmplist[j][1]) <= 1 &&
+		    abs(tmplist[k][2]-tmplist[j][2]) <= 1) {
+				{
+					if (d2[j] < d2[k]) return true;
+				}
+		}
+	}
+	return false;
+}
+
 //-----------------------------------------------------------------------------------------------------
+// A neighbour V1 of V0 is dominated if:
+// (1) V1 is not N6 of V0
+// (2) V1 is N6 of V2, which is N26 of V0
 //-----------------------------------------------------------------------------------------------------
-int GetNeighbors(int *pos, int nbrlist[][3])
+bool dominated(int k, int pos[], int ntmp, int tmplist[][3], bool drop[]) {
+	int i, j, neq, nd, offset;
+
+	// Is V1 = tmplist[k][] N6 of pos?
+	nd = 0;
+	neq = 0;
+	for (i=0; i<3; i++) {
+		offset = tmplist[k][i] - pos[i];
+		if (offset == 1 || offset == -1) nd++;
+		if (offset == 0) neq++;
+	}
+	if (neq == 2 && nd == 1) return false;	// V0 is N6 of pos, therefore not dominated
+
+	// Is V1 N6 of another neighbour V2 tmplist[j][]?
+	for (j=0; j<ntmp; j++) {
+		if (j==k) continue;
+		if (drop[j]) continue;
+		nd = 0;
+		neq = 0;
+		for (i=0; i<3; i++) {
+			offset = tmplist[k][i] - tmplist[j][i];
+			if (offset == 1 || offset == -1) nd++;
+			if (offset == 0) neq++;
+		}
+		if (neq == 2 && nd == 1) 
+			return true;		// V0 is N6 of V2, therefore dominated
+	}
+	return false;
+}
+
+//-----------------------------------------------------------------------------------------------------
+// Old code
+//-----------------------------------------------------------------------------------------------------
+int GetNeighborsOld(int *pos, int nbrlist[][3])
 {
 	int dx, dy, dz, x, y, z, nbrs;
 
@@ -1442,6 +1520,76 @@ int GetNeighbors(int *pos, int nbrlist[][3])
 					nbrs++;
 				}
 			}
+		}
+	}
+	return nbrs;
+}
+
+//-----------------------------------------------------------------------------------------------------
+// New version
+//-----------------------------------------------------------------------------------------------------
+int GetNeighborsNew(int *pos, int nbrlist[][3])
+{
+	int dx, dy, dz, x, y, z, nbrs, i, k, ntmp;
+	int tmplist[20][3], d2[20];
+	bool drop[20];
+	bool dbug=false;;
+
+//	if (dbug) printf("pos: %3d %3d %3d\n",pos[0],pos[1],pos[2]);
+	nbrs = 0;
+	for (dz=-1; dz<=1; dz++) {
+		z = pos[2] + dz;
+		if (z < 0 || z > depth-1)
+			continue;
+		for (dy=-1; dy<=1; dy++) {
+			y = pos[1] + dy;
+			if (y < 0 || y > height-1)
+				continue;
+			for (dx=-1; dx<=1; dx++) {
+				x = pos[0] + dx;
+				if (dx == 0 && dy == 0 && dz == 0) continue;
+				if (x < 0 || x > width-1)
+					continue;
+				if (V3Dskel(x,y,z) != 0) {
+					nbrlist[nbrs][0] = x;
+					nbrlist[nbrs][1] = y;
+					nbrlist[nbrs][2] = z;
+//					if (dbug) printf("nbrs: %d  %3d %3d %3d\n",nbrs,x,y,z);
+					nbrs++;
+				}
+			}
+		}
+	}
+	if (nbrs <= 2) return nbrs;
+	// We need to check that there are no redundant neighbour links
+	if (dbug) printf("pos: %3d %3d %3d  nbrs: %d\n",pos[0],pos[1],pos[2],nbrs);
+	for (k=0; k<nbrs; k++) {
+		for (i=0; i<3; i++) {
+			tmplist[k][i] = nbrlist[k][i];
+			drop[k] = false;
+			//dx = tmplist[k][0] - pos[0];
+			//dy = tmplist[k][1] - pos[1];
+			//dz = tmplist[k][2] - pos[2];
+			//d2[k] = dx*dx + dy*dy + dz*dz;
+		}
+		if (dbug) printf("%d %d %d %d\n",k,tmplist[k][0],tmplist[k][1],tmplist[k][2]);
+	}
+	ntmp = nbrs;
+	for (k=0; k<ntmp; k++) {
+//		if (dominated1(k,ntmp,tmplist,drop,d2)) {
+		if (dominated(k,pos,ntmp,tmplist,drop)) {
+			drop[k] = true;
+			if (dbug) printf("drop: %d\n",k);
+		}
+	}
+	nbrs = 0;
+	for (k=0; k<ntmp; k++) {
+		if (!drop[k]) {
+			for (i=0; i<3; i++) {
+				nbrlist[nbrs][i] = tmplist[k][i];
+			}
+//			printf("nbrs: %d  %3d %3d %3d\n",nbrs,nbrlist[nbrs][0],nbrlist[nbrs][1],nbrlist[nbrs][2]);
+			nbrs++;
 		}
 	}
 	return nbrs;
@@ -1540,7 +1688,8 @@ int TraceSkeleton1(void)
 //	int  xprev, yprev, zprev, xnext, ynext, znext;
 	int prev[3], next[3];
 	bool start, end;
-	bool dbug = false;
+	
+	dbug = false;
 
 	printf("TraceSkeleton\n");
 
@@ -1558,7 +1707,7 @@ int TraceSkeleton1(void)
 			for (x=0; x<width; x++) {
 				if (V3Dskel(x,y,z) == 0) continue;
 				next[0] = x; next[1] = y; next[2] = z;
-				nbrs = GetNeighbors(next,nbrlist);
+				nbrs = GetNeighborsOld(next,nbrlist);
 				if (nbrs != 1) continue;	// an end point has just one neighbor
 				EndVertex(next);
 				AddPoint(next);
@@ -1580,7 +1729,7 @@ int TraceSkeleton1(void)
 	printf("Start point: %d %d %d\n",next[0],next[1],next[2]);
 	int it = 0;
 	for (;;) {
-		nbrs = GetNeighbors(next,nbrlist);
+		nbrs = GetNeighborsOld(next,nbrlist);
 		it++;
 		if (dbug) fprintf(fperr,"it: %d  next: %d %d %d  nbrs: %d\n",it,next[0],next[1],next[2],nbrs);
 		if (nbrs == 1) {
@@ -1771,7 +1920,7 @@ int TraceSkeleton1(void)
 
 			node = 0;
 			if (dbug) fprintf(fperr,"                  Redirected to branch: %d  vertex: %d\n",nb,kv);
-			nbrs = GetNeighbors(vertex[kv].pos,nbrlist);
+			nbrs = GetNeighborsOld(vertex[kv].pos,nbrlist);
 			for (i=0;i<nbrs;i++) {
 				if (!vertex[kv].followed[i]) {
 					for (int j=0;j<3;j++) {
@@ -1849,7 +1998,7 @@ int CreateDistributions()
 //		printf("ie: %d npts: %d\n",ie,edge.npts);
 		fprintf(fperr,"ie: %d npts: %d\n",ie,edge.npts);
 		fflush(fperr);
-		bool dbug = false;
+		dbug = false;
 		kpprev = 0;
 		r2prev = 0;
 		dsum = 0;
@@ -1953,7 +2102,8 @@ int CreateDistributions()
 	fprintf(fpout,"Average pt diameter: %6.2f vessel diameter: %6.2f\n",ave_pt_diam, ave_seg_diam);
 	printf("Average vessel length: %6.1f\n",ave_len/ltot);
 	fprintf(fpout,"Average vessel length: %6.1f\n",ave_len/ltot);
-	fprintf(fpout,"Volume: %10.0f\n\n",volume);
+	printf("Total volume: %10.0f\n\n",volume);
+	fprintf(fpout,"Total volume: %10.0f\n\n",volume);
 
 	//ndpts = 0;
 	//for (k=0; k<NBOX; k++) {
@@ -2526,7 +2676,7 @@ int checkUnconnected(void)
 			if (edgeList[ii].vert[0] == kv0 || edgeList[ii].vert[1] == kv0) n0=1;
 			if (edgeList[ii].vert[0] == kv1 || edgeList[ii].vert[1] == kv1) n1=1;
 		}
-		if (n0+n1 == 0) {
+		if (n0+n1 == 0 && ne > 1) {
 			printf("Error: edge: %d is unconnected: npts: %d vert: %d %d\n",i,edge.npts,kv0,kv1);
 			fprintf(fperr,"Error: edge: %d is unconnected: npts: %d vert: %d %d\n",i,edge.npts,kv0,kv1);
 			err = 1;
@@ -2569,12 +2719,6 @@ int deloop(int iter)
 		if (!edge.used) continue;
 		kv0 = edge.vert[0];
 		kv1 = edge.vert[1];
-		if (vertex[kv0].ivox == 5700 || vertex[kv1].ivox == 5700) {
-			printf("Pt 5700 on edge: %d npts: %d vert: %d %d  %d %d\n",i,edge.npts,kv0,kv1,vertex[kv0].ivox,vertex[kv1].ivox);
-		}
-		if (vertex[kv0].ivox == 5551 || vertex[kv1].ivox == 5551) {
-			printf("Pt 5551 on edge: %d npts: %d vert: %d %d  %d %d\n",i,edge.npts,kv0,kv1,vertex[kv0].ivox,vertex[kv1].ivox);
-		}
 		if (edge.npts == 2) {
 			if (ne2 == NE2MAX) {
 				printf("Error: deloop: array dimension e2 exceeded\n");
@@ -2803,6 +2947,7 @@ int deloop(int iter)
 	printf("Number of loops removed: %d\n",nloops);
 	fprintf(fperr,"Number of loops removed: %d\n",nloops);
 	rejoin(ndropped,dropped);
+	printf("did rejoin\n");
 	return nloops;
 }
 
@@ -2850,6 +2995,7 @@ int follower(int kvert, int link, int *link_next, int *nevox, int evox[])
 	for (;;) {
 		ivox2 = voxel[ivox1].nid[link1];		// index to first voxel on this branch
 		nbrs = voxel[ivox2].nbrs;				// number of voxel neighbours
+//		printf("follower: link1, ivox1: %d %d ivox2: %d nbrs: %d\n",link1,ivox1,ivox2,nbrs);
 		evox[*nevox] = ivox2;
 		(*nevox)++;
 		if (*nevox == MAXEDGEPTS) {
@@ -2919,8 +3065,8 @@ int tracer(void)
 				vertex[kvert].followed[i] = false;
 			}
 		}
-		visited[nvisited] = kvert0;
-		vertex[kvert0].ivisit = nvisited;
+		visited[nvisited] = kvert0;			// the starting vertex kvert0 is the only entry in the visited list
+		vertex[kvert0].ivisit = nvisited;	// the visit list position of kvert0 is nvisited = 0
 		nvisited++;
 
 		for (;;) {
@@ -2937,14 +3083,18 @@ int tracer(void)
 			for (link=0; link<vertex[kvert].nlinks; link++) {
 				if (!vertex[kvert].followed[link]) break;
 			}
+			if (ne == 0) printf("unfollowed link of vertex: %d %d nlinks: %d\n",kvert,link,vertex[kvert].nlinks);
 			// Now follow this link, to another vertex or to a dead-end
 			// The follower returns the next vertex ID, and the link number on this vertex
 			kvert_next = follower(kvert,link,&link_next,&nevox,evox);
+			if (ne == 0) printf("kvert, kvert_next: %d %d link_next: %d nevox: %d\n",kvert,kvert_next,link_next,nevox);
+
 			if (kvert_next == kvert) {
 				nloop++;
 			}
 			if (vertex[kvert_next].nlinks == 1 && nevox < 0) {
 				nshort++;
+				if (ne == 0) printf("nshort: %d\n",nshort);
 				if (isweep == 1)
 					printf("short end: vertices: %d  %d nevox: %d\n",kvert,kvert_next,nevox);
 			} else {
@@ -2965,6 +3115,7 @@ int tracer(void)
 				}
 				ne++;
 				ecount[nevox]++;
+				if (ne <= 1) printf("nevox: %d\n",nevox);
 			}
 
 			vertex[kvert].edge[link] = ne-1;
@@ -2973,9 +3124,11 @@ int tracer(void)
 			vertex[kvert_next].edge[link_next] = ne-1;
 			vertex[kvert_next].followed[link_next] = true;
 			vertex[kvert_next].nfollowed++;
+			if (ne <= 1) printf("vertex: %d link: %d edge: %d\n",kvert,link,ne-1);
 			if (vertex[kvert_next].ivisit < 0) {	// If this is the first visit to kvert_next
 				visited[nvisited] = kvert_next;
 				vertex[kvert_next].ivisit = nvisited;
+				if (ne <= 1) printf("first visit to: %d ivisit: %d\n",kvert_next,nvisited);
 				nvisited++;
 			}
 		}
@@ -3368,7 +3521,7 @@ int prune(int iter)
 		nlused[0] = vertex[kv0].nlinks_used;
 		nlused[1] = vertex[kv1].nlinks_used;
 		if (nlused[0] != 1 && nlused[1] != 1) continue;
-		printf("edge: %d npts: %d kv0,kv1: %d %d nlused: %d %d\n",ie,edge.npts,kv0,kv1,nlused[0],nlused[1]);
+//		printf("edge: %d npts: %d kv0,kv1: %d %d nlused: %d %d\n",ie,edge.npts,kv0,kv1,nlused[0],nlused[1]);
 		// One end or the other is loose
 		diam = 0;
 		len = 0;
@@ -3614,17 +3767,23 @@ int TraceSkeleton(int n_prune_cycles)
 				if (V3Dskel(x,y,z) == 0) continue;
 				npts++;
 				next[0] = x; next[1] = y; next[2] = z;
-				nbrs = GetNeighbors(next,nbrlist);
+				if (USE_NEW)
+				nbrs = GetNeighborsNew(next,nbrlist);
+				else
+				nbrs = GetNeighborsOld(next,nbrlist);
+//				printf("nbrs: %d\n",nbrs);
 //				if (nbrs != 1) continue;	// an end point has just one neighbor
 				nbcount[nbrs] = nbcount[nbrs] + 1;
 				if (nbrs > maxnbrs) {
-					printf("z: %d nbrs: %d\n",z,nbrs);
+//					printf(" nbrs: %d\n",z,nbrs);
 					maxnbrs = nbrs;
 				}
 			}
 		}
 	}
 	printf("npts: %d  maxnbrs: %d\n",npts,maxnbrs);
+//	exit(0);
+
 	for (i=0; i<=maxnbrs; i++) {
 		printf("%4d %8d\n",i,nbcount[i]);
 	}
@@ -3646,7 +3805,10 @@ int TraceSkeleton(int n_prune_cycles)
 			for (x=0; x<width; x++) {
 				if (V3Dskel(x,y,z) == 0) continue;
 				next[0] = x; next[1] = y; next[2] = z;
-				nbrs = GetNeighbors(next,nbrlist);
+//				if (USE_NEW)
+//				nbrs = GetNeighborsNew(next,nbrlist);
+//				else
+				nbrs = GetNeighborsOld(next,nbrlist);
 				if (nbrs > MAXNBRS) {
 					printf("Error: TraceSkeleton: nbrs > MAXNBRS: %d  %d\n",nbrs,MAXNBRS);
 					fprintf(fperr,"Error: TraceSkeleton: nbrs > MAXNBRS: %d  %d\n",nbrs,MAXNBRS);
@@ -3674,9 +3836,6 @@ int TraceSkeleton(int n_prune_cycles)
 					vertex[kv].nfollowed = 0;
 					vertex[kv].used = true;
 
-					if (kv == 480 || kv == 494 || kv == 498) {
-						printf("kv: %6d ivox: %6d nlinks: %2d\n",kv,k,nbrs);
-					}
 					kv++;
 				}
 				k++;
@@ -3732,12 +3891,12 @@ int TraceSkeleton(int n_prune_cycles)
 			printf("nhit != nbrs: %d  %d %d\n",k,nhit,nbrs);
 			return 1;
 		}
-		if (k < 10) {
-			printf("Voxel: %d nbrs: %d ",k,nbrs);
-			for (i=0; i<nbrs; i++)
-				printf(" %d ",voxel[k].nid[i]);
-			printf("\n");
-		}
+		//if (k < 30) {
+		//	printf("Voxel: %d nbrs: %d ",k,nbrs);
+		//	for (i=0; i<nbrs; i++)
+		//		printf(" %d ",voxel[k].nid[i]);
+		//	printf("\n");
+		//}
 	}
 	printf("Determined all neighbour IDs\n");
 
@@ -3753,10 +3912,15 @@ int TraceSkeleton(int n_prune_cycles)
 	}
 
 	tracer();
+	printf("did tracer\n");
+
 	err = checker();
 	if (err != 0) return 1;
+
 	nloops = deloop(0);
 	if (nloops < 0) return 1;
+	printf("did deloop\n");
+
 	err = checker();
 	if (err != 0) return 1;
 
@@ -3770,6 +3934,8 @@ int TraceSkeleton(int n_prune_cycles)
 	}
 	
 	adjoinEdges();
+	printf("did adjoinEdges\n");
+
 	err = checkUnconnected();
 	if (err != 0) return 1;
 	edgePtDist();
@@ -3778,13 +3944,187 @@ int TraceSkeleton(int n_prune_cycles)
 
 
 //-----------------------------------------------------------------------------------------------------
+// Need to adjust diameters near junctions, because the diameter estimation method does not work well
+// where vessels come together.
+// Method:
+// For each edge:
+//    Find the points that are less than alpha (e.g. 1.5) diameters from each end, set edge.avediameter[k] = 0
+// For each edge:
+//    Set zero-diameter points to diameter of nearest point on the edge with non-zero diameter (if it exists)
+//    except at end points - here set to max of this and current value
+// For each edge:
+//    If 
+//-----------------------------------------------------------------------------------------------------
+void FixDiameters()
+{
+	EDGE *edge;
+	int ie, k, kp0, kp1, kp, npts, n0, n1, ipass, nzero, err;
+	double d0, d1, diam;
+	bool done;
+	double alpha = 0.5;
+
+	printf("FixDiameters\n");
+	for (ie=0; ie<100; ie++) {
+		edge = &edgeList[ie];
+		if (!edge->used) continue;
+		showedge(ie,'D');
+	}
+
+	for (ie=0; ie<ne; ie++) {
+		edge = &edgeList[ie];
+		if (!edge->used) continue;
+		npts = edge->npts;
+		kp0 = edge->pt[0];
+		kp1 = edge->pt[npts-1];
+		edge->avediameter[0] = 0;
+		edge->avediameter[npts-1] = 0;
+		for (k=1; k<npts-1; k++) {
+			kp = edge->pt[k];
+			diam = avediameter[kp];
+			d0 = dist_um(kp,kp0);
+			d1 = dist_um(kp,kp1);
+			if (d0 < alpha*diam || d1 < alpha*diam) {
+				avediameter[kp] = 0;
+			}
+		}
+	}
+	printf("did stage 1\n");
+	for (ie=0; ie<ne; ie++) {
+		edge = &edgeList[ie];
+		if (!edge->used) continue;
+		npts = edge->npts;
+		kp0 = edge->pt[0];
+		kp1 = edge->pt[npts-1];
+		d0 = 0;
+		n0 = 0;
+		for (k=1; k<npts-1; k++) {
+			kp = edge->pt[k];
+			d0 = avediameter[kp];
+			if (d0 > 0) break;
+			n0 = k;
+		}
+//		if (ie == 4) printf("ie: %d npts: %d n0: %d d0: %f\n",ie,npts,n0,d0);
+		d1 = 0;
+		n1 = npts-1;
+		for (k=npts-2; k>0; k--) {
+			kp = edge->pt[k];
+			d1 = avediameter[kp];
+			if (d1 > 0) break;
+			n1 = k;
+		}
+//		if (ie == 4) printf("ie: %d npts: %d n1: %d d1: %f\n",ie,npts,n1,d1);
+		if (d0 == 0) {
+			if (d1 != 0) {
+				printf("d1 != 0\n");
+				exit(1);
+			}
+			continue;
+		}
+		for (k=1; k<=n0; k++) {
+			kp = edge->pt[k];
+			avediameter[kp] = d0;
+		}
+		avediameter[kp0] = MAX(avediameter[kp0],d0);
+		for (k=n1; k<npts-1; k++) {
+			kp = edge->pt[k];
+			avediameter[kp] = d1;
+		}
+		avediameter[kp1] = MAX(avediameter[kp1],d1);
+	}
+	printf("did stage 2\n");
+	// There may still remain some edges with unset diameters
+	ipass = 0;
+	for (;;) {
+		printf("pass: %d\n",ipass);
+		ipass++;
+		done = true;
+		for (ie=0; ie<ne; ie++) {
+			edge = &edgeList[ie];
+			if (!edge->used) continue;
+			npts = edge->npts;
+			kp0 = edge->pt[0];
+			kp1 = edge->pt[npts-1];
+			d0 = avediameter[kp0];
+			d1 = avediameter[kp1];
+			if (d0 == 0 && d1 > 0) {
+				done = false;
+				for (k=0; k<npts; k++) {
+					kp = edge->pt[k];
+					avediameter[kp] = d1;
+				}
+			}
+			if (d1 == 0 && d0 > 0) {
+				done = false;
+				for (k=0; k<npts; k++) {
+					kp = edge->pt[k];
+					avediameter[kp] = d0;
+				}
+			}
+		}
+		if (done) break;
+	}
+	printf("did stage 3\n");
+	nzero = 0;
+	for (ie=0; ie<ne; ie++) {
+		edge = &edgeList[ie];
+		if (!edge->used) continue;
+		npts = edge->npts;
+		err = 0;
+		for (k=0; k<npts; k++) {
+			kp = edge->pt[k];
+			if (avediameter[kp] == 0) err = 1;
+		}
+		if (err != 0) {
+			//for (k=0; k<npts; k++) {
+			//	kp = edge->pt[k];
+			//	printf("%6.1f",avediameter[kp]);
+			//}
+			//printf("\n");
+			nzero++;
+			n0 = 0;
+			for (k=0; k<npts; k++) {
+				kp = edge->pt[k];
+				if (avediameter[kp] == 0) {
+					n0 = k-1;
+					break;
+				}
+				d0 = avediameter[kp];
+			}
+			n1 = npts-1;
+			for (k=npts-1; k>=0; k--) {
+				kp = edge->pt[k];
+				if (avediameter[kp] == 0) {
+					n1 = k+1;
+					break;
+				}
+				d1 = avediameter[kp];
+			}
+			for (k=n0+1; k<n1; k++) {
+				kp = edge->pt[k];
+				avediameter[kp] = d0 + (d1-d0)*(float)(k-n0)/(n1-n0);
+			}
+//			exit(1);
+		}
+	}
+	for (ie=0; ie<100; ie++) {
+		edge = &edgeList[ie];
+		if (!edge->used) continue;
+		showedge(ie,'D');
+		//npts = edge->npts;
+		//printf("ie: %d npts: %d vertex diam: %6.1f  %6.1f %6.1f  %6.1f\n",ie,npts,
+		//	avediameter[edge->pt[0]],avediameter[edge->pt[0]],avediameter[edge->pt[npts-1]],avediameter[edge->pt[npts-2]]);
+	}
+}
+
+//-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
 int main(int argc, char**argv)
 {
 	int n_prune_cycles;
 	double voxelsize_x, voxelsize_y, voxelsize_z;
+	double volume;
 	char *vessFile, *skelFile;
-	int err;
+	int count, err;
 	char *outfilename;
 	char drive[32], dir[256],filename[256], ext[32];
 	char errfilename[256], amfilename[256];
@@ -3883,42 +4223,42 @@ int main(int argc, char**argv)
 
 //	if (FIXED_DIAMETER == 0) {
 	
-		// Read original vessel file (binary)
-		FileReaderType::Pointer reader = FileReaderType::New();
-		reader->SetFileName(vessFile);
-		try
-		{
-			printf("Reading input vessel file: %s\n",vessFile);
-			reader->Update();
-		}
-		catch (itk::ExceptionObject &e)
-		{
-			std::cout << e << std::endl;
-			fprintf(fperr,"Read error on vessel file\n");
-			fclose(fperr);
-			return 3;	// Read error on input file
-		}
+	// Read original vessel file (binary)
+	FileReaderType::Pointer reader = FileReaderType::New();
+	reader->SetFileName(vessFile);
+	try
+	{
+		printf("Reading input vessel file: %s\n",vessFile);
+		reader->Update();
+	}
+	catch (itk::ExceptionObject &e)
+	{
+		std::cout << e << std::endl;
+		fprintf(fperr,"Read error on vessel file\n");
+		fclose(fperr);
+		return 3;	// Read error on input file
+	}
 
-		im = reader->GetOutput();
+	im = reader->GetOutput();
 
-		int w = im->GetLargestPossibleRegion().GetSize()[0];
-		int h = im->GetLargestPossibleRegion().GetSize()[1];
-		int d = im->GetLargestPossibleRegion().GetSize()[2];
+	int w = im->GetLargestPossibleRegion().GetSize()[0];
+	int h = im->GetLargestPossibleRegion().GetSize()[1];
+	int d = im->GetLargestPossibleRegion().GetSize()[2];
 
-		if (w != width || h != height || d != depth) {
-			printf("Error: skeleton and vessel files differ in size\n");
-			fprintf(fperr,"Error: skeleton and vessel files differ in size\n");
-			fclose(fperr);
-			return 4;
-		}
+	if (w != width || h != height || d != depth) {
+		printf("Error: skeleton and vessel files differ in size\n");
+		fprintf(fperr,"Error: skeleton and vessel files differ in size\n");
+		fclose(fperr);
+		return 4;
+	}
 
-		p = (unsigned char *)(im->GetBufferPointer());
+	p = (unsigned char *)(im->GetBufferPointer());
 
-		volume = 0;
-		for (int i=0; i<width*height*depth; i++) {
-			if (p[i] > 0) volume++;
-		}
-		volume *= vsize[0]*vsize[1]*vsize[2];
+	count = 0;
+	for (int i=0; i<width*height*depth; i++) {
+		if (p[i] > 0) count++;
+	}
+	volume = count*vsize[0]*vsize[1]*vsize[2];
 
 //	}
 			
@@ -3931,6 +4271,7 @@ int main(int argc, char**argv)
 		fclose(fperr);
 		return 5;
 	}
+	printf("did TraceSkeleton\n");
 
 	if (FIXED_DIAMETER == 0) {
 		err = CrudeGetDiameters();
@@ -3940,11 +4281,13 @@ int main(int argc, char**argv)
 			fclose(fperr);
 			return 6;
 		}
+		FixDiameters();
 	}
 
-	printf("Total voxels: %d vertices: %d  points: %d\n",nt,nv,np);
+	printf("Total voxels: %d vertices: %d  points: %d\n",count,nv,np);
 	printf("Edges: %d edges>2: %d\n",ne,negmin);
-	printf("Volume: %d\n",volume);
+	printf("voxel_size: %6.2f %6.2f %6.2f\n",vsize[0],vsize[1],vsize[2]);
+	printf("Volume: %f\n",volume);
 
 	checkUnconnected();
 

@@ -1,6 +1,6 @@
 Quantifier info
 
-This program is used to extract vessel data from the network .am file,for comparison with histology.
+This program is used to extract vessel data from the network .am file, for comparison with histology.
 
 Input data:
 (1) Amira spatialgraph file.
