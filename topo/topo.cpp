@@ -4284,10 +4284,13 @@ int main(int argc, char**argv)
 		FixDiameters();
 	}
 
-	printf("Total voxels: %d vertices: %d  points: %d\n",count,nv,np);
 	printf("Edges: %d edges>2: %d\n",ne,negmin);
+	printf("Total voxels: %d vertices: %d  points: %d\n",count,nv,np);
 	printf("voxel_size: %6.2f %6.2f %6.2f\n",vsize[0],vsize[1],vsize[2]);
-	printf("Volume: %f\n",volume);
+	printf("Voxel volume: %f\n",volume);
+	fprintf(fpout,"Total voxels: %d vertices: %d  points: %d\n",count,nv,np);
+	fprintf(fpout,"voxel_size: %6.2f %6.2f %6.2f\n",vsize[0],vsize[1],vsize[2]);
+	fprintf(fpout,"Voxel volume: %f\n",volume);
 
 	checkUnconnected();
 
