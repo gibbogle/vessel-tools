@@ -18,8 +18,6 @@
 #include "itkImageFileWriter.h"
 #include "itkSize.h"
 
-#define USE_NEW false
-
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
@@ -27,7 +25,9 @@
 #define REVISED_VERSION true
 //--------------------------
 
+#define USE_NEW false
 #define USE_HEALING false
+#define NEW_PRUNE true
 
 #define MAXVERTICES 200
 #define MAXBRANCHES 200000
@@ -148,6 +148,8 @@ bool dbug = false;
 
 #define PI 3.14159
 
+int adjoinEdges();
+
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
 #define crossProduct(a,b,c) \
@@ -160,9 +162,9 @@ bool dbug = false;
 //-----------------------------------------------------------------------------------------------------
 float zdist(int k1, int k2)
 {
-	float dx = voxel[k2].pos[0] - voxel[k1].pos[0];
-	float dy = voxel[k2].pos[1] - voxel[k1].pos[1];
-	float dz = voxel[k2].pos[2] - voxel[k1].pos[2];
+	float dx = vsize[0]*(voxel[k2].pos[0] - voxel[k1].pos[0]);
+	float dy = vsize[0]*(voxel[k2].pos[1] - voxel[k1].pos[1]);
+	float dz = vsize[0]*(voxel[k2].pos[2] - voxel[k1].pos[2]);
 	return sqrt(dx*dx+dy*dy+dz*dz);
 }
 
@@ -333,6 +335,7 @@ int squeezer(void)
 	VOXEL *voxel_x;
 	float *avediameter_x;
 	int *oldpt;
+	bool dbug;
 
 	printf("squeezer: np: %d\n",np);
 	vertex_x = (VERTEX *)malloc(nv*sizeof(VERTEX));
@@ -349,6 +352,7 @@ int squeezer(void)
 	for (i=0; i<ne; i++) {
 		if (!edgeList[i].used) continue;
 		if (edgeList[i].vert[0] == edgeList[i].vert[1]) continue;	// repeated pt
+		dbug = false;
 		edge = &edgeList_x[ne_x];
 		edge->used = true;
 		for (j=0; j<2; j++) {
@@ -374,24 +378,28 @@ int squeezer(void)
 	i_x = 0;
 	for (i=0; i<ne; i++) {
 		if (!edgeList[i].used) continue;
-		if (edgeList[i].vert[0] == edgeList[i].vert[1]) continue;	// repeated pt
-//		int npts = edgeList[i].npts;
+//		if (edgeList[i].vert[0] == edgeList[i].vert[1]) continue;	// repeated pt
+		if (dbug) printf("old edge: %d npts: %d  new edge: %d npts: %d\n",i,edgeList[i].npts,i_x,edgeList[i].npts_used);
 		int npts = edgeList[i].npts_used;
 		if (npts < 1) {
 			printf("squeezer: i: %d npts: %d\n",i,npts);
 			return 1;
 		}
-//		printf("edge: %d npts: %d\n",i,npts);
 		edgeList_x[i_x].pt = (int *)malloc(npts*sizeof(int));
 		edgeList_x[i_x].pt_used = (int *)malloc(npts*sizeof(int));
 		edge = &edgeList_x[i_x];
 		edge->npts = npts;
 //		edge->npts_used = npts;
-		edge->pt[0] = edge->vert[0];
-		for (k=1; k<npts-1; k++) {
+//		edge->pt[0] = edge->vert[0];
+		for (k=0; k<npts; k++) {
 //			j = edgeList[i].pt[k];
 			j = edgeList[i].pt_used[k];
+			if (j > np || j < 0) {
+				printf("i: %d k: %d  j: %d\n",i,k,j);
+				return 1;
+			}
 			oldpt[np_x] = j;
+			if (dbug) printf("k: %d oldpt: %d new pt: %d\n",k,j,np_x);
 			voxel_x[np_x] = voxel[j];
 			avediameter_x[np_x] = avediameter[j];
 			edge->pt[k] = np_x;
@@ -403,10 +411,15 @@ int squeezer(void)
 			}
 			np_x++;
 		}
-		edge->pt[npts-1] = edge->vert[1];
-//		edgeList_x[i_x] = edge;
+//		edge->pt[npts-1] = edge->vert[1];
 		i_x++;
 	}
+	//printf("i_x=20: npts: %d\n",edgeList_x[20].npts);
+	//for (k=0; k<edgeList_x[20].npts; k++)
+	//	printf("%6d ",edgeList_x[20].pt[k]);
+	//printf("\n");
+
+
 	printf("Added interior edge points\n");
 	printf("ne, ne_x: %d %d  nv, nv_x: %d %d  np, np_x: %d %d\n",ne,ne_x,nv,nv_x,np,np_x);
 
@@ -439,6 +452,8 @@ int squeezer(void)
 	free(voxel_x);
 	free(oldpt);
 	free(avediameter_x);
+	showedge(68,'N');
+	showedge(68,'D');
 	return err;
 }
 
@@ -884,19 +899,63 @@ double GetRadius(double p1[3], double v[3])
 }
 
 //-----------------------------------------------------------------------------------------------------
+// Get distance from p1[] in direction of unit vector v[] to the first black voxel.
+//-----------------------------------------------------------------------------------------------------
+double GetRadius2(double p1[3], double v[3])
+{
+	int i, k, ixyz[3], ixyzmax[3];
+	double r, dr, xyz;
+	bool out;
+
+//	printf("GetRadius2\n");
+	dr = vsize[2]/10;
+	ixyzmax[0] = width-1;
+	ixyzmax[1] = height-1;
+	ixyzmax[2] = depth-1;
+	i = 0;
+	for(;;) {
+		r = i*dr;
+//		printf("r: %d %6.1f\n",i,r);
+		out = false;
+		for (k=0; k<3; k++) {
+			xyz = p1[k] + r*v[k];
+			ixyz[k] = xyz/vsize[k];
+			if (ixyz[k] < 0) out = true;;
+			if (ixyz[k] > ixyzmax[k]) out = true;
+		}
+//		printf("ixyz: %d %d %d\n",ixyz[0],ixyz[1],ixyz[2]);
+		if (out) break;
+		if (V3D(ixyz[0],ixyz[1],ixyz[2]) == 0) {
+			if (r == 0) {
+				printf("GetRadius2 (a): r2=0: i,x,y,z,V: %d  %d %d %d  %d\n",i,ixyz[0],ixyz[1],ixyz[2],V3D(ixyz[0],ixyz[1],ixyz[2]));
+				fprintf(fperr,"GetRadius2 (a): r2=0: i,x,y,z,V: %d  %d %d %d  %d\n",i,ixyz[0],ixyz[1],ixyz[2],V3D(ixyz[0],ixyz[1],ixyz[2]));
+				return 1.0;
+			}
+			break;
+		}
+		i++;
+	}
+	return r*r;
+}
+
+//-----------------------------------------------------------------------------------------------------
 // At the point of interest, p1, the centreline connects p0 and p2.
 // We want to estimate the mean square radius of the vessel at p1.
 // We do this by shooting lines equispaced through 360 degrees from p1,
 // in the plane normal to p0-p2, to find distance to the first black voxel.
+// This method should be used on a simplified edge, i.e. with sufficient
+// separation between p0 and p2 to provide a reasonable estimate of the 
+// centreline direction vector N[].
 //-----------------------------------------------------------------------------------------------------
-int EstimateDiameter(double p0[3], double p1[3], double p2[3], double *dave, double *dmin)
+int EstimateDiameter(double p0[3], double p1[3], double p2[3], double *r2ave, double *r2min)
 {
 	int i;
-	double N[3], sum, dp, r1, r2;
+	double N[3], sum, dp, r2, r2sum;
 	double v0[3], v[3];
 	double angle;
 	int nrays = 16;
 
+//	printf("EstimateDiameter: %f %f %f\n",p1[0],p1[1],p1[2]);
 	sum = 0;
 	for (i=0; i<3; i++) {
 		N[i] = p2[i] - p0[i];	// axis of vessel, normal to the plane
@@ -923,40 +982,34 @@ int EstimateDiameter(double p0[3], double p1[3], double p2[3], double *dave, dou
 	}
 //	printf("N:   %f %f %f\n",N[0],N[1],N[2]);
 //	printf("v0:  %f %f %f\n",v0[0],v0[1],v0[2]);
-	sum = 0;
-	*dmin = 1.0e10;
+	r2sum = 0;
+	*r2min = 1.0e10;
 	for (i=0;i<nrays;i++) {
 		angle = i*(PI/nrays);
+//		printf("angle: %2d %6.2f %6.3f %6.3f %6.3f\n",i,angle,v0[0],v0[1],v0[2]);
 		Rotate(v0,N,angle,v);
-		r1 = GetRadius(p1,v);
-		if (r1 == 0) {
-			printf("GetRadius: r1=0: p1: %f %f %f\n",p1[0],p1[1],p1[2]);
-			fprintf(fperr,"GetRadius: r1=0: p1: %f %f %f\n",p1[0],p1[1],p1[2]);
-			double delta = 0.5;
-			int x = int(p1[0] + delta);
-			int y = int(p1[1] + delta);
-			int z = int(p1[2] + delta);
-			printf("x,y,z,V3D: %d %d %d  %d\n",x,y,z,V3D(x,y,z));
-			continue;
+//		printf("angle: %2d %6.2f %6.3f %6.3f %6.3f\n",i,angle,v[0],v[1],v[2]);
+		r2 = GetRadius2(p1,v);
+		if (r2 <= 1.0) {
+//			printf("EstimateDiameter: r2<=1.0: p1: %f %f %f\n",p1[0],p1[1],p1[2]);
+			fprintf(fperr,"EstimateDiameter: r2<=1.0: p1: %f %f %f\n",p1[0],p1[1],p1[2]);
+			break;;
 		}
+		r2sum += r2;
+		if (r2 < *r2min) *r2min = r2;
 		angle += PI;
 		Rotate(v0,N,angle,v);
-		r2 = GetRadius(p1,v);
-		if (r2 == 0) {
-			printf("GetRadius: r2=0: p1: %f %f %f\n",p1[0],p1[1],p1[2]);
-			continue;
+		r2 = GetRadius2(p1,v);
+		if (r2 <= 1.0) {
+//			printf("EstimateDiameter: r2<=1.0: p1: %f %f %f\n",p1[0],p1[1],p1[2]);
+			fprintf(fperr,"EstimateDiameter: r2<=1.0: p1: %f %f %f\n",p1[0],p1[1],p1[2]);
+			break;;
 		}
-		if (r1+r2 < 1.0) {
-			printf("Diameter < 1: %f\n",r1+r2);
-		}
-		sum += (r1 + r2);
-		if (r1+r2 < *dmin) {
-			*dmin = r1+r2;
-		}
+		r2sum += r2;
+		if (r2 < *r2min) *r2min = r2;
 	}
-	*dave = sum/nrays;
-	*dmin = MAX(1.0,*dmin);
-	*dave = MAX(1.0,*dave);
+	*r2ave = r2sum/(2*nrays);
+	*r2ave = MAX(1.0,*r2ave);
 	return 0;
 }
 
@@ -1044,13 +1097,66 @@ int CrudeGetDiameters(void)
 }
 
 //-----------------------------------------------------------------------------------------------------
+// This method uses the preceding and following pts on an edge to estimate the centreline direction
+// vector.  To improve the estimate of the cutting plane perpendicular to the vessel, the pts need 
+// to be well separated, i.e. this must be applied to the simplified network.
+// It can be used only for the interior pts, therefore not when npts = 2.
+//-----------------------------------------------------------------------------------------------------
+int getDiameter(int kp0, int kp1, int kp2)
+{
+	int i;
+	double p1[3], p2[3], p0[3];
+	double r2_ave, r2_min, diam, factor;
+	double alpha = 0.0;
+	double dlim = 50.0;
+
+	for (i=0; i<3; i++) {
+		p0[i] = vsize[i]*(voxel[kp0].pos[i] + 0.5);		// Note: centres of voxel cubes
+		p1[i] = vsize[i]*(voxel[kp1].pos[i] + 0.5);
+		p2[i] = vsize[i]*(voxel[kp2].pos[i] + 0.5);
+	}
+	// This estimates the average and minimum diameter at the point p1, centreline p0 -> p2
+	EstimateDiameter(p0,p1,p2,&r2_ave,&r2_min);
+	diam = 2*sqrt(r2_ave);
+	if (alpha != 0) {
+		factor = 1.0 + alpha*diam/dlim;
+		diam = factor*diam;
+	}
+	return diam;
+}
+
+//-----------------------------------------------------------------------------------------------------
+int GetDiameters(void)
+{
+	int ie, npts, k, kp, kp0, kp1, kp2;
+	EDGE *edge;
+
+	printf("GetDiameters\n");
+	for (ie=0;ie<ne;ie++) {
+		edge = &edgeList[ie];
+		if (!edge->used) continue;
+		npts = edge->npts;
+		for (k=0;k<npts;k++) {
+			kp = edge->pt[k];
+			avediameter[kp] = 0;
+		}
+		for (k=1;k<npts-1;k++) {
+			kp0 = edge->pt[k-1];
+			kp1 = edge->pt[k];
+			kp2 = edge->pt[k+1];
+			avediameter[kp1] = getDiameter(kp0,kp1,kp2);
+		}
+	}
+	return 0;
+}
+//-----------------------------------------------------------------------------------------------------
 // This version estimates the average diameter, and minimum diameter, at edge midpoints.
 // Note that the diameters are edge properties.
 // Get edge lengths too. There are two methods:
 // (a) add voxel-voxel distances (this will overestimate length)
 // (b) compute distance from start to end of the edge (segment).  (this will underestimate length)
 //-----------------------------------------------------------------------------------------------------
-int oldGetDiameters(void)
+int OldGetDiameters(void)
 {
 	int i, j, k, k0, k1, k2;
 	double p1[3], p2[3], p0[3];
@@ -1972,7 +2078,7 @@ int CreateDistributions()
 	double ad, len, ddiam, dlen, ltot, lsum, dsum, dvol, r2, r2prev, lsegdtot;
 	double ave_len, volume, d95;
 	double ave_pt_diam, ave_seg_diam;
-	int ie, ip, k, ka, kp, kpprev, ndpts, nlpts, ndtot, nsegdtot;
+	int ie, ip, k, ka, kp, kpprev, ndpts, nlpts, ndtot, nsegdtot, nptstot, nptsusedtot;
 	double lenlimit = 3.0;
 	EDGE edge;
 
@@ -1984,6 +2090,8 @@ int CreateDistributions()
 	}
 	printf("Compute diameter distributions\n");
 	fprintf(fperr,"Compute diameter distributions\n");
+	nptstot = 0;
+	nptsusedtot = 0;
 	// Diameters
 	ddiam = 0.5;
 	ndtot = 0;
@@ -1996,8 +2104,10 @@ int CreateDistributions()
 		edge = edgeList[ie];
 		if (!edge.used) continue;
 //		printf("ie: %d npts: %d\n",ie,edge.npts);
-		fprintf(fperr,"ie: %d npts: %d\n",ie,edge.npts);
+		fprintf(fperr,"ie: %d npts: %d npts_used: %d\n",ie,edge.npts,edge.npts_used);
 		fflush(fperr);
+		nptstot += edge.npts;
+		nptsusedtot += edge.npts_used;
 		dbug = false;
 		kpprev = 0;
 		r2prev = 0;
@@ -2086,8 +2196,8 @@ int CreateDistributions()
 		k = len/dlen + 0.5;
 		if (k*dlen <= lenlimit) continue;
 		if (k >= NBOX) {
-			printf("Edge too long: len: %d  %f  k: %d\n",ie,len,k);
-			fprintf(fperr,"Edge too long: len: %d  %f  k: %d\n",ie,len,k);
+			printf("Edge too long: ie: %d  k: %d len: %f  k: %d\n",ie,k,len);
+			fprintf(fperr,"Edge too long: ie: %d  k: %d len: %f  k: %d\n",ie,k,len);
 			continue;
 		}
 		lvbox[k]++;
@@ -2137,6 +2247,8 @@ int CreateDistributions()
 	for (k=0; k<nlpts; k++) {
 		fprintf(fpout,"%6.2f %8d %9.5f\n",k*dlen,lvbox[k],lvbox[k]/ltot);
 	}
+	printf("nptstot: %d\n",nptstot);
+	printf("nptsusedtot: %d\n",nptsusedtot);
 	return 0;
 }
 
@@ -2202,8 +2314,8 @@ int WriteCmguiData(void)
 		kv0 = edge.vert[0];
 		kv1 = edge.vert[1];
 		if (kfrom == kto) {
-//			printf("Error: writecmguidata: repeated node: element: %d npts: %d kvo: %d kfrom: %d\n",ie,npts,kv0,kfrom);
-			fprintf(fperr,"repeated node: element: %d npts: %d kvo: %d kfrom: %d\n",ie,npts,kv0,kfrom);
+			printf("Error: writecmguidata: repeated node: element: %d npts: %d kv0,kv1: %d %d kfrom: %d\n",ie,npts,kv0,kv1,kfrom);
+			fprintf(fperr,"repeated node: element: %d npts: %d kv0.kv1: %d %d kfrom: %d\n",ie,npts,kv0,kv1,kfrom);
 			for (k=0; k<npts; k++)
 				fprintf(fperr,"  k: %3d  pt: %6d\n",k,edge.pt_used[k]);
 			edgeList[ie].used = false;
@@ -2213,7 +2325,7 @@ int WriteCmguiData(void)
 		radius[kfrom] = MAX(radius[kfrom],avediameter[kfrom]/2);
 		radius[kto] = MAX(radius[kto],avediameter[kto]/2);
 		point_used[kfrom] = true;
-		fprintf(fperr,"edge: %6d npts: %3d kfrom,kto: %6d %6d  %6d\n",ie,npts,kfrom,kto,kelem);
+//		fprintf(fperr,"edge: %6d npts: %3d kfrom,kto: %6d %6d  %6d\n",ie,npts,kfrom,kto,kelem);
 		for (ip=1; ip<npts; ip++) {
 //			int k2 = edge.pt[ip];
 			int k2 = edge.pt_used[ip];
@@ -2251,9 +2363,63 @@ int WriteCmguiData(void)
 }
 
 //-----------------------------------------------------------------------------------------------------
+// A simplified network is produced by dropping close pts
+// Edges and vertices are unchanged, but the number of points on an edge is reduced.
+//-----------------------------------------------------------------------------------------------------
+int simplify()
+{
+	int ie, iv, kp1, kp2, kp3, ip0, ip1, nptot;
+	double d12, d23, dmin, diam1, diam2;
+	EDGE edge;
+	bool dbug;
+	double fraction = 0.5;
+
+	printf("simplify\n");
+	nptot = 0;
+	for (ie=0; ie<ne; ie++) {
+		edge = edgeList[ie];
+		if (!edge.used) continue;
+		if (edge.npts < 5) continue;
+		dbug = false;
+		kp1 = edge.pt[0];
+		kp3 = edge.pt[edge.npts-1];
+		edgeList[ie].pt[0] = kp1;
+		diam1 = getDiameter(edge.pt[0],edge.pt[1],edge.pt[2]);
+		if (dbug) printf("diam1: %f  %d %d %d\n",diam1,edge.pt[0],edge.pt[1],edge.pt[2]);
+		ip1 = 0;
+		ip1++;
+		for (ip0=1; ip0<edge.npts; ip0++) {
+			kp2 = edge.pt[ip0];
+			if (ip0 == edge.npts-1)
+				diam2 = getDiameter(edge.pt[ip0-2],edge.pt[ip0-1],edge.pt[ip0]);	//only approx. because pt spacing is small
+			else
+				diam2 = getDiameter(edge.pt[ip0-1],edge.pt[ip0],edge.pt[ip0+1]);	//only approx. because pt spacing is small
+			d12 = zdist(kp1,kp2);
+			d23 = zdist(kp2,kp3);
+			dmin = fraction*(diam1 + diam2)/2;
+			if (dbug) printf("ip0: %d kp2: %d diam2: %f d12,d23: %f %f dmin: %f\n",ip0,kp2,diam2,d12,d23,dmin);
+			if ((d12 > dmin &&  d23 > dmin) || ip0 == edge.npts-1) {
+				edgeList[ie].pt[ip1] = kp2;
+				edgeList[ie].pt_used[ip1] = kp2;
+				if (dbug) printf("pt: %d %d\n",ip1,kp2);
+				ip1++;
+				kp1 = kp2;
+				diam1 = diam2;
+				nptot++;
+			}
+		}
+		edgeList[ie].npts = ip1;
+		edgeList[ie].npts_used = edgeList[ie].npts;
+		if (dbug) printf("simplify: ie: %d npts: %d -> %d\n",ie,edge.npts,edgeList[ie].npts);
+	}
+	printf("done: nptot: %d\n",nptot);
+	return 0;
+}
+
+//-----------------------------------------------------------------------------------------------------
 // Reduce the number of points on an edge by imposing a lower bound DMIN on the distance between points.
 //-----------------------------------------------------------------------------------------------------
-int simplify(void)
+int simplify1(void)
 {
 	int ie, j1, j2, k, kk, n, nused;
 	double pdist[MAXEDGEPTS], dave, distsum, del, DFAC;
@@ -2267,7 +2433,7 @@ int simplify(void)
 	for (ie=0;ie<ne;ie++) {
 		if (!edgeList[ie].used) continue;
 //		printf("  edge: %6d  npts: %4d\n",ie,edgeList[ie].npts);
-		fprintf(fperr,"  edge: %6d  npts: %4d\n",ie,edgeList[ie].npts);
+//		fprintf(fperr,"  edge: %6d  npts: %4d\n",ie,edgeList[ie].npts);
 		if (edgeList[ie].npts > MAXEDGEPTS) exit(1);
 		distsum = 0;
 		dave = 0;
@@ -2303,17 +2469,20 @@ int simplify(void)
 			// Now step along the edge and choose the points closest to multiples of del
 			distsum = 0;
 			kk = 1;
-			for (k=1;k<edgeList[ie].npts; k++) {
+			for (k=1;k<edgeList[ie].npts-1; k++) {
 				distsum += pdist[k];
 				if (distsum > kk*del) {
 					nused++;
 					edgeList[ie].pt_used[kk] = edgeList[ie].pt[k];
+					if (ie == 20) printf("edge: %d pt_used: %d  %d\n",kk,k,edgeList[ie].pt[k]);
 					kk++;
-					if (kk == n) break;
+//					if (kk == n) break;
 				}
 			}
-			edgeList[ie].pt_used[n] = edgeList[ie].pt[edgeList[ie].npts-1];
-			edgeList[ie].npts_used = n+1;
+//			edgeList[ie].pt_used[n] = edgeList[ie].pt[edgeList[ie].npts-1];
+//			edgeList[ie].npts_used = n+1;
+			edgeList[ie].pt_used[kk] = edgeList[ie].pt[edgeList[ie].npts-1];
+			edgeList[ie].npts_used = kk+1;
 		} else {
 			for (k=1; k<edgeList[ie].npts; k++) {
 				edgeList[ie].pt_used[k] = edgeList[ie].pt[k];
@@ -2321,6 +2490,10 @@ int simplify(void)
 			edgeList[ie].npts_used = edgeList[ie].npts;
 		}
 		np_used += edgeList[ie].npts_used;
+		if (edgeList[ie].npts_used != edgeList[ie].npts) {
+			printf("simplify: edge: %d dropped: %d\n",edgeList[ie].npts - edgeList[ie].npts_used);
+			fprintf(fperr,"simplify: edge: %d dropped: %d\n",edgeList[ie].npts - edgeList[ie].npts_used);
+		}
 	}
 	return 0;
 }
@@ -2960,8 +3133,8 @@ int edgePtDist(void)
 
 	printf("edgePtDist: ne: %d\n",ne);
 	fprintf(fperr,"Vertices: %d\n",nv);
-	for (i=0;i<nv;i++)
-		fprintf(fperr,"vertex: %4d  ivox: %6d  nlinks: %d\n",i,vertex[i].ivox,vertex[i].nlinks);
+	//for (i=0;i<nv;i++)
+	//	fprintf(fperr,"vertex: %4d  ivox: %6d  nlinks: %d\n",i,vertex[i].ivox,vertex[i].nlinks);
 	for (i=0; i<MAXEDGEPTS; i++)
 		ecount[i] = 0;
 	ne_used = 0;
@@ -2972,10 +3145,10 @@ int edgePtDist(void)
 		ecount[n]++;
 	}
 	printf("Number of edges used: %d\n",ne_used);
-	for (i=0; i<20; i++) {
-		printf("%4d %8d\n",i,ecount[i]);
-		if (i > 10 && ecount[i] == 0) break;
-	}
+	//for (i=0; i<20; i++) {
+	//	printf("%4d %8d\n",i,ecount[i]);
+	//	if (i > 10 && ecount[i] == 0) break;
+	//}
 	return 0;
 }
 
@@ -3134,10 +3307,10 @@ int tracer(void)
 		}
 		if (isweep == 0) {
 			printf("Number of edges: %d  nshort: %d  nloop: %d\n",ne,nshort,nloop);
-			for (i=0; i<20; i++) {
-				printf("%4d %8d\n",i,ecount[i]);
-				if (i > 10 && ecount[i] == 0) break;
-			}
+			//for (i=0; i<20; i++) {
+			//	printf("%4d %8d\n",i,ecount[i]);
+			//	if (i > 10 && ecount[i] == 0) break;
+			//}
 			ne_max = 1.5*ne;
 			edgeList = (EDGE *)malloc(ne_max*sizeof(EDGE));
 			printf("Allocated edgeList: %d\n",ne);
@@ -3483,9 +3656,92 @@ void showEnds(LOOSEND end[], int nloose)
 }
 
 //-----------------------------------------------------------------------------------------------------
-// Prune short dead-end edges
+// Replaces oldprune()
 //-----------------------------------------------------------------------------------------------------
-int prune(int iter)
+void prune() 
+{
+	int iv, ie, nlinks, iecon, ivcon, k, kp0, kp1, count, n, etmp[20];
+	float len, dave;
+	bool deadend;
+	EDGE *edge;
+
+	printf("prune\n");
+	count = 0;
+	for (iv=0; iv<nv; iv++) {
+		if (!vertex[iv].used) continue;
+		if (vertex[iv].nlinks_used == 1) {
+			count++;
+			deadend = true;
+		} else {
+			deadend = false;
+		}
+		nlinks = 0;
+		for (ie=0; ie<ne; ie++) {
+			if (!edgeList[ie].used) continue;
+			if (edgeList[ie].vert[0] == iv) {
+				nlinks++;
+				if (deadend) {
+					iecon = ie;
+					ivcon = edgeList[ie].vert[1];
+				}
+			}
+			if (edgeList[ie].vert[1] == iv) {
+				nlinks++;
+				if (deadend) {
+					iecon = ie;
+					ivcon = edgeList[ie].vert[0];
+				}
+			}
+		}
+		//if (nlinks != vertex[iv].nlinks_used) {
+		//	printf("vertex: %d nlinks_used: %d actual: %d\n",iv,vertex[iv].nlinks_used,nlinks);
+		//}
+		// Now find the length if nlinks == 1
+		if (deadend) {
+			edge = &edgeList[iecon];
+			len = 0;
+			dave = 0;
+			for (k=0; k<edge->npts; k++) {
+				if (k > 0) {
+					kp0 = edge->pt[k-1];
+					kp1 = edge->pt[k];
+					len += zdist(kp0,kp1);
+				}
+				dave += pointdiameter(edge->pt[k]);
+			}
+			dave/= edge->npts;
+//			printf("loose end: %d %d %6.1f %6.1f %6.3f\n",iecon,iv,len,dave,len/dave);
+			if (len/dave < 5) {
+//				printf("Remove the loose end\n");
+				edge->used = false;
+				// remove iecon from the edge list for vertex ivcon
+				for (k=0; k<vertex[ivcon].nlinks; k++) {
+					etmp[k] = vertex[ivcon].edge[k];
+				}
+				n = 0;
+				for (k=0; k<vertex[ivcon].nlinks; k++) {
+					ie = vertex[ivcon].edge[k];
+					if (ie != iecon) {
+						vertex[ivcon].edge[n] = ie;
+						n++;
+					}
+				}
+				vertex[ivcon].nlinks--;
+				// Now the non-deadend vertex may have nlinks=2, and the edges may need to be concatenated
+				if (vertex[ivcon].nlinks == 2) {
+					joiner(ivcon);
+				}
+			}
+		}
+	}
+	printf("ne: %d loose ends: %d\n",ne,count);
+}
+
+//-----------------------------------------------------------------------------------------------------
+// Prune short dead-end edges
+// If not USE_HEALING, iter=1 makes no changes to the network.
+//-----------------------------------------------------------------------------------------------------
+int oldprune(int iter)
 {
 	int ie, i, k, kv0, kv1, k1, k2, j1, j2, npruned, nlused[2], nloose, last, err;
 	float diam, len;
@@ -3495,7 +3751,7 @@ int prune(int iter)
 
 	printf("prune: iter: %d min twig length factor: %d\n", iter, MINTWIGFACTOR);
 	fprintf(fperr,"prune: iter: %d min twig length factor: %d\n", iter, MINTWIGFACTOR);
-	if (iter == 0) {	// Need to count loose ends, to allocated array end[]
+	if (iter == 0) {	// Need to count loose ends, to allocate array end[]
 		nloose = 0;
 		for (ie=0; ie<ne; ie++) {
 			edge = edgeList[ie];
@@ -3508,6 +3764,7 @@ int prune(int iter)
 			nloose++;
 		}
 		printf("nloose: %d\n",nloose);
+		fprintf(fperr,"nloose: %d\n",nloose);
 		end = (LOOSEND *)malloc(nloose*sizeof(LOOSEND));
 	}
 	
@@ -3554,6 +3811,8 @@ int prune(int iter)
 			}
 			end[nloose].joined = -1;
 			edge0 = edgeList[end[nloose].iedge];
+			printf("loose edge: %d npts: %d\n",end[nloose].iedge,edge0.npts);
+			fprintf(fperr,"loose edge: %d npts: %d\n",end[nloose].iedge,edge0.npts);
 			nloose++;
 		} else {		// Is there a way to process the list of loose ends, as in prune.cpp?
 			if (len <= MINTWIGFACTOR*diam) {
@@ -3563,6 +3822,8 @@ int prune(int iter)
 					vertex[kv0].nlinks_used--;
 					vertex[kv1].nlinks_used--;
 					npruned++;
+					printf("nlused[0]=1: ie: %d kv0,kv1: %d %d\n",ie,kv0,kv1);
+					fprintf(fperr,"nlused[0]=1: ie: %d kv0,kv1: %d %d\n",ie,kv0,kv1);
 				}
 				if (nlused[1] == 1) {
 					vertex[kv1].used = false;
@@ -3570,6 +3831,8 @@ int prune(int iter)
 					vertex[kv0].nlinks_used--;
 					vertex[kv1].nlinks_used--;
 					npruned++;
+					printf("nlused[1]=1: ie: %d kv0,kv1: %d %d\n",ie,kv0,kv1);
+					fprintf(fperr,"nlused[1]=1: ie: %d kv0,kv1: %d %d\n",ie,kv0,kv1);
 				}
 			}	
 		}
@@ -3749,7 +4012,7 @@ int adjoinEdges(void)
 //-----------------------------------------------------------------------------------------------------
 int TraceSkeleton(int n_prune_cycles)
 {
-	int x, y, z, i, j, k, kv, nbrs=0, nbrlist[MAXNBRS][3], maxnbrs, npts;
+	int x, y, z, ie, i, j, k, kv, nbrs=0, nbrlist[MAXNBRS][3], maxnbrs, npts;
 	int next[3];
 	int nbcount[MAXNBRS];
 	int nhit, k1, xnb, ynb, znb, nloops, iter, npruned, err;
@@ -3826,6 +4089,9 @@ int TraceSkeleton(int n_prune_cycles)
 				if (nbrs != 2) {
 					voxel[k].ivert = kv;
 					vertex[kv].ivox = k;
+					vertex[kv].pos[0] = x;
+					vertex[kv].pos[1] = y;
+					vertex[kv].pos[2] = z;
 					vertex[kv].ivisit = -1;
 					vertex[kv].nlinks = nbrs;
 					vertex[kv].nlinks_used = nbrs;
@@ -3924,18 +4190,28 @@ int TraceSkeleton(int n_prune_cycles)
 	err = checker();
 	if (err != 0) return 1;
 
-	for (iter=0; iter<n_prune_cycles; iter++) {
-		printf("call prune: %d\n",iter);
-		npruned = prune(iter);
-		err = checker();
-		if (err != 0) return 1;
-		printf("iter: %d npruned: %d\n",iter,npruned);
-		if (iter > 0 && npruned < 10) break;
-	}
+	if (NEW_PRUNE) {
+		prune();
+	} else {
+		for (iter=0; iter<n_prune_cycles; iter++) {
+			printf("call prune: %d\n",iter);
+			npruned = oldprune(iter);
+			err = checker();
+			if (err != 0) return 1;
+			printf("iter: %d npruned: %d\n",iter,npruned);
+			if (iter > 0 && npruned < 10) break;
+		}
 	
-	adjoinEdges();
-	printf("did adjoinEdges\n");
-
+		adjoinEdges();
+		printf("did adjoinEdges\n");
+	}
+	// Drop  loops created by pruning
+	for (ie=0; ie<ne; ie++) {
+		npts = edgeList[ie].npts;
+		int kfrom = edgeList[ie].pt_used[0];
+		int kto = edgeList[ie].pt_used[npts-1];
+		if (kfrom == kto) edgeList[ie].used = false;
+	}
 	err = checkUnconnected();
 	if (err != 0) return 1;
 	edgePtDist();
@@ -3961,14 +4237,14 @@ void FixDiameters()
 	int ie, k, kp0, kp1, kp, npts, n0, n1, ipass, nzero, err;
 	double d0, d1, diam;
 	bool done;
-	double alpha = 0.5;
+	double alpha = 0.3;
 
 	printf("FixDiameters\n");
-	for (ie=0; ie<100; ie++) {
-		edge = &edgeList[ie];
-		if (!edge->used) continue;
-		showedge(ie,'D');
-	}
+	//for (ie=0; ie<100; ie++) {
+	//	edge = &edgeList[ie];
+	//	if (!edge->used) continue;
+	//	showedge(ie,'D');
+	//}
 
 	for (ie=0; ie<ne; ie++) {
 		edge = &edgeList[ie];
@@ -4106,14 +4382,11 @@ void FixDiameters()
 //			exit(1);
 		}
 	}
-	for (ie=0; ie<100; ie++) {
-		edge = &edgeList[ie];
-		if (!edge->used) continue;
-		showedge(ie,'D');
-		//npts = edge->npts;
-		//printf("ie: %d npts: %d vertex diam: %6.1f  %6.1f %6.1f  %6.1f\n",ie,npts,
-		//	avediameter[edge->pt[0]],avediameter[edge->pt[0]],avediameter[edge->pt[npts-1]],avediameter[edge->pt[npts-2]]);
-	}
+	//for (ie=0; ie<100; ie++) {
+	//	edge = &edgeList[ie];
+	//	if (!edge->used) continue;
+	//	showedge(ie,'D');
+	//}
 }
 
 //-----------------------------------------------------------------------------------------------------
@@ -4149,6 +4422,7 @@ int main(int argc, char**argv)
 	strcat(output_basename,filename);
 	sprintf(errfilename,"%s%s",output_basename,"_topo.log");
 	fperr = fopen(errfilename,"w");
+	printf("errfilename: %s\n",errfilename);
 
 	fprintf(fperr,"drive: %s dir: %s filename: %s ext: %s\n",drive,dir,filename,ext);
 	fprintf(fperr,"Basename: %s\n",output_basename);
@@ -4273,8 +4547,17 @@ int main(int argc, char**argv)
 	}
 	printf("did TraceSkeleton\n");
 
+	err = simplify();
+	if (err != 0) {
+		printf("Error: simplify\n");
+		fprintf(fperr,"Error: simplify\n");
+		fclose(fperr);
+		return 7;
+	}
+
 	if (FIXED_DIAMETER == 0) {
-		err = CrudeGetDiameters();
+		err = GetDiameters();
+//		err = CrudeGetDiameters();
 		if (err != 0) {
 			printf("Error: GetDiameters\n");
 			fprintf(fperr,"Error: GetDiameters\n");
@@ -4293,15 +4576,6 @@ int main(int argc, char**argv)
 	fprintf(fpout,"Voxel volume: %f\n",volume);
 
 	checkUnconnected();
-
-	err = 0;
-	err = simplify();
-	if (err != 0) {
-		printf("Error: simplify\n");
-		fprintf(fperr,"Error: simplify\n");
-		fclose(fperr);
-		return 7;
-	}
 	
 //	checker();
 //	checkUnconnected();
@@ -4335,7 +4609,7 @@ int main(int argc, char**argv)
 		return 10;
 	}
 
-	if (squeeze) {
+//	if (squeeze) {
 		err = WriteAmiraFile(amfilename,vessFile,skelFile);
 		if (err != 0) {
 			printf("Error: WriteAmiraFile\n");
@@ -4343,10 +4617,10 @@ int main(int argc, char**argv)
 			fclose(fperr);
 			return 11;
 		}
-	} else {
-		printf("Amira file not written - data not squeezed\n");
-		fprintf(fperr,"Amira file not written - data not squeezed\n");
-	}
+	//} else {
+	//	printf("Amira file not written - data not squeezed\n");
+	//	fprintf(fperr,"Amira file not written - data not squeezed\n");
+	//}
 	printf("Terminated normally\n");
 	fprintf(fperr,"Terminated normally\n");
 	fclose(fperr);
