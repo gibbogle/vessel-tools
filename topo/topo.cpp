@@ -137,6 +137,7 @@ bool *point_used;
 float *avediameter, *mindiameter, *radius;
 int nb, branchlist[MAXBRANCHES];
 //double voxelsize_xy, voxelsize_z;	// in um
+double calib_param;
 double vsize[3];	// in um
 float FIXED_DIAMETER;
 //int volume;
@@ -1107,7 +1108,7 @@ int getDiameter(int kp0, int kp1, int kp2)
 	int i;
 	double p1[3], p2[3], p0[3];
 	double r2_ave, r2_min, diam, factor;
-	double alpha = 0.0;
+//	double alpha = 0.0;
 	double dlim = 50.0;
 
 	for (i=0; i<3; i++) {
@@ -1118,8 +1119,8 @@ int getDiameter(int kp0, int kp1, int kp2)
 	// This estimates the average and minimum diameter at the point p1, centreline p0 -> p2
 	EstimateDiameter(p0,p1,p2,&r2_ave,&r2_min);
 	diam = 2*sqrt(r2_ave);
-	if (alpha != 0) {
-		factor = 1.0 + alpha*diam/dlim;
+	if (calib_param != 0) {
+		factor = 1.0 + calib_param*diam/dlim;
 		diam = factor*diam;
 	}
 	return diam;
@@ -2212,8 +2213,8 @@ int CreateDistributions()
 	fprintf(fpout,"Average pt diameter: %6.2f vessel diameter: %6.2f\n",ave_pt_diam, ave_seg_diam);
 	printf("Average vessel length: %6.1f\n",ave_len/ltot);
 	fprintf(fpout,"Average vessel length: %6.1f\n",ave_len/ltot);
-	printf("Total volume: %10.0f\n\n",volume);
-	fprintf(fpout,"Total volume: %10.0f\n\n",volume);
+	printf("Total vessel volume: %10.0f\n\n",volume);
+	fprintf(fpout,"Total vessel volume: %10.0f\n\n",volume);
 
 	//ndpts = 0;
 	//for (k=0; k<NBOX; k++) {
@@ -4404,9 +4405,9 @@ int main(int argc, char**argv)
 	bool squeeze = true;
 
 	if (argc != 9) {
-		printf("Usage: topo skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z n_prune_cycles fixed_diam\n");
+		printf("Usage: topo skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z calib_param fixed_diam\n");
 		fperr = fopen("topo_error.log","w");
-		fprintf(fperr,"Usage: topo skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z n_prune_cycles fixed_diam\n");
+		fprintf(fperr,"Usage: topo skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z calib_param fixed_diam\n");
 		fprintf(fperr,"Submitted command line: argc: %d\n",argc);
 		for (int i=0; i<argc; i++) {
 			fprintf(fperr,"argv: %d: %s\n",i,argv[i]);
@@ -4433,7 +4434,7 @@ int main(int argc, char**argv)
 	sscanf(argv[4],"%lf",&voxelsize_x);
 	sscanf(argv[5],"%lf",&voxelsize_y);
 	sscanf(argv[6],"%lf",&voxelsize_z);
-	sscanf(argv[7],"%d",&n_prune_cycles);
+	sscanf(argv[7],"%lf",&calib_param);
 	sscanf(argv[8],"%f",&FIXED_DIAMETER);
 
 	vsize[0] = voxelsize_x;
@@ -4570,10 +4571,10 @@ int main(int argc, char**argv)
 	printf("Edges: %d edges>2: %d\n",ne,negmin);
 	printf("Total voxels: %d vertices: %d  points: %d\n",count,nv,np);
 	printf("voxel_size: %6.2f %6.2f %6.2f\n",vsize[0],vsize[1],vsize[2]);
-	printf("Voxel volume: %f\n",volume);
+	printf("Total voxel volume: %10.0f\n",volume);
 	fprintf(fpout,"Total voxels: %d vertices: %d  points: %d\n",count,nv,np);
 	fprintf(fpout,"voxel_size: %6.2f %6.2f %6.2f\n",vsize[0],vsize[1],vsize[2]);
-	fprintf(fpout,"Voxel volume: %f\n",volume);
+	fprintf(fpout,"Total voxel volume: %10.0f\n",volume);
 
 	checkUnconnected();
 	

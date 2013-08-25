@@ -89,7 +89,7 @@ void MainWindow::topology()
     qstr += " ";
     qstr += ui->lineEditVoxelSize_z->text();
     qstr += " ";
-    qstr += ui->lineEditPrune->text();
+    qstr += ui->lineEditCalib->text();
 	qstr += " ";
 	if (ui->checkBoxDiam->isChecked()) {
 		qstr += ui->lineEditDiam->text();

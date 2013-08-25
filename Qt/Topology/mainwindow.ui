@@ -212,7 +212,7 @@
      <string>Diameter</string>
     </property>
    </widget>
-   <widget class="QLineEdit" name="lineEditPrune">
+   <widget class="QLineEdit" name="lineEditCalib">
     <property name="geometry">
      <rect>
       <x>120</x>
@@ -222,20 +222,20 @@
      </rect>
     </property>
     <property name="text">
-     <string>3</string>
+     <string>-0.1</string>
     </property>
    </widget>
-   <widget class="QLabel" name="labelPrune">
+   <widget class="QLabel" name="labelCalib">
     <property name="geometry">
      <rect>
       <x>160</x>
       <y>161</y>
-      <width>121</width>
+      <width>111</width>
       <height>21</height>
      </rect>
     </property>
     <property name="text">
-     <string>Number of prune cycles</string>
+     <string>Calibration parameter</string>
     </property>
    </widget>
    <widget class="QLineEdit" name="lineEditVoxelSize_z">
