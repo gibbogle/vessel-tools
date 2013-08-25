@@ -222,7 +222,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>-0.1</string>
+     <string>1.0</string>
     </property>
    </widget>
    <widget class="QLabel" name="labelCalib">

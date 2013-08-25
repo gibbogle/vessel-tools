@@ -453,8 +453,6 @@ int squeezer(void)
 	free(voxel_x);
 	free(oldpt);
 	free(avediameter_x);
-	showedge(68,'N');
-	showedge(68,'D');
 	return err;
 }
 
@@ -1120,8 +1118,9 @@ int getDiameter(int kp0, int kp1, int kp2)
 	EstimateDiameter(p0,p1,p2,&r2_ave,&r2_min);
 	diam = 2*sqrt(r2_ave);
 	if (calib_param != 0) {
-		factor = 1.0 + calib_param*diam/dlim;
-		diam = factor*diam;
+		//factor = 1.0 + calib_param*diam/dlim;
+		//diam = factor*diam;
+		diam *= calib_param;
 	}
 	return diam;
 }
@@ -4568,12 +4567,11 @@ int main(int argc, char**argv)
 		FixDiameters();
 	}
 
-	printf("Edges: %d edges>2: %d\n",ne,negmin);
-	printf("Total voxels: %d vertices: %d  points: %d\n",count,nv,np);
-	printf("voxel_size: %6.2f %6.2f %6.2f\n",vsize[0],vsize[1],vsize[2]);
+	printf("Total voxels: %d edges: %d vertices: %d points: %d\n",count,ne,nv,np);
+	printf("Voxel size: %6.2f %6.2f %6.2f\n",vsize[0],vsize[1],vsize[2]);
 	printf("Total voxel volume: %10.0f\n",volume);
-	fprintf(fpout,"Total voxels: %d vertices: %d  points: %d\n",count,nv,np);
-	fprintf(fpout,"voxel_size: %6.2f %6.2f %6.2f\n",vsize[0],vsize[1],vsize[2]);
+	fprintf(fpout,"Total voxels: %d edges: %d vertices: %d points: %d\n",count,ne,nv,np);
+	fprintf(fpout,"Voxel size: %6.2f %6.2f %6.2f\n",vsize[0],vsize[1],vsize[2]);
 	fprintf(fpout,"Total voxel volume: %10.0f\n",volume);
 
 	checkUnconnected();

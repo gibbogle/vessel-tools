@@ -1,24 +1,19 @@
 Topology information
 
-Parameters:
-
 voxelsize = size of voxel in um
 diameter  = vessel diameter when a fixed diameter is specified
 
-Data from the thresholded, connected object image is combined with data from
-the skeleton image in order to quantify the network.
+Data from the thresholded, connected object image is combined with data from the skeleton image in order to quantify the network.
 
-The length of each vessel segment is computed (distance along the vessel
-between junctions), and the distribution (histogram) of lengths is output.
+The length of each vessel segment is computed (distance along the vessel between junctions), and the distribution (histogram) of lengths is output.
 
 The average vessel diameter is estimated at each skeleton voxel.
-Two probability distributions of vessel diameter are output, one based simply on the number of vessels, the other weigthed by vessel length.  This second distribution is more meaningful.
+Two probability distributions of vessel diameter are output, one based simply on the number of vessels, the other weighted by vessel length.  This second distribution is more meaningful.
 
 The total volume of the vessel network is computed, together with the volume corresponding to the number of lit voxels in the segmented image.
-The calibration parameter allows a small adjustment to be made to the estimated diameters.  The fractional change increases proportional to diameter.  By choosing this parameter the total vessel volume can be made consistent with the volume based on the lit voxel count.
+The calibration parameter allows a small adjustment to be made to the estimated diameters.  By appropriate choice of this parameter the total vessel volume can be made consistent with the volume based on the lit voxel count.
 
 All results are in units of micrometres (um).
 
-If "Fixed diameter" is checked and a diameter value is specified, 
-the network files are generated using this diameter for all vessels.  
+If "Fixed diameter" is checked and a diameter value is specified, the network files are generated using this diameter for all vessels.  
 This aids viewing the network topology.
