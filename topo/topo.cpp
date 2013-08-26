@@ -145,6 +145,7 @@ VECSET plane[9];
 FILE *fperr, *fpout;
 FILE *exelem, *exnode, *dotcom;
 char output_basename[512];
+bool uniform_diameter;
 bool dbug = false;
 
 #define PI 3.14159
@@ -4235,7 +4236,8 @@ void FixDiameters()
 {
 	EDGE *edge;
 	int ie, k, kp0, kp1, kp, npts, n0, n1, ipass, nzero, err;
-	double d0, d1, diam;
+	double d0, d1, diam, d2ave, dave, vsum;
+	double len, len0, len1, lsum;
 	bool done;
 	double alpha = 0.3;
 
@@ -4382,18 +4384,52 @@ void FixDiameters()
 //			exit(1);
 		}
 	}
-	//for (ie=0; ie<100; ie++) {
-	//	edge = &edgeList[ie];
-	//	if (!edge->used) continue;
-	//	showedge(ie,'D');
-	//}
+	// set uniform (average) diameter along each edge
+	// the total vessel volume is conserved, and end pt diameters are not changed
+	// interior point diameters are all set to the same value = dave = sqrt(d2ave)
+	// where: (d0*d0+d2ave)*len0/2 + d2ave*(lsum - len0 - len1) + (d1*d1+d2ave)*len1/2 = vsum
+	// d2ave = (vsum - d0*d0*len0/2 - d1*d1*len1/2)/(lsum - len0/2 - len1/2)
+	// d0 = start pt diameter, len0 = start segment length,
+	// d1 = end pt diameter, len1 = end segment length,
+	if (uniform_diameter) {	
+		printf("Creating uniform edge diameters\n");
+		for (ie=0; ie<ne; ie++) {
+			edge = &edgeList[ie];
+			if (!edge->used) continue;
+			npts = edge->npts;
+			if (npts < 4) continue;
+			lsum = 0;
+			vsum = 0;
+			for (k=0; k<npts-1; k++) {
+				kp0 = edge->pt[k];
+				kp1 = edge->pt[k+1];
+				d0 = avediameter[kp0];
+				d1 = avediameter[kp1];
+				len = zdist(kp0,kp1);
+				lsum += len;
+				vsum += len*(d0*d0 + d1*d1)/2;
+				if (k == 0) len0 = len;
+				if (k == npts-2) len1 = len;
+			}
+			kp0 = edge->pt[0];
+			d0 = avediameter[kp0];
+			kp1 = edge->pt[npts-1];
+			d1 = avediameter[kp1];
+			d2ave = (vsum - d0*d0*len0/2 - d1*d1*len1/2)/(lsum - len0/2 - len1/2);
+			dave = sqrt(d2ave);
+			for (k=1; k<npts-1; k++) {
+				kp = edge->pt[k];
+				avediameter[kp] = dave;
+			}
+		}
+	}
 }
 
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
 int main(int argc, char**argv)
 {
-	int n_prune_cycles;
+	int uniform_flag;
 	double voxelsize_x, voxelsize_y, voxelsize_z;
 	double volume;
 	char *vessFile, *skelFile;
@@ -4403,10 +4439,10 @@ int main(int argc, char**argv)
 	char errfilename[256], amfilename[256];
 	bool squeeze = true;
 
-	if (argc != 9) {
-		printf("Usage: topo skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z calib_param fixed_diam\n");
+	if (argc != 10) {
+		printf("Usage: topo skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z calib_param fixed_diam uniform_flag\n");
 		fperr = fopen("topo_error.log","w");
-		fprintf(fperr,"Usage: topo skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z calib_param fixed_diam\n");
+		fprintf(fperr,"Usage: topo skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z calib_param fixed_diam uniform_flag\n");
 		fprintf(fperr,"Submitted command line: argc: %d\n",argc);
 		for (int i=0; i<argc; i++) {
 			fprintf(fperr,"argv: %d: %s\n",i,argv[i]);
@@ -4435,6 +4471,7 @@ int main(int argc, char**argv)
 	sscanf(argv[6],"%lf",&voxelsize_z);
 	sscanf(argv[7],"%lf",&calib_param);
 	sscanf(argv[8],"%f",&FIXED_DIAMETER);
+	sscanf(argv[9],"%d",&uniform_flag);
 
 	vsize[0] = voxelsize_x;
 	vsize[1] = voxelsize_y;
@@ -4449,12 +4486,13 @@ int main(int argc, char**argv)
 	fprintf(fpout,"Output basename: %s\n",output_basename);
 	printf("Voxel size: x,y,z: %f %f %f\n",voxelsize_x, voxelsize_y,voxelsize_z);
 	fprintf(fpout,"Voxel size: x,y,z: %f %f %f\n",voxelsize_x, voxelsize_y,voxelsize_z);
-	printf("Number of prune cycles: %d\n",n_prune_cycles);
-	fprintf(fpout,"Number of prune cycles: %d\n",n_prune_cycles);
+	printf("Uniform diameter flag: %d\n",uniform_flag);
+	fprintf(fperr,"Uniform diameter flag: %d\n",uniform_flag);
 	if (FIXED_DIAMETER > 0) {
 		printf("Using a fixed vessel diameter: %f\n",FIXED_DIAMETER);
 		fprintf(fpout,"Using a fixed vessel diameter: %f\n",FIXED_DIAMETER);
 	}
+	uniform_diameter = (uniform_flag==1);
 	fprintf(fpout,"Amira file: %s\n",amfilename);
 
 	if (USE_HEALING) {
@@ -4538,7 +4576,7 @@ int main(int argc, char**argv)
 			
 	InitVector();
 
-	err = TraceSkeleton(n_prune_cycles);
+	err = TraceSkeleton(1);
 	if (err != 0) {
 		printf("Error: TraceSkeleton\n");
 		fprintf(fperr,"Error: TraceSkeleton\n");

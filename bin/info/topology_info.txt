@@ -13,7 +13,8 @@ Two probability distributions of vessel diameter are output, one based simply on
 The total volume of the vessel network is computed, together with the volume corresponding to the number of lit voxels in the segmented image.
 The calibration parameter allows a small adjustment to be made to the estimated diameters.  By appropriate choice of this parameter the total vessel volume can be made consistent with the volume based on the lit voxel count.
 
+If "Uniform vessel diameters?" is checked, for each vessel the average diameter is computed and applied to all interior points.  This is done in a way that conserves vessel volume.
+
 All results are in units of micrometres (um).
 
-If "Fixed diameter" is checked and a diameter value is specified, the network files are generated using this diameter for all vessels.  
-This aids viewing the network topology.
+If "Fixed diameter" is checked and a diameter value is specified, the network files are generated using this diameter for all vessels.  This aids viewing the network topology.
