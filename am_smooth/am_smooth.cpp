@@ -1,4 +1,4 @@
-// Check a .am file
+// Simplify a network (.am file) by reducing the number of points per edge
 
 #include <cstdio>
 #include <vector>
@@ -51,7 +51,7 @@ int WriteAmiraFile(char *amFileOut, char *amFileIn, NETWORK *net, float origin_s
 
 	FILE *fpam = fopen(amFileOut,"w");
 	fprintf(fpam,"# AmiraMesh 3D ASCII 2.0\n");
-	fprintf(fpam,"# Created by zoom.exe from: %s\n",amFileIn);
+	fprintf(fpam,"# Created by am_smooth.exe from: %s\n",amFileIn);
 	fprintf(fpam,"\n");
 	fprintf(fpam,"define VERTEX %d\n",net->nv);
 	fprintf(fpam,"define EDGE %d\n",net->ne);
@@ -366,8 +366,9 @@ int amcheck(NETWORK *net)
 //-----------------------------------------------------------------------------------------------------
 // A smoothed network NP1 is generated from NP0
 // Edges and vertices are unchanged, but the number of points on an edge is reduced.
+// FIRST VERSION - REPLACED
 //-----------------------------------------------------------------------------------------------------
-int amsmooth(NETWORK *net0, NETWORK *net1)
+int amsmooth1(NETWORK *net0, NETWORK *net1)
 {
 	int ie, iv, ip0, ip1;
 	EDGE edge0;
@@ -396,19 +397,88 @@ int amsmooth(NETWORK *net0, NETWORK *net1)
 		net1->np++;
 		ip1++;
 		for (ip0=1; ip0<edge0.npts; ip0++) {
-			int k2 = edge0.pt[ip0];
-			double d = dist(net0,kfrom,k2);
-			if (d > fraction*(net0->point[kfrom].d/2 + net0->point[k2].d/2) || ip0 == edge0.npts-1) {
-				net1->point[net1->np] = net0->point[net0->edgeList[ie].pt[ip0]];
+			int kp2 = edge0.pt[ip0];
+			double d = dist(net0,kfrom,kp2);
+			if (d > fraction*(net0->point[kfrom].d/2 + net0->point[kp2].d/2) || ip0 == edge0.npts-1) {
+				net1->point[net1->np] = net0->point[kp2];
 				net1->point[net1->np].used = true;
 				net1->edgeList[ie].pt[ip1] = net1->np;
 				net1->np++;
 				ip1++;
-				kfrom = k2;
+				kfrom = kp2;
 			}
 		}
 		net1->edgeList[ie].npts = ip1;
 	}
+	if (diameter != 0) {
+		for (ip1=0; ip1<net1->np; ip1++)
+			net1->point[ip1].d = diameter;
+	}
+	printf("done: np: %d\n",net1->np);
+	return 0;
+}
+
+//-----------------------------------------------------------------------------------------------------
+// A smoothed network NP1 is generated from NP0
+// Edges and vertices are unchanged, but the number of points on an edge is reduced.
+// REVISED - now the same as the code in topo.cpp 
+//-----------------------------------------------------------------------------------------------------
+int amsmooth(NETWORK *net0, NETWORK *net1)
+{
+	int ie, iv, kp1, kp2, kp3, ip0, ip1, nptot;
+	double d12, d23, dmin, diam1, diam2;
+	bool dbug;
+	EDGE edge0;
+
+	printf("amsmooth\n");
+	net1->ne = net0->ne;
+	net1->nv = net0->nv;
+	net1->vertex = (VERTEX *)malloc(net1->nv*sizeof(VERTEX));
+	net1->edgeList = (EDGE *)malloc(net1->ne*sizeof(EDGE));
+	net1->point = (POINT *)malloc(net0->np*sizeof(POINT));
+	for (iv=0; iv<net1->nv; iv++) {
+		net1->vertex[iv].point = net0->vertex[iv].point;
+	}
+	net1->np = 0;
+
+	nptot = 0;
+	for (ie=0; ie<net0->ne; ie++) {
+		edge0 = net0->edgeList[ie];
+		if (!edge0.used) continue;
+		if (edge0.npts < 5) continue;
+		dbug = false;
+		kp1 = edge0.pt[0];
+		kp3 = edge0.pt[edge0.npts-1];
+		net1->edgeList[ie].pt[0] = kp1;
+		kp2 = edge0.pt[1];
+		diam1 = net0->point[kp2].d;		//getDiameter(edge.pt[0],edge.pt[1],edge.pt[2]);
+		if (dbug) printf("diam1: %f  %d %d %d\n",diam1,edge0.pt[0],edge0.pt[1],edge0.pt[2]);
+		ip1 = 0;
+		ip1++;
+		for (ip0=1; ip0<edge0.npts; ip0++) {
+			kp2 = edge0.pt[ip0];
+			diam2 = net0->point[kp2].d;	
+			d12 = dist(net0,kp1,kp2);
+			d23 = dist(net0,kp2,kp3);
+			dmin = fraction*(diam1 + diam2)/2;
+			if (dbug) printf("ip0: %d kp2: %d diam2: %f d12,d23: %f %f dmin: %f\n",ip0,kp2,diam2,d12,d23,dmin);
+			if ((d12 > dmin &&  d23 > dmin) || ip0 == edge0.npts-1) {
+				net1->point[net1->np] = net0->point[kp2];
+				net1->point[net1->np].used = true;
+				net1->edgeList[ie].pt[ip1] = net1->np;
+				net1->edgeList[ie].pt_used[ip1] = net1->np;
+				net1->np++;
+				if (dbug) printf("pt: %d %d\n",ip1,kp2);
+				ip1++;
+				kp1 = kp2;
+				diam1 = diam2;
+			}
+		}
+		net1->edgeList[ie].npts = ip1;
+		net1->edgeList[ie].npts_used = net1->edgeList[ie].npts;
+		if (dbug) printf("simplify: ie: %d npts: %d -> %d\n",ie,edge0.npts,net1->edgeList[ie].npts);
+	}
+
 	if (diameter != 0) {
 		for (ip1=0; ip1<net1->np; ip1++)
 			net1->point[ip1].d = diameter;
