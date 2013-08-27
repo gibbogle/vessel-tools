@@ -326,6 +326,8 @@ int inlist(int *list, int n, int k)
 
 //-----------------------------------------------------------------------------------------------------
 // Reorder element and node identifiers
+// writeCMGUIfile() does not use any vertex data
+// writeAMIRAfile() uses edge.vert[] and vertex[].pos[]
 //-----------------------------------------------------------------------------------------------------
 int squeezer(void)
 {
@@ -365,8 +367,9 @@ int squeezer(void)
 				oldpt[np_x] = ivox;		//edgeList[i].vert[j];						// index in old voxel list
 				for (k=0; k<3; k++)
 					vertex_x[np_x].pos[k] = voxel[oldpt[np_x]].pos[k];
-				voxel_x[np_x] = voxel[oldpt[np_x]];
-				avediameter_x[np_x] = avediameter[oldpt[np_x]];
+// TRY THIS
+//				voxel_x[np_x] = voxel[oldpt[np_x]];
+//				avediameter_x[np_x] = avediameter[oldpt[np_x]];
 				knew = np_x;
 				np_x++;
 			}
@@ -377,6 +380,10 @@ int squeezer(void)
 	nv_x = np_x;
 	printf("nv_x: %d\n",nv_x);
 	// Now add the edge interior points to the list.  These occur once only.
+
+// TRY THIS
+	np_x = 0;
+//
 	i_x = 0;
 	for (i=0; i<ne; i++) {
 		if (!edgeList[i].used) continue;
@@ -1764,6 +1771,7 @@ void RevisitVertex(int kv, int *prev,  int nbrlist[][3], int nbrs, int *j)
 	vp->nfollowed++;
 }
 
+/*
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
 void AddPoint(int *pos)
@@ -1772,6 +1780,7 @@ void AddPoint(int *pos)
 		point[np][i] = pos[i];
 	np++;
 }
+*/
 
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
@@ -1786,6 +1795,7 @@ int PointIndex(int *pos)
 	return -1;
 }
 
+/*
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
 int TraceSkeleton1(void)
@@ -2065,6 +2075,7 @@ int TraceSkeleton1(void)
 	printf("maxnbrs: %d\n",maxnbrs);
 	return 0;
 }
+*/
 
 //-----------------------------------------------------------------------------------------------------
 // The average diameter of a vessel (edge) is now estimated by dividing the volume by the length.
@@ -2264,7 +2275,8 @@ int CreateDistributions()
 //-----------------------------------------------------------------------------------------------------
 int WriteCmguiData(void)
 {
-	int k, ie, ip, npts, kv0, kv1, err;
+	int k, ie, ip, npts, err;
+//	int kv0, kv1;
 	EDGE edge;
 	char dotcomname[256], exelemname[256], exnodename[256];
 
@@ -2312,11 +2324,11 @@ int WriteCmguiData(void)
 //		int kto = edge.pt[npts-1];
 		int kfrom = edge.pt_used[0];
 		int kto = edge.pt_used[npts-1];
-		kv0 = edge.vert[0];
-		kv1 = edge.vert[1];
+//		kv0 = edge.vert[0];
+//		kv1 = edge.vert[1];
 		if (kfrom == kto) {
-			printf("Error: writecmguidata: repeated node: element: %d npts: %d kv0,kv1: %d %d kfrom: %d\n",ie,npts,kv0,kv1,kfrom);
-			fprintf(fperr,"repeated node: element: %d npts: %d kv0.kv1: %d %d kfrom: %d\n",ie,npts,kv0,kv1,kfrom);
+			printf("Error: writecmguidata: repeated node: element: %d npts: %d kv0,kv1: %d %d kfrom: %d\n",ie,npts,edge.vert[0],edge.vert[1],kfrom);
+			fprintf(fperr,"repeated node: element: %d npts: %d kv0.kv1: %d %d kfrom: %d\n",ie,npts,edge.vert[0],edge.vert[1],kfrom);
 			for (k=0; k<npts; k++)
 				fprintf(fperr,"  k: %3d  pt: %6d\n",k,edge.pt_used[k]);
 			edgeList[ie].used = false;
@@ -4010,6 +4022,7 @@ int adjoinEdges(void)
 }
 
 //-----------------------------------------------------------------------------------------------------
+// Note: n_prune_cycles not used now
 //-----------------------------------------------------------------------------------------------------
 int TraceSkeleton(int n_prune_cycles)
 {
@@ -4087,7 +4100,7 @@ int TraceSkeleton(int n_prune_cycles)
 						voxel[k].nbr[i][j] = nbrlist[i][j];
 					}
 				}
-				if (nbrs != 2) {
+				if (nbrs != 2) {	// initialise the vertex
 					voxel[k].ivert = kv;
 					vertex[kv].ivox = k;
 					vertex[kv].pos[0] = x;
@@ -4178,16 +4191,20 @@ int TraceSkeleton(int n_prune_cycles)
 		}
 	}
 
+	// I would like to eliminate tight loops here
+	// It should be possible to find loops using a recursive function
+
 	tracer();
 	printf("did tracer\n");
 
 	err = checker();
 	if (err != 0) return 1;
 
-	nloops = deloop(0);
-	if (nloops < 0) return 1;
-	printf("did deloop\n");
-
+	for (iter=0; iter<3; iter++) {
+		nloops = deloop(iter);
+		if (nloops < 0) return 1;
+		printf("did deloop: nloops: %d\n",nloops);
+	}
 	err = checker();
 	if (err != 0) return 1;
 

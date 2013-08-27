@@ -589,9 +589,6 @@ int ReadAmiraFile(char *amFile)
 						}
 						j = edge.pt[k];
 						sscanf(line,"%f",&point[j].d);
-						if (j == 13) {
-							printf("j=13: d: %f\n",point[j].d);
-						}
 						if (point[j].d == 0) {
 							printf("Error: ReadAmiraFile: zero diameter: i: %d npts: %d k: %d j: %d\n",i,edge.npts,k,j);
 							return 1;

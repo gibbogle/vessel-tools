@@ -36,6 +36,28 @@ float dist(NETWORK *net, int k1, int k2)
 	return sqrt(dx*dx+dy*dy+dz*dz);
 }
 
+//-----------------------------------------------------------------------------------
+// mode = 'N' for numbers
+//        'D' for diameters
+//        'P' for positions
+//-----------------------------------------------------------------------------------
+void showedge(NETWORK *net, int ie, char mode)
+{
+	int k, kp;
+
+	printf("edge: %d npts: %d\n",ie,net->edgeList[ie].npts);
+	for (k=0; k<net->edgeList[ie].npts; k++) {
+		kp = net->edgeList[ie].pt[k];
+		if (mode == 'N')
+			printf("%7d ",kp);
+		else if (mode == 'D')
+			printf("%7.1f ",net->point[kp].d);
+		else 
+			printf("%7.1f %7.1f %7.1f   ",net->point[kp].x,net->point[kp].y,net->point[kp].z);
+		printf("\n");
+	}
+}
+
 //-----------------------------------------------------------------------------------------------------
 // This code is faulty - because points can appear multiple times, there are multiple subtractions.
 // NOT USED
@@ -200,11 +222,11 @@ int ReadAmiraFile(char *amFile, NETWORK *net)
 						return 1;
 					}
 					sscanf(line,"%f %f %f\n",&(net->vertex[i].point.x),&(net->vertex[i].point.y),&(net->vertex[i].point.z));
-					kp = i;
+//					kp = i;
 					net->vertex[i].point.d = 0;
-					net->point[kp] = net->vertex[i].point;
+//					net->point[kp] = net->vertex[i].point;
 				}
-				kp++;
+//				kp++;
 				printf("Got vertices\n");
 			} else if (k == 2) {
 				for (i=0;i<net->ne;i++) {
@@ -231,8 +253,8 @@ int ReadAmiraFile(char *amFile, NETWORK *net)
 					net->edgeList[i].pt = (int *)malloc(net->edgeList[i].npts*sizeof(int));
 					net->edgeList[i].pt_used = (int *)malloc(net->edgeList[i].npts*sizeof(int));
 					npts += net->edgeList[i].npts;
-					net->edgeList[i].pt[0] = net->edgeList[i].vert[0];
-					net->edgeList[i].pt[net->edgeList[i].npts-1] = net->edgeList[i].vert[1];
+//					net->edgeList[i].pt[0] = net->edgeList[i].vert[0];
+//					net->edgeList[i].pt[net->edgeList[i].npts-1] = net->edgeList[i].vert[1];
 				}
 				printf("Got edge npts, total: %d\n",npts);
 			} else if (k == 4) {
@@ -243,12 +265,12 @@ int ReadAmiraFile(char *amFile, NETWORK *net)
 							printf("ERROR reading section @4\n");
 							return 1;
 						}
-						if (k > 0 && k<edge.npts-1) {
+//						if (k > 0 && k<edge.npts-1) {
 							sscanf(line,"%f %f %f",&net->point[kp].x,&net->point[kp].y,&net->point[kp].z);
 							net->edgeList[i].pt[k] = kp;
 							net->edgeList[i].pt_used[k] = kp;
 							kp++;
-						}
+//						}
 					}
 				}
 			} else if (k == 5) {
@@ -262,16 +284,13 @@ int ReadAmiraFile(char *amFile, NETWORK *net)
 						}
 						j = edge.pt[k];
 						sscanf(line,"%f",&net->point[j].d);
-						if (j == 13) {
-							printf("j=13: d: %f\n",net->point[j].d);
-						}
 						if (net->point[j].d == 0) {
 							printf("Error: ReadAmiraFile: zero diameter: i: %d npts: %d k: %d j: %d\n",i,edge.npts,k,j);
 							return 1;
 						}
-						if (j < net->nv) {		// because the first nv points are vertices
-							net->vertex[j].point.d = net->point[j].d;
-						}
+//						if (j < net->nv) {		// because the first nv points are vertices
+//							net->vertex[j].point.d = net->point[j].d;
+//						}
 						dave += net->point[j].d;
 						net->edgeList[i].segavediam = dave/edge.npts;
 					}
@@ -682,10 +701,6 @@ int CreateSelectNet(NETWORK *net0, NETWORK *net1, float diam_min, float diam_max
 		for (kp=0; kp<elist[ie].npts; kp++) {
 			i = elist[ie].pt[kp];
 			net1->point[i].used = true;
-			//if (net1->point[i].d > 75) {
-			//	printf("Error ExtractSelectNet: edge: %d npts: %d pt: %d %d d: %6.1f\n",ie,elist[ie].npts,kp,i,net1->point[i].d);
-			//	return 1;
-			//}
 		}
 	}
 
@@ -971,7 +986,7 @@ int main(int argc, char **argv)
 		}
 		err = CreateDistributions(NP2);
 		if (err != 0) return 7;
-} else {
+	} else {
 		err = WriteAmiraFile(output_amfile,input_amfile,NP1,origin_shift);
 		if (err != 0) return 5;
 		if (cmgui_flag == 1) {
