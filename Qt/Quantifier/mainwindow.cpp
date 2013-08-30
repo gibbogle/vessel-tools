@@ -26,12 +26,13 @@ MainWindow::MainWindow(QWidget *parent) :
         file.close();
         ui->textEdit->moveCursor(QTextCursor::Start);
     }
+    fpout = NULL;
     is_ready = false;
     is_amfile = false;
     is_closefile = false;
     is_resultfile = false;
-//    ui->pushButton_area->setEnabled(false);
     ui->pushButton_vessels->setEnabled(false);
+    ui->groupBox_slice->setEnabled(false);
     checkReady();
     reset();
 }
@@ -76,21 +77,31 @@ void MainWindow::resultFileSelecter()
 
 void MainWindow::voxelChanged()
 {
-    reset();
+//    reset();
     checkReady();
+    if (isSetup()) {
+        computeVolume();
+    }
 }
 
 void MainWindow::sliceChanged()
 {
     is_slice = ui->checkBoxSlice->isChecked();
     ui->checkBoxAverage->setChecked(!is_slice);
+    is_average = ui->checkBoxAverage->isChecked();
+    ui->lineEdit_intercept->setEnabled(is_slice);
+    ui->groupBox_centre->setEnabled(is_average&&ui->radioButton_centre->isChecked());
+    ui->groupBox_range->setEnabled(is_average&&ui->radioButton_range->isChecked());
 }
 
 void MainWindow::averageChanged()
 {
-    is_slice = ui->checkBoxSlice->isChecked();
     is_average = ui->checkBoxAverage->isChecked();
     ui->checkBoxSlice->setChecked(!is_average);
+    is_slice = ui->checkBoxSlice->isChecked();
+    ui->lineEdit_intercept->setEnabled(is_slice);
+    ui->groupBox_centre->setEnabled(is_average&&ui->radioButton_centre->isChecked());
+    ui->groupBox_range->setEnabled(is_average&&ui->radioButton_range->isChecked());
 }
 
 void MainWindow::on_radioButton_centre_toggled(bool checked)
@@ -106,7 +117,7 @@ void MainWindow::on_radioButton_centre_toggled(bool checked)
 
 void MainWindow::checkBox_x()
 {
-    if (!ui->checkBox_xfull->isChecked()) {
+    if (ui->checkBox_xfull->isChecked()) {
         ui->lineEdit_x1->setEnabled(false);
         ui->lineEdit_x2->setEnabled(false);
     } else {
@@ -117,7 +128,7 @@ void MainWindow::checkBox_x()
 
 void MainWindow::checkBox_y()
 {
-    if (!ui->checkBox_yfull->isChecked()) {
+    if (ui->checkBox_yfull->isChecked()) {
         ui->lineEdit_y1->setEnabled(false);
         ui->lineEdit_y2->setEnabled(false);
     } else {
@@ -128,7 +139,7 @@ void MainWindow::checkBox_y()
 
 void MainWindow::checkBox_z()
 {
-    if (!ui->checkBox_zfull->isChecked()) {
+    if (ui->checkBox_zfull->isChecked()) {
         ui->lineEdit_z1->setEnabled(false);
         ui->lineEdit_z2->setEnabled(false);
     } else {
@@ -147,14 +158,27 @@ void MainWindow::checkReady()
         voxelOK = true;
     else
         voxelOK = false;
-    if (voxelOK && is_amfile && is_closefile && is_resultfile) {
+    if ((voxelOK || isSetup()) && is_amfile && is_closefile && is_resultfile) {
         is_ready = true;
-//        ui->pushButton_area->setEnabled(true);
-        ui->pushButton_vessels->setEnabled(true);
-        doSetup();
+        ui->pushButton_setup->setEnabled(true);
     } else {
         is_ready = false;
-//        ui->pushButton_area->setEnabled(false);
+        ui->pushButton_setup->setEnabled(false);
+        ui->groupBox_slice->setEnabled(false);
+        ui->pushButton_vessels->setEnabled(false);
+    }
+}
+
+void MainWindow::reader()
+{
+    doSetup();
+    if (isSetup()) {
+        ui->groupBox_slice->setEnabled(true);
+        ui->pushButton_vessels->setEnabled(true);
+    } else {
+        is_ready = false;
+        ui->pushButton_setup->setEnabled(false);
+        ui->groupBox_slice->setEnabled(false);
         ui->pushButton_vessels->setEnabled(false);
     }
 }
@@ -162,20 +186,36 @@ void MainWindow::checkReady()
 void MainWindow::computeVolume()
 {
     int err;
+    int ntvoxels;
     float volume;
-    QString volumestr;
+    QString volumestr, countstr;
+    bool voxelOK;
 
     if (!is_ready) {
         return;
     }
     if (!isSetup()) {
-        doSetup();
+        return;
     }
-    err = getVolume(&volume);
+//    if (!isSetup()) {
+//        doSetup();
+//    }
+    voxelsize[0] = ui->lineEdit_xvoxel->text().toFloat();
+    voxelsize[1] = ui->lineEdit_yvoxel->text().toFloat();
+    voxelsize[2] = ui->lineEdit_zvoxel->text().toFloat();
+    if (voxelsize[0] > 0 && voxelsize[1] > 0 && voxelsize[2] > 0)
+        voxelOK = true;
+    else
+        voxelOK = false;
+    if (!voxelOK) return;
+    err = getVolume(&volume,&ntvoxels);
+    countstr = QString::number(ntvoxels);
+    ui->lineEdit_ntvoxels->setText(countstr);
+    fprintf(fpout,"Voxel count: %d\n",ntvoxels);
     volume = 1.0e-9*volume;   // convert um3 -> mm3
     volumestr = QString::number(volume,'f',3);
     ui->lineEdit_volume->setText(volumestr);
-    fprintf(fpout,"volume: %7.3f mm3\n",volume);
+    fprintf(fpout,"Volume: %7.3f mm3\n",volume);
 }
 
 void MainWindow::computeArea()
@@ -188,9 +228,9 @@ void MainWindow::computeArea()
     if (!is_ready) {
         return;
     }
-    if (!isSetup()) {
-        doSetup();
-    }
+//    if (!isSetup()) {
+//        doSetup();
+//    }
     if (ui->radioButton_xaxis->isChecked())
         axis = 0;
     else if (ui->radioButton_yaxis->isChecked())
@@ -351,9 +391,9 @@ void MainWindow::computeVessels()
     if (!is_ready) {
         return;
     }
-    if (!isSetup()) {
-        doSetup();
-    }
+//    if (!isSetup()) {
+//        doSetup();
+//    }
     area = 0;
     count = 0;
     if (is_slice) {
@@ -412,10 +452,15 @@ void MainWindow::doSetup()
     strcpy(input_amfile, amFileName.toAscii().constData());
     strcpy(close_file, closeFileName.toAscii().constData());
     strcpy(result_file, resultFileName.toAscii().constData());
+    if (fpout) fclose(fpout);
     fpout = fopen(result_file,"w");
-    err = setup(input_amfile,close_file,result_file,voxelsize);
-    resultstr = QString::number(err);
-    ui->labelResult->setText(resultstr);
+    if (!isSetup()) {
+        ui->labelResult->setText("Doing setup()");
+        err = setup(input_amfile,close_file,result_file,voxelsize);
+        resultstr = QString::number(err);
+//        ui->labelResult->setText(resultstr);
+        if (err != 0) return;
+}
     getCloseSize(nvoxels);
     numstr = QString::number(nvoxels[0]);
     ui->lineEdit_nx->setText(numstr);

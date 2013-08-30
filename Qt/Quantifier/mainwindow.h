@@ -36,6 +36,7 @@ public slots:
     void getCentredRanges();
     void getAveragingRanges();
     void checkRanges();
+    void reader();
 
 private slots:
     void on_radioButton_centre_toggled(bool checked);
@@ -45,9 +46,10 @@ private:
 
 public:
     int getArea(int axis, int islice, float *area);
-    int getVolume(float *volume);
+    int getVolume(float *volume, int *ntvoxels);
     int histology(int axis, int islice, int *np, float *area);
     int average_histology(int *np, float *area);
+    void fillEllipse(float z0, float S1[], float S2[], float diam, float vsize[]);
     int setup(char *input_amfile, char *close_file, char *result_file, float vsize[]);
     int getCloseSize(int nvoxels[]);
     bool isSetup();

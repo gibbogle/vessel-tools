@@ -4,7 +4,7 @@
 //#include <vector>
 
 //#include <algorithm>
-//#include <math.h>
+#include <math.h>
 //#include <string.h>
 //#include <string>
 //#include <sstream>
@@ -223,6 +223,7 @@ int MainWindow::ReadAmiraFile(char *amFile, NETWORK *net)
 			ip = edge.pt[i];
 			segment[iseg].end1 = net->point[ip];
 			segment[iseg].end2 = net->point[ip+1];
+            segment[iseg].diam = (net->point[ip].d + net->point[ip+1].d)/2;
 			iseg++;
 		}
 	}
@@ -358,14 +359,14 @@ int MainWindow::getArea(int axis, int islice, float *area)
 //--------------------------------------------------------------------
 // This uses 1-based indexing!
 //--------------------------------------------------------------------
-int MainWindow::getVolume(float *volume)
+int MainWindow::getVolume(float *volume, int *ntvoxels)
 {
-	int ix, iy, iz, p[3];
+    int ix, iy, iz, p[3], nt;
 	double total, dvol;
 
-	printf("getVolume\n");
 	dvol = voxelsize[0]*voxelsize[1]*voxelsize[2];
 	total = 0;
+    nt = 0;
 	for (ix=1; ix<=nxc; ix++) {
 		for (iy=1; iy<=nyc; iy++) {
 			for (iz=1; iz<=nzc; iz++) {
@@ -373,16 +374,21 @@ int MainWindow::getVolume(float *volume)
 				p[1] = iy;
 				p[2] = iz;
 				if (in_close(p)) {
+                    nt++;
 					total += dvol;
 				}
 			}
 		}
 	}
+    *ntvoxels = nt;
 	*volume = (float)total;
 	return 0;
 }
 
 //--------------------------------------------------------------------
+// For image creation, the axes are permuted such that the slize plane is always a z plane
+// If the case is really a x-slice, x -> z, y -> x, z -> y
+// If the case is really a y-slice, y -> z, x -> y, z -> x
 //--------------------------------------------------------------------
 int MainWindow::histology(int axis, int islice, int *np, float *area)
 {
@@ -390,6 +396,7 @@ int MainWindow::histology(int axis, int islice, int *np, float *area)
 	float d;
 	float zmin, zmax;
 	POINT pos1, pos2;
+    float z0, diam, S1[3], S2[3], vsize[2];
 
 	zmin = 1.0e10;
 	zmax = -zmin;
@@ -398,22 +405,51 @@ int MainWindow::histology(int axis, int islice, int *np, float *area)
 	for (iseg=0; iseg<nsegments;iseg++) {
 		pos1 = segment[iseg].end1;
 		pos2 = segment[iseg].end2;
+        diam = segment[iseg].diam;
 		zmin = MIN(pos1.z,zmin);
 		zmin = MIN(pos2.z,zmin);
 		zmax = MAX(pos1.z,zmax);
 		zmax = MAX(pos2.z,zmax);
 		if (axis == 0 && ((pos1.x <= d  && d <= pos2.x) || (pos2.x <= d && d <= pos1.x))) {
 			cnt++;
-		}
+            S1[0] = pos1.y;
+            S1[1] = pos1.z;
+            S1[2] = pos1.x;
+            S2[0] = pos2.y;
+            S2[1] = pos2.z;
+            S2[2] = pos2.x;
+            z0 = d;
+            vsize[0] = voxelsize[1];
+            vsize[1] = voxelsize[2];
+        }
 		if (axis == 1 && ((pos1.y <= d  && d <= pos2.y) || (pos2.y <= d && d <= pos1.y))) {
 			cnt++;
-		}
+            S1[0] = pos1.z;
+            S1[1] = pos1.x;
+            S1[2] = pos1.y;
+            S2[0] = pos2.z;
+            S2[1] = pos2.x;
+            S2[2] = pos2.y;
+            z0 = d;
+            vsize[0] = voxelsize[2];
+            vsize[1] = voxelsize[0];
+        }
 		if (axis == 2 && ((pos1.z <= d  && d <= pos2.z) || (pos2.z <= d && d <= pos1.z))) {
 			cnt++;
-		}
+            S1[0] = pos1.x;
+            S1[1] = pos1.y;
+            S1[2] = pos1.z;
+            S2[0] = pos2.x;
+            S2[1] = pos2.y;
+            S2[2] = pos2.z;
+            z0 = d;
+            vsize[0] = voxelsize[0];
+            vsize[1] = voxelsize[1];
+        }
+        fillEllipse(z0,S1,S2,diam,vsize);
 	}
 	printf("nsegments, cnt: %d %d\n",nsegments,cnt);
-	printf("axis, d, zmin, zmax: %d %f %f %f\n",axis,d,zmin,zmax);
+    printf("axis, d, zmin, zmax: %d %f %f %f\n",axis,d,zmin,zmax);
 	*np = cnt;
 	getArea(axis,islice,area);
 	return 0;
@@ -532,6 +568,138 @@ bool MainWindow::isSetup()
 void MainWindow::reset()
 {
 	is_setup = false;
+}
+
+// Consider a cylinder intersecting a plane.
+// The cylinder has radius R, the centreline C intersects the plane at P0 (x0,y0)
+// the line C makes an angle alpha with the plane, the projection of C onto
+// the plane is the line L
+// First define the rectangle that bounds the ellipse E of intersection.
+// Then look at all grid points (pixels) within the rectangle, and select
+// those that are within E
+// Consider a cylinder cross-section S that touches the plane.
+// The point where the perimeter of the disk touches the plane is P1.
+// The furthest point of intersection of the cylinder and the plane from P1 is P2.
+// The contact points midway between P1 and P2 are P3 and P4.
+// P1, P2, P3 and P4 define a rectangle (they are midpoints of the sides).
+// The distance P0-P1 = a = R/sin(alpha) = P0-P2
+// The distance P0-P3 = b = R = P0-P4
+// The focal points F1 and F2 are a distance f from P0, f^2 = a^2 - b^2
+// The perimeter of E is points P such that P-F1 + P-F2 = 2a
+// Therefore a point P is within E if P-F1 + P-F2 <= 2a
+//
+// Case of z-slice
+// The segment that intersects the plane z=z0 has ends S1(x1,y1,z1) and S2(x2,y2,z2)
+// The line C is (x,y,z)' = (x1,y1,z1)' + s*(x2-x1,y2-y1,z2-z1)'
+// z = z0 when z0 = z1 + s0*(z2-z1), i.e. when s = s0 = (z0-z1)/(z2-z1)
+// and x0 = x1 + s0*(x2-x1), y0 = y1 + s0*(y2-y1)
+// The line L is the projection of line C onto the plane z=z0
+// (x,y)' = (x1,y1)' + s*(x2-x1,y2-y1)'
+// (x,y)' = (x0,y0)' + (s-s0)*(x2-x1,y2-y1)'
+// Let t = s-s0, then (x-x0,y-y0)' = t*(x2-x1,y2-y1)'
+// and t=0 at P0(x0,y0,z0)
+// The unit vector along the line L is u = N(x2-x1,y2-y1)
+// The unit normal to the plane is the vector (0,0,1)
+// Therefore the angle between the line C and the normal is given by:
+// cos(gamma) = (0,0,1).N(x2-x1,y2-y1,z2-z1)'  where Nv is the normalised v
+// alpha = PI/2 - gamma.  If gamma > PI/2, gamma = PI - gamma, alpha = gamma - PI/2
+// a = R/sin(alpha), b = R, f = sqrt(a*a - b*b)
+// P1 is (x0,y0) + a*u
+// P2 is (x0,y0) - a*u
+// The unit vector normal to u (in the plane) is:
+// v = |0 -1|u
+//     |1  0|
+// The ellipse focal points are at F1 = (x0,y0)' + f*u, F2 = (x0,y0)' - f*u
+// The four corners of the rectangle bounding the intersection ellipse E are:
+// (x0,y0)' + a*u + b*v
+// (x0,y0)' + a*u - b*v
+// (x0,y0)' - a*u + b*v
+// (x0,y0)' - a*u - b*v
+// Therefore the range of x we need to evaluate points over is:
+// min(x values) - max(x values)
+// and similarly for y:
+// min(y values) - max(y values)
+// For a candidate grid point P(x,y), evaluate the distance from F1,
+// d1 = P-F1, and from F2, d2 = P-F2
+// then P is inside the ellipse if (d1+d2) < 2a
+// This pixel is lit.
+//----------------------------------------------------------------------------
+// The axes have been permuted such that the slize plane is always a z plane
+// If the case is really a x-slice, x -> z, y -> x, z -> y
+// If the case is really a y-slice, y -> z, x -> y, z -> x
+//----------------------------------------------------------------------------
+void MainWindow::fillEllipse(float z0, float S1[], float S2[], float diam, float vsize[])
+{
+    float s0, P0[2], C[3], u[2], v[2], d, cosgamma, gamma, alpha;
+    float a, b, f, F1[2], F2[2], xc[4], yc[4], xmin, xmax, ymin, ymax;
+    float sum, x, y, d1, d2;
+    int i, ix, iy, ixmin, ixmax, iymin, iymax;
+
+    s0 = (z0 - S1[2])/(S2[2] - S1[2]);
+    P0[0] = S1[0] + s0*(S2[0] - S1[0]);
+    P0[1] = S1[1] + s0*(S2[1] - S1[1]);
+    u[0] = S2[0] - S1[0];
+    u[1] = S2[1] - S1[1];
+    d = sqrt(u[0]*u[0] + u[1]*u[1]);
+    u[0] /= d;
+    u[1] /= d;
+    v[0] = -u[1];
+    v[1] = u[0];
+    sum = 0;
+    for (i=0; i<3; i++) {
+        C[i] = S2[i] - S1[i];
+        sum += C[i]*C[i];
+    }
+    d = sqrt(sum);
+    cosgamma = C[2]/sqrt(d);
+    gamma = acos(cosgamma);
+    if (gamma < PI/2)
+        alpha = PI/2 - gamma;
+    else
+        alpha = gamma - PI/2;
+    a = (diam/2)/sin(alpha);
+    b = diam/2;
+    f = sqrt(a*a - b*b);
+    F1[0] = P0[0] + f*u[0];
+    F1[1] = P0[1] + f*u[1];
+    F2[0] = P0[0] - f*u[0];
+    F2[1] = P0[1] - f*u[1];
+    xmin = 1.0e10;
+    xmax = -xmin;
+    ymin = 1.0e10;
+    ymax = -ymin;
+    xmin = MIN(xmin,P0[0] + a*u[0] + b*v[0]);
+    xmin = MIN(xmin,P0[0] + a*u[0] - b*v[0]);
+    xmin = MIN(xmin,P0[0] - a*u[0] + b*v[0]);
+    xmin = MIN(xmin,P0[0] - a*u[0] - b*v[0]);
+    xmax = MAX(xmax,P0[0] + a*u[0] + b*v[0]);
+    xmax = MAX(xmax,P0[0] + a*u[0] - b*v[0]);
+    xmax = MAX(xmax,P0[0] - a*u[0] + b*v[0]);
+    xmax = MAX(xmax,P0[0] - a*u[0] - b*v[0]);
+    ymin = MIN(ymin,P0[1] + a*u[1] + b*v[1]);
+    ymin = MIN(ymin,P0[1] + a*u[1] - b*v[1]);
+    ymin = MIN(ymin,P0[1] - a*u[1] + b*v[1]);
+    ymin = MIN(ymin,P0[1] - a*u[1] - b*v[1]);
+    ymax = MAX(ymax,P0[1] + a*u[1] + b*v[1]);
+    ymax = MAX(ymax,P0[1] + a*u[1] - b*v[1]);
+    ymax = MAX(ymax,P0[1] - a*u[1] + b*v[1]);
+    ymax = MAX(ymax,P0[1] - a*u[1] - b*v[1]);
+    // These values (xmin, xmax, ymin, ymax) bound the region within which the ellipse E lies
+    ixmin = xmin/vsize[0];
+    ixmax = xmax/vsize[0];
+    iymin = ymin/vsize[1];
+    iymax = ymax/vsize[1];
+    for (ix=ixmin; ix<ixmax; ix++) {
+        for (iy=iymin; iy<iymax; iy++) {
+            x = ix*vsize[0];
+            y = iy*vsize[1];
+            d1 = sqrt((x-F1[0])*(x-F1[0]) + (y-F1[1])*(y-F1[1]));
+            d2 = sqrt((x-F2[0])*(x-F2[0]) + (y-F2[1])*(y-F2[1]));
+            if (d1+d2 <= 2*a) {
+                // inside ellipse, lit voxel
+            }
+        }
+    }
 }
 
 /*

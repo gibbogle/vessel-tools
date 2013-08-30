@@ -379,7 +379,8 @@ int squeezer(void)
 	}
 	nv_x = np_x;
 	printf("nv_x: %d\n",nv_x);
-	// Now add the edge interior points to the list.  These occur once only.
+
+// Now add the edge points to the list.
 
 // TRY THIS
 	np_x = 0;
@@ -387,7 +388,6 @@ int squeezer(void)
 	i_x = 0;
 	for (i=0; i<ne; i++) {
 		if (!edgeList[i].used) continue;
-//		if (edgeList[i].vert[0] == edgeList[i].vert[1]) continue;	// repeated pt
 		if (dbug) printf("old edge: %d npts: %d  new edge: %d npts: %d\n",i,edgeList[i].npts,i_x,edgeList[i].npts_used);
 		int npts = edgeList[i].npts_used;
 		if (npts < 1) {
@@ -398,10 +398,7 @@ int squeezer(void)
 		edgeList_x[i_x].pt_used = (int *)malloc(npts*sizeof(int));
 		edge = &edgeList_x[i_x];
 		edge->npts = npts;
-//		edge->npts_used = npts;
-//		edge->pt[0] = edge->vert[0];
 		for (k=0; k<npts; k++) {
-//			j = edgeList[i].pt[k];
 			j = edgeList[i].pt_used[k];
 			if (j > np || j < 0) {
 				printf("i: %d k: %d  j: %d\n",i,k,j);
@@ -420,16 +417,10 @@ int squeezer(void)
 			}
 			np_x++;
 		}
-//		edge->pt[npts-1] = edge->vert[1];
 		i_x++;
 	}
-	//printf("i_x=20: npts: %d\n",edgeList_x[20].npts);
-	//for (k=0; k<edgeList_x[20].npts; k++)
-	//	printf("%6d ",edgeList_x[20].pt[k]);
-	//printf("\n");
 
-
-	printf("Added interior edge points\n");
+	printf("Added edge points\n");
 	printf("ne, ne_x: %d %d  nv, nv_x: %d %d  np, np_x: %d %d\n",ne,ne_x,nv,nv_x,np,np_x);
 
 	// Now copy the revised data back into the original arrays
@@ -565,7 +556,6 @@ int WriteAmiraFile(char *outFile, char *vessFile, char *skelFile)
 	fprintf(fpam,"define VERTEX %d\n",nv);
 	fprintf(fpam,"define EDGE %d\n",ne);
 	fprintf(fpam,"define POINT %d\n",npts);
-//	fprintf(fpam,"define POINT %d\n",npts_used);
 	fprintf(fpam,"\n");
 	fprintf(fpam,"Parameters {\n");
 	fprintf(fpam,"    ContentType \"HxSpatialGraph\"\n");
@@ -596,9 +586,7 @@ int WriteAmiraFile(char *outFile, char *vessFile, char *skelFile)
 	fprintf(fpam,"\n@4\n");
 	for (i=0;i<ne;i++) {
 		for (k=0;k<edgeList[i].npts;k++) {
-//		for (k=0;k<edgeList[i].npts_used;k++) {
 			j = edgeList[i].pt[k];
-//			j = edgeList[i].pt_used[k];
 			fprintf(fpam,"%6.1f %6.1f %6.1f\n",vsize[0]*voxel[j].pos[0],vsize[1]*voxel[j].pos[1],vsize[2]*voxel[j].pos[2]);
 		}
 	}
@@ -606,10 +594,7 @@ int WriteAmiraFile(char *outFile, char *vessFile, char *skelFile)
 	double diam;
 	for (i=0;i<ne;i++) {
 		for (k=0;k<edgeList[i].npts;k++) {
-//		for (k=0;k<edgeList[i].npts_used;k++) {
 			j = edgeList[i].pt[k];
-//			j = edgeList[i].pt_used[k];
-//			double segavediam = edgeList[i].segavediam;
 			diam = avediameter[j];
 			if (diam < 1.0) {
 //				printf("d < 1.0: edge: %d npts: %d pt: %d %d  %f\n",i,edgeList[i].npts,k,j,diam);
@@ -617,7 +602,6 @@ int WriteAmiraFile(char *outFile, char *vessFile, char *skelFile)
 				diam = 1.0;
 			}
 			fprintf(fpam,"%6.2f\n",avediameter[j]);
-//			fprintf(fpam,"%6.2f\n",vsize*diam);
 		}
 	}
 	fclose(fpam);
@@ -732,6 +716,7 @@ int Rotate(double *v0, double *N, double angle, double *v)
    return 0;
 }
 
+/*
 //-----------------------------------------------------------------------------------------------------
 // The point of interest, p0, lies on the line connecting p1 and p2.
 // We want to estimate the mean square radius of the vessel at p0.
@@ -784,7 +769,6 @@ float MeanSquareRadius(int *p0, int *p1, int *p2)
 	return sum/nrays;
 }
 
-/*
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
 int VertexDiameters(void)
@@ -866,7 +850,6 @@ int VertexDiameters(void)
 	}
 	return 0;
 }
-*/
 
 //-----------------------------------------------------------------------------------------------------
 // Get distance from p1[] in direction of unit vector v[] to the first black voxel.
@@ -904,6 +887,7 @@ double GetRadius(double p1[3], double v[3])
 	}
 	return r;
 }
+*/
 
 //-----------------------------------------------------------------------------------------------------
 // Get distance from p1[] in direction of unit vector v[] to the first black voxel.
@@ -987,8 +971,6 @@ int EstimateDiameter(double p0[3], double p1[3], double p2[3], double *r2ave, do
 	for (i=0; i<3; i++) {
 		v0[i] = v0[i]/dp;		// unit vector in the plane
 	}
-//	printf("N:   %f %f %f\n",N[0],N[1],N[2]);
-//	printf("v0:  %f %f %f\n",v0[0],v0[1],v0[2]);
 	r2sum = 0;
 	*r2min = 1.0e10;
 	for (i=0;i<nrays;i++) {
@@ -1065,8 +1047,7 @@ double pointdiameter(int kp)
 					break;
 				}
 				if (V3D(x,y,z) == 0) {
-//					r2sum += k*k*dr2;		//FIXED
-					r2sum += (k-delta)*(k-delta)*dr2;		//FIXED
+					r2sum += (k-delta)*(k-delta)*dr2;
 					break;
 				}
 			}
@@ -1157,6 +1138,8 @@ int GetDiameters(void)
 	}
 	return 0;
 }
+
+/*
 //-----------------------------------------------------------------------------------------------------
 // This version estimates the average diameter, and minimum diameter, at edge midpoints.
 // Note that the diameters are edge properties.
@@ -1298,6 +1281,7 @@ int OldGetDiameters(void)
 	printf("nout: %d\n",nout);
 	return 0;
 }
+*/
 
 //-----------------------------------------------------------------------------------------------------
 // Initialize vectors for the 9 planes.
@@ -1709,6 +1693,7 @@ int GetNeighborsNew(int *pos, int nbrlist[][3])
 	return nbrs;
 }
 
+/*
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
 void EndVertex(int *pos)
@@ -1771,7 +1756,6 @@ void RevisitVertex(int kv, int *prev,  int nbrlist[][3], int nbrs, int *j)
 	vp->nfollowed++;
 }
 
-/*
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
 void AddPoint(int *pos)
@@ -1780,7 +1764,6 @@ void AddPoint(int *pos)
 		point[np][i] = pos[i];
 	np++;
 }
-*/
 
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
@@ -1795,7 +1778,6 @@ int PointIndex(int *pos)
 	return -1;
 }
 
-/*
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
 int TraceSkeleton1(void)
@@ -2227,12 +2209,6 @@ int CreateDistributions()
 	printf("Total vessel volume: %10.0f\n\n",volume);
 	fprintf(fpout,"Total vessel volume: %10.0f\n\n",volume);
 
-	//ndpts = 0;
-	//for (k=0; k<NBOX; k++) {
-	//	if (adbox[k]/float(ndtot) >= 0.0005) {
-	//		ndpts = k+1;
-	//	}
-	//}
 	for (k=NBOX-1; k>=0; k--) {
 		if (segadbox[k] > 0) break;
 	}
@@ -2244,12 +2220,6 @@ int CreateDistributions()
 			lsegadbox[k],lsegadbox[k]/lsegdtot);
 	}
 
-	//nlpts = 0;
-	//for (k=0; k<NBOX; k++) {
-	//	if (lvbox[k]/ltot >= 0.0005) {
-	//		nlpts = k+1;
-	//	}
-	//}
 	for (k=NBOX-1; k>=0; k--) {
 		if (lvbox[k] > 0) break;
 	}
@@ -2320,8 +2290,6 @@ int WriteCmguiData(void)
 //		npts = edge.npts;
 		npts = edge.npts_used;
 
-//		int kfrom = edge.pt[0];
-//		int kto = edge.pt[npts-1];
 		int kfrom = edge.pt_used[0];
 		int kto = edge.pt_used[npts-1];
 //		kv0 = edge.vert[0];
@@ -2334,16 +2302,13 @@ int WriteCmguiData(void)
 			edgeList[ie].used = false;
 			continue;
 		}
-//		radius[kfrom] = MAX(radius[kfrom],edge.segavediam/2);
 		radius[kfrom] = MAX(radius[kfrom],avediameter[kfrom]/2);
 		radius[kto] = MAX(radius[kto],avediameter[kto]/2);
 		point_used[kfrom] = true;
 //		fprintf(fperr,"edge: %6d npts: %3d kfrom,kto: %6d %6d  %6d\n",ie,npts,kfrom,kto,kelem);
 		for (ip=1; ip<npts; ip++) {
-//			int k2 = edge.pt[ip];
 			int k2 = edge.pt_used[ip];
 			point_used[k2] = true;
-//			radius[k2] = MAX(radius[k2],edge.segavediam/2);
 			radius[k2] = MAX(radius[k2],avediameter[k2]/2);
 			double d = dist_um(kfrom,k2);
 			if (FIXED_DIAMETER > 0 || d > 0.5*(radius[kfrom]+radius[k2]) || ip == npts-1) {
@@ -2429,6 +2394,7 @@ int simplify()
 	return 0;
 }
 
+/*
 //-----------------------------------------------------------------------------------------------------
 // Reduce the number of points on an edge by imposing a lower bound DMIN on the distance between points.
 //-----------------------------------------------------------------------------------------------------
@@ -2510,6 +2476,7 @@ int simplify1(void)
 	}
 	return 0;
 }
+*/
 
 //-----------------------------------------------------------------------------------------------------
 // When an edge (edrop) is removed and a vertex (kv) is reduced to two used edges, the two edges are 
@@ -3857,7 +3824,7 @@ int oldprune(int iter)
 		free(end);
 		return err;
 	}
-
+	free(end);
 	printf("Number of short twigs pruned: %d\n",npruned);
 	return npruned;
 }
@@ -4171,12 +4138,6 @@ int TraceSkeleton(int n_prune_cycles)
 			printf("nhit != nbrs: %d  %d %d\n",k,nhit,nbrs);
 			return 1;
 		}
-		//if (k < 30) {
-		//	printf("Voxel: %d nbrs: %d ",k,nbrs);
-		//	for (i=0; i<nbrs; i++)
-		//		printf(" %d ",voxel[k].nid[i]);
-		//	printf("\n");
-		//}
 	}
 	printf("Determined all neighbour IDs\n");
 
@@ -4628,11 +4589,6 @@ int main(int argc, char**argv)
 	fprintf(fpout,"Total voxels: %d edges: %d vertices: %d points: %d\n",count,ne,nv,np);
 	fprintf(fpout,"Voxel size: %6.2f %6.2f %6.2f\n",vsize[0],vsize[1],vsize[2]);
 	fprintf(fpout,"Total voxel volume: %10.0f\n",volume);
-
-	checkUnconnected();
-	
-//	checker();
-//	checkUnconnected();
 
 	if (squeeze) {
 		err = squeezer();

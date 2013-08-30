@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>950</width>
-    <height>513</height>
+    <height>573</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -43,8 +43,8 @@
    <widget class="QLabel" name="label">
     <property name="geometry">
      <rect>
-      <x>20</x>
-      <y>440</y>
+      <x>10</x>
+      <y>500</y>
       <width>41</width>
       <height>16</height>
      </rect>
@@ -56,9 +56,9 @@
    <widget class="QLabel" name="labelResult">
     <property name="geometry">
      <rect>
-      <x>60</x>
-      <y>440</y>
-      <width>491</width>
+      <x>50</x>
+      <y>500</y>
+      <width>881</width>
       <height>16</height>
      </rect>
     </property>
@@ -72,7 +72,7 @@
       <x>560</x>
       <y>10</y>
       <width>371</width>
-      <height>331</height>
+      <height>481</height>
      </rect>
     </property>
    </widget>
@@ -270,10 +270,10 @@
    <widget class="QGroupBox" name="groupBox_voxel">
     <property name="geometry">
      <rect>
-      <x>90</x>
+      <x>130</x>
       <y>90</y>
       <width>171</width>
-      <height>141</height>
+      <height>171</height>
      </rect>
     </property>
     <property name="title">
@@ -465,7 +465,7 @@
      <property name="geometry">
       <rect>
        <x>60</x>
-       <y>110</y>
+       <y>140</y>
        <width>51</width>
        <height>20</height>
       </rect>
@@ -481,7 +481,7 @@
      <property name="geometry">
       <rect>
        <x>120</x>
-       <y>110</y>
+       <y>140</y>
        <width>31</width>
        <height>20</height>
       </rect>
@@ -494,7 +494,7 @@
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>110</y>
+       <y>140</y>
        <width>41</width>
        <height>20</height>
       </rect>
@@ -503,12 +503,38 @@
       <string>Volume</string>
      </property>
     </widget>
+    <widget class="QLineEdit" name="lineEdit_ntvoxels">
+     <property name="geometry">
+      <rect>
+       <x>60</x>
+       <y>110</y>
+       <width>71</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="readOnly">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_ntvoxels">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>110</y>
+       <width>41</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Voxels</string>
+     </property>
+    </widget>
    </widget>
    <widget class="QGroupBox" name="groupBoxRanges">
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>240</y>
+      <y>270</y>
       <width>521</width>
       <height>151</height>
      </rect>
@@ -559,6 +585,9 @@
      </widget>
     </widget>
     <widget class="QGroupBox" name="groupBox_centre">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="geometry">
       <rect>
        <x>290</x>
@@ -1041,8 +1070,8 @@
    <widget class="QPushButton" name="pushButton_vessels">
     <property name="geometry">
      <rect>
-      <x>150</x>
-      <y>400</y>
+      <x>120</x>
+      <y>450</y>
       <width>91</width>
       <height>23</height>
      </rect>
@@ -1054,8 +1083,8 @@
    <widget class="QLineEdit" name="lineEdit_density">
     <property name="geometry">
      <rect>
-      <x>380</x>
-      <y>400</y>
+      <x>350</x>
+      <y>450</y>
       <width>41</width>
       <height>20</height>
      </rect>
@@ -1067,8 +1096,8 @@
    <widget class="QLineEdit" name="lineEdit_count">
     <property name="geometry">
      <rect>
-      <x>320</x>
-      <y>400</y>
+      <x>290</x>
+      <y>450</y>
       <width>41</width>
       <height>20</height>
      </rect>
@@ -1080,8 +1109,8 @@
    <widget class="QLineEdit" name="lineEdit_area">
     <property name="geometry">
      <rect>
-      <x>260</x>
-      <y>400</y>
+      <x>230</x>
+      <y>450</y>
       <width>41</width>
       <height>20</height>
      </rect>
@@ -1093,8 +1122,8 @@
    <widget class="QLabel" name="label_density">
     <property name="geometry">
      <rect>
-      <x>380</x>
-      <y>420</y>
+      <x>350</x>
+      <y>470</y>
       <width>41</width>
       <height>16</height>
      </rect>
@@ -1106,8 +1135,8 @@
    <widget class="QLabel" name="label_unitsarea">
     <property name="geometry">
      <rect>
-      <x>270</x>
-      <y>420</y>
+      <x>240</x>
+      <y>470</y>
       <width>31</width>
       <height>16</height>
      </rect>
@@ -1119,14 +1148,30 @@
    <widget class="QLabel" name="label_number">
     <property name="geometry">
      <rect>
-      <x>320</x>
-      <y>420</y>
+      <x>290</x>
+      <y>470</y>
       <width>31</width>
       <height>16</height>
      </rect>
     </property>
     <property name="text">
      <string>count</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton_setup">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>150</y>
+      <width>75</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Setup</string>
     </property>
    </widget>
   </widget>
@@ -1202,29 +1247,13 @@
    </hints>
   </connection>
   <connection>
-   <sender>lineEdit_xvoxel</sender>
-   <signal>textChanged(QString)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>voxelChanged()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>150</x>
-     <y>182</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>84</x>
-     <y>222</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>lineEdit_yvoxel</sender>
    <signal>textChanged(QString)</signal>
    <receiver>MainWindow</receiver>
    <slot>voxelChanged()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>150</x>
+     <x>190</x>
      <y>202</y>
     </hint>
     <hint type="destinationlabel">
@@ -1240,7 +1269,7 @@
    <slot>voxelChanged()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>150</x>
+     <x>190</x>
      <y>222</y>
     </hint>
     <hint type="destinationlabel">
@@ -1256,8 +1285,8 @@
    <slot>computeVessels()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>172</x>
-     <y>455</y>
+     <x>142</x>
+     <y>505</y>
     </hint>
     <hint type="destinationlabel">
      <x>295</x>
@@ -1289,11 +1318,91 @@
    <hints>
     <hint type="sourcelabel">
      <x>254</x>
-     <y>291</y>
+     <y>321</y>
     </hint>
     <hint type="destinationlabel">
      <x>27</x>
      <y>339</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_setup</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>reader()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>31</x>
+     <y>190</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>46</x>
+     <y>154</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>checkBox_xfull</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>checkBox_x()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>85</x>
+     <y>393</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>19</x>
+     <y>430</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>checkBox_yfull</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>checkBox_y()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>108</x>
+     <y>410</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>44</x>
+     <y>437</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>checkBox_zfull</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>checkBox_z()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>101</x>
+     <y>433</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>73</x>
+     <y>449</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>lineEdit_xvoxel</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>voxelChanged()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>166</x>
+     <y>173</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>78</x>
+     <y>220</y>
     </hint>
    </hints>
   </connection>
@@ -1310,5 +1419,9 @@
   <slot>voxelChanged()</slot>
   <slot>sliceChanged()</slot>
   <slot>averageChanged()</slot>
+  <slot>reader()</slot>
+  <slot>checkBox_x()</slot>
+  <slot>checkBox_y()</slot>
+  <slot>checkBox_z()</slot>
  </slots>
 </ui>

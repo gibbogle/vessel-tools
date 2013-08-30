@@ -9,8 +9,11 @@
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
+#define PI 3.14159
+
 struct segment_str {
 	POINT end1, end2;
+    float diam;
 };
 typedef segment_str SEGMENT_TYPE;
 
