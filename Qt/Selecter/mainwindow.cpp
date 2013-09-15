@@ -66,17 +66,17 @@ void MainWindow::selecter()
 	qstr += " ";
     qstr += ui->lineEditDmax->text();
     qstr += " ";
-    if (ui->radioButton_average->isChecked())
+    if (ui->checkBoxConnect->isChecked())           // connect_flag
+        qstr += "1 ";
+    else
+        qstr += "0 ";
+    if (ui->radioButton_average->isChecked())       // diam_flag
         qstr += "0 ";
     else if (ui->radioButton_majority->isChecked())
         qstr += "1 ";
     else
         qstr += "2 ";
-    if (ui->checkBoxConnect->isChecked())
-        qstr += "1 ";
-    else
-        qstr += "0 ";
-    if (ui->checkBoxCmgui->isChecked())
+    if (ui->checkBoxCmgui->isChecked())             // cmgui_flag
         qstr += "1 ";
     else
         qstr += "0 ";

@@ -14,6 +14,7 @@
 struct segment_str {
 	POINT end1, end2;
     float diam;
+    float len;
 };
 typedef segment_str SEGMENT_TYPE;
 

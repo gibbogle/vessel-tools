@@ -41,6 +41,16 @@ NETWORK *NP0 = NULL;
 bool is_setup = false;
 */
 
+float pointDist(POINT p1, POINT p2)
+{
+    float dx, dy, dz;
+
+    dx = p1.x - p2.x;
+    dy = p1.y - p2.y;
+    dz = p1.z - p2.z;
+    return sqrt(dx*dx+dy*dy+dz*dz);
+}
+
 //-----------------------------------------------------------------------------------------------------
 // Read Amira SpatialGraph file
 //-----------------------------------------------------------------------------------------------------
@@ -144,7 +154,6 @@ int MainWindow::ReadAmiraFile(char *amFile, NETWORK *net)
 			} else if (k == 4) {
 				for (i=0;i<net->ne;i++) {
 					edge = net->edgeList[i];
-					float len = 0;
 					for (k=0;k<edge.npts;k++) {
 						if (fgets(line, STR_LEN, fpam) == NULL) {
 							printf("ERROR reading section @4\n");
@@ -224,7 +233,8 @@ int MainWindow::ReadAmiraFile(char *amFile, NETWORK *net)
 			segment[iseg].end1 = net->point[ip];
 			segment[iseg].end2 = net->point[ip+1];
             segment[iseg].diam = (net->point[ip].d + net->point[ip+1].d)/2;
-			iseg++;
+            segment[iseg].len = pointDist(net->point[ip],net->point[ip+1]);
+            iseg++;
 		}
 	}
 	nsegments = iseg;
@@ -392,15 +402,17 @@ int MainWindow::getVolume(float *volume, int *ntvoxels)
 //--------------------------------------------------------------------
 int MainWindow::histology(int axis, int islice, int *np, float *area)
 {
-	int iseg, cnt;
+    int iseg, cnt, nv[2], npixels, ntpixels;
 	float d;
 	float zmin, zmax;
 	POINT pos1, pos2;
     float z0, diam, S1[3], S2[3], vsize[2];
+    bool hit;
 
 	zmin = 1.0e10;
 	zmax = -zmin;
 	d = islice*voxelsize[axis];
+    ntpixels = 0;
 	cnt = 0;
 	for (iseg=0; iseg<nsegments;iseg++) {
 		pos1 = segment[iseg].end1;
@@ -410,7 +422,8 @@ int MainWindow::histology(int axis, int islice, int *np, float *area)
 		zmin = MIN(pos2.z,zmin);
 		zmax = MAX(pos1.z,zmax);
 		zmax = MAX(pos2.z,zmax);
-		if (axis == 0 && ((pos1.x <= d  && d <= pos2.x) || (pos2.x <= d && d <= pos1.x))) {
+        hit = false;
+        if (axis == 0 && ((pos1.x <= d  && d < pos2.x) || (pos2.x < d && d <= pos1.x))) {
 			cnt++;
             S1[0] = pos1.y;
             S1[1] = pos1.z;
@@ -421,8 +434,11 @@ int MainWindow::histology(int axis, int islice, int *np, float *area)
             z0 = d;
             vsize[0] = voxelsize[1];
             vsize[1] = voxelsize[2];
+            nv[0] = nvoxels[1];
+            nv[1] = nvoxels[2];
+            hit = true;
         }
-		if (axis == 1 && ((pos1.y <= d  && d <= pos2.y) || (pos2.y <= d && d <= pos1.y))) {
+        if (axis == 1 && ((pos1.y <= d  && d < pos2.y) || (pos2.y < d && d <= pos1.y))) {
 			cnt++;
             S1[0] = pos1.z;
             S1[1] = pos1.x;
@@ -433,8 +449,12 @@ int MainWindow::histology(int axis, int islice, int *np, float *area)
             z0 = d;
             vsize[0] = voxelsize[2];
             vsize[1] = voxelsize[0];
+            nv[0] = nvoxels[2];
+            nv[1] = nvoxels[0];
+            if (S1[0] < 0.5*nv[0]*vsize[0]) //Note: odd image for y axis, 36
+                hit = true;
         }
-		if (axis == 2 && ((pos1.z <= d  && d <= pos2.z) || (pos2.z <= d && d <= pos1.z))) {
+        if (axis == 2 && ((pos1.z <= d  && d < pos2.z) || (pos2.z < d && d <= pos1.z))) {
 			cnt++;
             S1[0] = pos1.x;
             S1[1] = pos1.y;
@@ -445,10 +465,19 @@ int MainWindow::histology(int axis, int islice, int *np, float *area)
             z0 = d;
             vsize[0] = voxelsize[0];
             vsize[1] = voxelsize[1];
+            nv[0] = nvoxels[0];
+            nv[1] = nvoxels[1];
+            hit = true;
         }
-        fillEllipse(z0,S1,S2,diam,vsize);
+        if (hit) {
+            fprintf(fpout,"\nsegment: %6d S1: %6.1f %6.1f %6.1f S2: %6.1f %6.1f %6.1f diam: %4.1f\n",
+                    iseg,S1[0],S1[1],S1[2],S2[0],S2[1],S2[2],diam);
+            fillEllipse(z0,S1,S2,diam,vsize,nv,&npixels);
+            ntpixels += npixels;
+        }
 	}
-	printf("nsegments, cnt: %d %d\n",nsegments,cnt);
+    fprintf(fpout,"nsegments, cnt: %6d %6d ntpixels: %6d\n",nsegments,cnt,ntpixels);
+    printf("nsegments, cnt: %6d %6d ntpixels: %6d\n",nsegments,cnt,ntpixels);
     printf("axis, d, zmin, zmax: %d %f %f %f\n",axis,d,zmin,zmax);
 	*np = cnt;
 	getArea(axis,islice,area);
@@ -570,6 +599,65 @@ void MainWindow::reset()
 	is_setup = false;
 }
 
+//--------------------------------------------------------------------
+// Network topology is in NETWORK *NP0
+// Vertices (branch points) are NP0->vertex[]
+//--------------------------------------------------------------------
+int MainWindow::branching(int *nbranchpts, float *totlen, float *totvol)
+{
+    int k, nb;
+    float xmin, xmax, ymin, ymax, zmin, zmax, tlen;
+    POINT p;
+
+    xmin = range[0][0]*voxelsize[0];
+    xmax = range[0][1]*voxelsize[0];
+    ymin = range[1][0]*voxelsize[1];
+    ymax = range[1][1]*voxelsize[1];
+    zmin = range[2][0]*voxelsize[2];
+    zmax = range[2][1]*voxelsize[2];
+    nb = 0;
+    for (k=0; k<NP0->nv; k++) {
+        p = NP0->vertex[k].point;
+        if (p.x >= xmin && p.x < xmax && p.y >= ymin && p.y < ymax && p.z >= zmin && p.z < zmax) nb++;
+    }
+    *nbranchpts = nb;
+    tlen = 0;
+    for (k=0; k<nsegments; k++) {
+        p = segment[k].end1;
+        if (p.x >= xmin && p.x < xmax && p.y >= ymin && p.y < ymax && p.z >= zmin && p.z < zmax) {
+            p = segment[k].end2;
+            if (p.x >= xmin && p.x < xmax && p.y >= ymin && p.y < ymax && p.z >= zmin && p.z < zmax) {
+                tlen += segment[k].len;
+            }
+        }
+    }
+    *totlen = tlen;
+    *totvol = rangeVolume();
+    return 0;
+}
+
+//--------------------------------------------------------------------
+// Volume of tissue region defined by range of slices
+//--------------------------------------------------------------------
+float MainWindow::rangeVolume()
+{
+    int ix, iy, iz, p[3], nt;
+
+    nt = 0;
+    for (ix=range[0][0]; ix<=range[0][1]; ix++){
+        for (iy=range[1][0]; iy<=range[1][1]; iy++){
+            for (iz=range[2][0]; iz<=range[2][1]; iz++){
+                p[0] = ix;
+                p[1] = iy;
+                p[2] = iz;
+                if (in_close(p)) nt++;
+            }
+        }
+    }
+    return nt*voxelsize[0]*voxelsize[1]*voxelsize[2];
+}
+
+
 // Consider a cylinder intersecting a plane.
 // The cylinder has radius R, the centreline C intersects the plane at P0 (x0,y0)
 // the line C makes an angle alpha with the plane, the projection of C onto
@@ -628,78 +716,115 @@ void MainWindow::reset()
 // If the case is really a x-slice, x -> z, y -> x, z -> y
 // If the case is really a y-slice, y -> z, x -> y, z -> x
 //----------------------------------------------------------------------------
-void MainWindow::fillEllipse(float z0, float S1[], float S2[], float diam, float vsize[])
+void MainWindow::fillEllipse(float z0, float S1[], float S2[], float diam, float vsize[], int nv[], int *npixels)
 {
-    float s0, P0[2], C[3], u[2], v[2], d, cosgamma, gamma, alpha;
-    float a, b, f, F1[2], F2[2], xc[4], yc[4], xmin, xmax, ymin, ymax;
+    float s0, P0[2], C[3], u[2], v[2], d, gamma, alpha;
+    float a, b, f, F1[2], F2[2], xmin, xmax, ymin, ymax;
     float sum, x, y, d1, d2;
-    int i, ix, iy, ixmin, ixmax, iymin, iymax;
+    int i, ix, iy, ixmin, ixmax, iymin, iymax, npix;
+    bool circle;
 
+    npix = 0;
+    if (S1[2] == S2[2]) S2[2] += 1;
     s0 = (z0 - S1[2])/(S2[2] - S1[2]);
     P0[0] = S1[0] + s0*(S2[0] - S1[0]);
     P0[1] = S1[1] + s0*(S2[1] - S1[1]);
     u[0] = S2[0] - S1[0];
     u[1] = S2[1] - S1[1];
     d = sqrt(u[0]*u[0] + u[1]*u[1]);
-    u[0] /= d;
-    u[1] /= d;
-    v[0] = -u[1];
-    v[1] = u[0];
-    sum = 0;
-    for (i=0; i<3; i++) {
-        C[i] = S2[i] - S1[i];
-        sum += C[i]*C[i];
+    if (d == 0) {
+        circle = true;
+        xmin = P0[0] - diam/2;
+        xmax = P0[0] + diam/2;
+        ymin = P0[1] - diam/2;
+        ymax = P0[1] + diam/2;
+        fprintf(fpout,"circle: centre: %6.1f %6.1f radius: %6.1f\n",P0[0],P0[1],diam/2);
+    } else {
+        circle = false;
+        u[0] /= d;
+        u[1] /= d;
+        v[0] = -u[1];
+        v[1] = u[0];
+        fprintf(fpout,"s0: %8.3f u: %6.3f %6.3f v: %6.3f %6.3f\n",s0,u[0],u[1],v[0],v[1]);
+        sum = 0;
+        for (i=0; i<3; i++) {
+            C[i] = S2[i] - S1[i];
+            sum += C[i]*C[i];
+        }
+        d = sqrt(sum);
+        fprintf(fpout,"C: %6.1f %6.1f %6.1f  d: %6.1f\n",C[0],C[1],C[2],d);
+        for (i=0; i<3; i++) {
+            C[i] /= d;
+        }
+        gamma = acos(C[2]);
+        if (gamma < PI/2)
+            alpha = PI/2 - gamma;
+        else
+            alpha = gamma - PI/2;
+        a = (diam/2)/sin(alpha);
+        b = diam/2;
+        f = sqrt(a*a - b*b);
+        fprintf(fpout,"gamma: %6.1f alpha: %6.1f a,b,f: %6.1f %6.1f %6.1f\n",
+                gamma*180/PI,alpha*180/PI,a,b,f);
+        F1[0] = P0[0] + f*u[0];
+        F1[1] = P0[1] + f*u[1];
+        F2[0] = P0[0] - f*u[0];
+        F2[1] = P0[1] - f*u[1];
+        xmin = 1.0e10;
+        xmax = -xmin;
+        ymin = 1.0e10;
+        ymax = -ymin;
+        xmin = MIN(xmin,P0[0] + a*u[0] + b*v[0]);
+        xmin = MIN(xmin,P0[0] + a*u[0] - b*v[0]);
+        xmin = MIN(xmin,P0[0] - a*u[0] + b*v[0]);
+        xmin = MIN(xmin,P0[0] - a*u[0] - b*v[0]);
+        xmax = MAX(xmax,P0[0] + a*u[0] + b*v[0]);
+        xmax = MAX(xmax,P0[0] + a*u[0] - b*v[0]);
+        xmax = MAX(xmax,P0[0] - a*u[0] + b*v[0]);
+        xmax = MAX(xmax,P0[0] - a*u[0] - b*v[0]);
+        ymin = MIN(ymin,P0[1] + a*u[1] + b*v[1]);
+        ymin = MIN(ymin,P0[1] + a*u[1] - b*v[1]);
+        ymin = MIN(ymin,P0[1] - a*u[1] + b*v[1]);
+        ymin = MIN(ymin,P0[1] - a*u[1] - b*v[1]);
+        ymax = MAX(ymax,P0[1] + a*u[1] + b*v[1]);
+        ymax = MAX(ymax,P0[1] + a*u[1] - b*v[1]);
+        ymax = MAX(ymax,P0[1] - a*u[1] + b*v[1]);
+        ymax = MAX(ymax,P0[1] - a*u[1] - b*v[1]);
     }
-    d = sqrt(sum);
-    cosgamma = C[2]/sqrt(d);
-    gamma = acos(cosgamma);
-    if (gamma < PI/2)
-        alpha = PI/2 - gamma;
-    else
-        alpha = gamma - PI/2;
-    a = (diam/2)/sin(alpha);
-    b = diam/2;
-    f = sqrt(a*a - b*b);
-    F1[0] = P0[0] + f*u[0];
-    F1[1] = P0[1] + f*u[1];
-    F2[0] = P0[0] - f*u[0];
-    F2[1] = P0[1] - f*u[1];
-    xmin = 1.0e10;
-    xmax = -xmin;
-    ymin = 1.0e10;
-    ymax = -ymin;
-    xmin = MIN(xmin,P0[0] + a*u[0] + b*v[0]);
-    xmin = MIN(xmin,P0[0] + a*u[0] - b*v[0]);
-    xmin = MIN(xmin,P0[0] - a*u[0] + b*v[0]);
-    xmin = MIN(xmin,P0[0] - a*u[0] - b*v[0]);
-    xmax = MAX(xmax,P0[0] + a*u[0] + b*v[0]);
-    xmax = MAX(xmax,P0[0] + a*u[0] - b*v[0]);
-    xmax = MAX(xmax,P0[0] - a*u[0] + b*v[0]);
-    xmax = MAX(xmax,P0[0] - a*u[0] - b*v[0]);
-    ymin = MIN(ymin,P0[1] + a*u[1] + b*v[1]);
-    ymin = MIN(ymin,P0[1] + a*u[1] - b*v[1]);
-    ymin = MIN(ymin,P0[1] - a*u[1] + b*v[1]);
-    ymin = MIN(ymin,P0[1] - a*u[1] - b*v[1]);
-    ymax = MAX(ymax,P0[1] + a*u[1] + b*v[1]);
-    ymax = MAX(ymax,P0[1] + a*u[1] - b*v[1]);
-    ymax = MAX(ymax,P0[1] - a*u[1] + b*v[1]);
-    ymax = MAX(ymax,P0[1] - a*u[1] - b*v[1]);
     // These values (xmin, xmax, ymin, ymax) bound the region within which the ellipse E lies
     ixmin = xmin/vsize[0];
     ixmax = xmax/vsize[0];
     iymin = ymin/vsize[1];
     iymax = ymax/vsize[1];
+    ixmin = MAX(ixmin,0);
+    ixmax = MIN(ixmax,nv[0]);
+    iymin = MAX(iymin,0);
+    iymax = MIN(iymax,nv[1]);
+    fprintf(fpout,"ix range: %6d %6d iy range: %6d %6d\n",ixmin,ixmax,iymin,iymax);
     for (ix=ixmin; ix<ixmax; ix++) {
         for (iy=iymin; iy<iymax; iy++) {
             x = ix*vsize[0];
             y = iy*vsize[1];
-            d1 = sqrt((x-F1[0])*(x-F1[0]) + (y-F1[1])*(y-F1[1]));
-            d2 = sqrt((x-F2[0])*(x-F2[0]) + (y-F2[1])*(y-F2[1]));
-            if (d1+d2 <= 2*a) {
-                // inside ellipse, lit voxel
+            if (circle) {
+                d1 = sqrt((x-P0[0])*(x-P0[0]) + (y-P0[1])*(y-P0[1]));
+                if (d1 <= diam/2) {
+                    // inside circle, lit voxel
+                    imageViewer->myQtImage->setPixel(x,y,255);
+                    npix++;
+                }
+            } else {
+                d1 = sqrt((x-F1[0])*(x-F1[0]) + (y-F1[1])*(y-F1[1]));
+                d2 = sqrt((x-F2[0])*(x-F2[0]) + (y-F2[1])*(y-F2[1]));
+                if (d1+d2 <= 2*a) {
+                    // inside ellipse, lit voxel
+                    imageViewer->myQtImage->setPixel(ix,iy,255);
+                    npix++;
+                }
             }
         }
     }
+    fprintf(fpout,"npixels: %6d\n",npix);
+    *npixels = npix;
 }
 
 /*

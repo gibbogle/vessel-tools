@@ -10,9 +10,9 @@ TARGET    = quantifier
 TEMPLATE  = app
 
 
-SOURCES  += main.cpp mainwindow.cpp quantify.cpp
+SOURCES  += main.cpp mainwindow.cpp quantify.cpp imageviewer.cpp
 
-HEADERS  += mainwindow.h quantify.h network.h
+HEADERS  += mainwindow.h quantify.h network.h imageviewer.h
 
 FORMS    += mainwindow.ui
 

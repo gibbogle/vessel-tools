@@ -25,6 +25,7 @@ int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[]);
 FILE *fperr, *fpout;
 int nconnected;
 int ne_net[NEMAX];
+float diam_min, diam_max, origin_shift[3];
 
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
@@ -153,6 +154,10 @@ int WriteAmiraFile(char *amFileOut, char *amFileIn, NETWORK *net, float origin_s
 		for (k=0;k<edge.npts;k++) {
 			j = edge.pt[k];
 			fprintf(fpam,"%6.2f\n",net->point[j].d);
+			//if (net->point[j].d > diam_max) {
+			//	printf("d > diam_max: edge: %d ne: %d k: %d d: %6.2f\n",i,net->ne,k,net->point[j].d);
+			//	exit(1);
+			//}
 		}
 	}
 	fclose(fpam);
@@ -919,7 +924,7 @@ int main(int argc, char **argv)
 	char errfilename[2048], output_amfile[2048], result_file[2048];
 	char output_basename[2048];
 	int diam_flag, cmgui_flag, connect_flag;
-	float diam_min, diam_max, origin_shift[3];
+//	float diam_min, diam_max, origin_shift[3];
 	bool connect;
 	NETWORK *NP0, *NP1, *NP2;
 
@@ -939,12 +944,11 @@ int main(int argc, char **argv)
 	strcpy(output_amfile,argv[2]);
 	sscanf(argv[3],"%f",&diam_min);
 	sscanf(argv[4],"%f",&diam_max);
-	sscanf(argv[6],"%d",&diam_flag);
 	sscanf(argv[5],"%d",&connect_flag);
+	sscanf(argv[6],"%d",&diam_flag);
 	sscanf(argv[7],"%d",&cmgui_flag);
 //	use_average = (ave_flag != 0);
 	connect = (connect_flag != 0);
-	printf("diam_flag: %d\n",diam_flag);
 
 	_splitpath(output_amfile,drive,dir,filename,ext);
 	strcpy(output_basename,drive);
@@ -958,6 +962,17 @@ int main(int argc, char **argv)
 //	fprintf(fperr,"Basename: %s\n",output_basename);
 
 	fpout = fopen(result_file,"w");	
+	printf("Input .am file: %s\n",input_amfile);
+	printf("connect_flag: %d\n",connect_flag);
+	printf("diam_flag: %d\n",diam_flag);
+	printf("cmgui_flag: %d\n",cmgui_flag);
+	printf("diam_min, diam_max: %6.2f %6.2f\n",diam_min,diam_max);
+	fprintf(fpout,"Input .am file: %s\n",input_amfile);
+	fprintf(fpout,"connect_flag: %d\n",connect_flag);
+	fprintf(fpout,"diam_flag: %d\n",diam_flag);
+	fprintf(fpout,"cmgui_flag: %d\n",cmgui_flag);
+	fprintf(fpout,"diam_min, diam_max: %6.2f %6.2f\n",diam_min,diam_max);
+
 	NP0 = (NETWORK *)malloc(sizeof(NETWORK));
 	err = ReadAmiraFile(input_amfile,NP0);
 	if (err != 0) return 2;

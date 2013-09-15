@@ -26,6 +26,7 @@ MainWindow::MainWindow(QWidget *parent) :
         file.close();
         ui->textEdit->moveCursor(QTextCursor::Start);
     }
+    imageViewer = NULL;
     fpout = NULL;
     is_ready = false;
     is_amfile = false;
@@ -295,6 +296,9 @@ void MainWindow::getCentredRanges()
     range[2][1] = (int)(zfac*(z0 + zr));
 }
 
+//---------------------------------------------------------
+// Note: range[][] is 1-based!
+//---------------------------------------------------------
 void MainWindow::getAveragingRanges() {
     float x1, y1, z1, x2, y2, z2, xfac, yfac, zfac;
     QString x1str, y1str, z1str, x2str, y2str, z2str;
@@ -384,8 +388,8 @@ void MainWindow::checkRanges()
 void MainWindow::computeVessels()
 {
     int err;
-    float area;
-    int axis, islice, count, density;
+    float area, totlen, totvol;
+    int axis, islice, count, density, w, h, nbranchpts;
     QString areastr, countstr, densitystr;
 
     if (!is_ready) {
@@ -397,19 +401,30 @@ void MainWindow::computeVessels()
     area = 0;
     count = 0;
     if (is_slice) {
-        if (ui->radioButton_xaxis->isChecked())
+        if (ui->radioButton_xaxis->isChecked()) {
             axis = 0;
-        else if (ui->radioButton_yaxis->isChecked())
+            w = nvoxels[1];
+            h = nvoxels[2];
+        } else if (ui->radioButton_yaxis->isChecked()) {
             axis = 1;
-        else if (ui->radioButton_zaxis->isChecked())
+            w = nvoxels[2];
+            h = nvoxels[0];
+        } else if (ui->radioButton_zaxis->isChecked()) {
             axis = 2;
+            w = nvoxels[0];
+            h = nvoxels[1];
+        }
         islice = ui->lineEdit_intercept->text().toInt();
         fprintf(fpout,"Computing histology for a slice: axis: %d  islice: %d\n",axis,islice);
         if (ui->radioButton_slicemicrons->isChecked())
             islice = (int)(islice/voxelsize[axis]);
         err = checkSlice(axis,islice);
         if (err == 0) {
+            if (imageViewer) delete imageViewer;
+            imageViewer = new ImageViewer(w,h);
             err = histology(axis,islice,&count,&area);
+            imageViewer->paintLabel();
+            imageViewer->show();
         } else {
             area = 0;
             count = 0;
@@ -418,6 +433,7 @@ void MainWindow::computeVessels()
         fprintf(fpout,"Computing average histology\n");
         getRanges();
         err = average_histology(&count,&area);
+        err = branching(&nbranchpts, &totlen, &totvol);
     }
     area = 1.0e-6*area;   // convert um2 -> mm2
     areastr = QString::number(area,'f',3);

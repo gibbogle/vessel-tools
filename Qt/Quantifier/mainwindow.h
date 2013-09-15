@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include "network.h"
+#include "imageviewer.h"
 
 namespace Ui {
     class MainWindow;
@@ -37,6 +38,7 @@ public slots:
     void getAveragingRanges();
     void checkRanges();
     void reader();
+//    void viewImage();
 
 private slots:
     void on_radioButton_centre_toggled(bool checked);
@@ -49,13 +51,15 @@ public:
     int getVolume(float *volume, int *ntvoxels);
     int histology(int axis, int islice, int *np, float *area);
     int average_histology(int *np, float *area);
-    void fillEllipse(float z0, float S1[], float S2[], float diam, float vsize[]);
+    void fillEllipse(float z0, float S1[], float S2[], float diam, float vsize[], int nv[], int *npixels);
     int setup(char *input_amfile, char *close_file, char *result_file, float vsize[]);
     int getCloseSize(int nvoxels[]);
     bool isSetup();
     void reset();
     int ReadAmiraFile(char *, NETWORK *);
     int ReadCloseFile(char *);
+    int branching(int *nbranchpts, float *totlen, float *totvol);
+    float rangeVolume();
 
     FILE *fpout;
     float voxelsize[3];
@@ -76,6 +80,8 @@ public:
     int range_z1;
     int range_z2;
     int range[3][2];
+
+    ImageViewer *imageViewer;
 };
 
 #endif // MAINWINDOW_H

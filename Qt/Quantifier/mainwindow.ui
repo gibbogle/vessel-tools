@@ -1423,5 +1423,6 @@
   <slot>checkBox_x()</slot>
   <slot>checkBox_y()</slot>
   <slot>checkBox_z()</slot>
+  <slot>viewImage()</slot>
  </slots>
 </ui>
