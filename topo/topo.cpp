@@ -4213,8 +4213,8 @@ int TraceSkeleton(int n_prune_cycles)
 void FixDiameters()
 {
 	EDGE *edge;
-	int ie, k, kp0, kp1, kp, npts, n0, n1, ipass, nzero, err;
-	double d0, d1, diam, d2ave, dave, vsum;
+	int ie, k, kp0, kp1, kp, npts, n0, n1, ipass, nzero, iv, err;
+	double d0, d1, diam, d2ave, dave, vsum, dmax;
 	double len, len0, len1, lsum;
 	bool done;
 	double alpha = 0.3;
@@ -4398,6 +4398,41 @@ void FixDiameters()
 			for (k=1; k<npts-1; k++) {
 				kp = edge->pt[k];
 				avediameter[kp] = dave;
+			}
+		}
+		// Finally, need to fix junction node diameters.
+		// At each junction, find the connected edges. Set the point avediameter to the maximum of the 
+		// computed uniform diameters (save) of the connected edges.
+		// Need to identify the point corresponding to the vertex!
+		// This is edge->pt[0] if iv == edge->vert[0], edge->pt[npts-1] if iv = edge->vert[1]
+		for (iv=0; iv<nv; iv++) {
+			dmax = 0;
+			for (k=0; k<vertex[iv].nlinks; k++) {
+				ie = vertex[iv].edge[k];
+				edge = &edgeList[ie];
+				if (!edge->used) continue;
+				npts = edge->npts;
+				if (iv == edge->vert[0]) {
+					kp = edgeList[ie].pt[1];
+				} else if (iv == edge->vert[1]) {
+					kp = edgeList[ie].pt[npts-2];
+				} else {
+					printf("Error: FixDiameters: iV: %d vert: %d %d\n",iv,edge->vert[0],edge->vert[1]);
+					exit(1);
+				}
+				if (avediameter[kp] > dmax) dmax = avediameter[kp];
+			}
+			for (k=0; k<vertex[iv].nlinks; k++) {
+				ie = vertex[iv].edge[k];
+				edge = &edgeList[ie];
+				if (!edge->used) continue;
+				npts = edge->npts;
+				if (iv == edge->vert[0]) {
+					kp = edgeList[ie].pt[0];
+				} else {
+					kp = edgeList[ie].pt[npts-1];
+				}
+				avediameter[kp] = dmax;
 			}
 		}
 	}
