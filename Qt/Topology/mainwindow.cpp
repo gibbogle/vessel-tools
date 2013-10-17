@@ -135,7 +135,9 @@ void MainWindow::topology()
 		resultstr = "FAILED: error in WriteCmguiData()";
 	else if (res == 11)
 		resultstr = "FAILED: error in WriteAmiraFile()";
-	else
+    else if (res == 12)
+        resultstr = "FAILED: error in FixDiameters()";
+    else
 		resultstr = "FAILED: some other error";
 	ui->labelResult->setText(resultstr);
 }

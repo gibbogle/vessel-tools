@@ -4210,7 +4210,7 @@ int TraceSkeleton(int n_prune_cycles)
 // For each edge:
 //    If 
 //-----------------------------------------------------------------------------------------------------
-void FixDiameters()
+int FixDiameters()
 {
 	EDGE *edge;
 	int ie, k, kp0, kp1, kp, npts, n0, n1, ipass, nzero, iv, err;
@@ -4218,6 +4218,7 @@ void FixDiameters()
 	double len, len0, len1, lsum;
 	bool done;
 	double alpha = 0.3;
+	bool FIX_JUNCTIONS = true;
 
 	printf("FixDiameters\n");
 	//for (ie=0; ie<100; ie++) {
@@ -4272,7 +4273,7 @@ void FixDiameters()
 		if (d0 == 0) {
 			if (d1 != 0) {
 				printf("d1 != 0\n");
-				exit(1);
+				return 1;
 			}
 			continue;
 		}
@@ -4400,42 +4401,48 @@ void FixDiameters()
 				avediameter[kp] = dave;
 			}
 		}
-		// Finally, need to fix junction node diameters.
-		// At each junction, find the connected edges. Set the point avediameter to the maximum of the 
-		// computed uniform diameters (save) of the connected edges.
-		// Need to identify the point corresponding to the vertex!
-		// This is edge->pt[0] if iv == edge->vert[0], edge->pt[npts-1] if iv = edge->vert[1]
-		for (iv=0; iv<nv; iv++) {
-			dmax = 0;
-			for (k=0; k<vertex[iv].nlinks; k++) {
-				ie = vertex[iv].edge[k];
-				edge = &edgeList[ie];
-				if (!edge->used) continue;
-				npts = edge->npts;
-				if (iv == edge->vert[0]) {
-					kp = edgeList[ie].pt[1];
-				} else if (iv == edge->vert[1]) {
-					kp = edgeList[ie].pt[npts-2];
-				} else {
-					printf("Error: FixDiameters: iV: %d vert: %d %d\n",iv,edge->vert[0],edge->vert[1]);
-					exit(1);
-				}
-				if (avediameter[kp] > dmax) dmax = avediameter[kp];
+	}
+	if (!FIX_JUNCTIONS) return 0;
+	// Finally, need to fix junction node diameters.
+	// At each junction, find the connected edges. Set the point avediameter to the maximum of the 
+	// computed uniform diameters (save) of the connected edges.
+	// Need to identify the point corresponding to the vertex!
+	// This is edge->pt[0] if iv == edge->vert[0], edge->pt[npts-1] if iv = edge->vert[1]
+	for (iv=0; iv<nv; iv++) {
+		if (!vertex[iv].used) continue;
+		dmax = 0;
+		n1 = 0;
+		for (k=0; k<vertex[iv].nlinks; k++) {
+			ie = vertex[iv].edge[k];
+			edge = &edgeList[ie];
+			if (!edge->used) continue;
+			n1++;
+			npts = edge->npts;
+			if (iv == edge->vert[0]) {
+				kp = edgeList[ie].pt[1];
+			} else if (iv == edge->vert[1]) {
+				kp = edgeList[ie].pt[npts-2];
+			} else {
+				printf("Error: FixDiameters: iV: %d vert: %d %d\n",iv,edge->vert[0],edge->vert[1]);
+				return 1;
 			}
-			for (k=0; k<vertex[iv].nlinks; k++) {
-				ie = vertex[iv].edge[k];
-				edge = &edgeList[ie];
-				if (!edge->used) continue;
-				npts = edge->npts;
-				if (iv == edge->vert[0]) {
-					kp = edgeList[ie].pt[0];
-				} else {
-					kp = edgeList[ie].pt[npts-1];
-				}
-				avediameter[kp] = dmax;
+			if (avediameter[kp] > dmax) dmax = avediameter[kp];
+		}
+		for (k=0; k<vertex[iv].nlinks; k++) {
+			ie = vertex[iv].edge[k];
+			edge = &edgeList[ie];
+			if (!edge->used) continue;
+			npts = edge->npts;
+			if (iv == edge->vert[0]) {
+				kp = edgeList[ie].pt[0];
+			} else {
+				kp = edgeList[ie].pt[npts-1];
 			}
+//			printf("iv: %6d  %3d  %6d %6d %6.1f %6.1f\n",iv,n1,k,kp,avediameter[kp],dmax);
+			avediameter[kp] = dmax;
 		}
 	}
+	return 0;
 }
 
 //-----------------------------------------------------------------------------------------------------
@@ -4615,7 +4622,13 @@ int main(int argc, char**argv)
 			fclose(fperr);
 			return 6;
 		}
-		FixDiameters();
+		err = FixDiameters();
+		if (err != 0) {
+			printf("Error: GFixDiameters\n");
+			fprintf(fperr,"Error: FixDiameters\n");
+			fclose(fperr);
+			return 12;
+		}
 	}
 
 	printf("Total voxels: %d edges: %d vertices: %d points: %d\n",count,ne,nv,np);
