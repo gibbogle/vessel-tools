@@ -98,9 +98,14 @@ void MainWindow::topology()
 	}
     qstr += " ";
     if (ui->checkBoxUniform->isChecked()) {
-        qstr += "1";
+        qstr += "1 ";
     } else {
-        qstr += "0";
+        qstr += "0 ";
+    }
+    if (ui->radioButton_junctionMax->isChecked()) {
+        qstr += "1 ";
+    } else {
+        qstr += "0 ";
     }
     if (qstr.size()>(int)sizeof(cmdstr)-1) {
 		printf("Failed to convert qstr->cmdstr since qstr didn't fit\n");

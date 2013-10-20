@@ -146,6 +146,7 @@ FILE *fperr, *fpout;
 FILE *exelem, *exnode, *dotcom;
 char output_basename[512];
 bool uniform_diameter;
+bool junction_max;
 bool dbug = false;
 
 #define PI 3.14159
@@ -4411,6 +4412,7 @@ int FixDiameters()
 	for (iv=0; iv<nv; iv++) {
 		if (!vertex[iv].used) continue;
 		dmax = 0;
+		dave = 0;
 		n1 = 0;
 		for (k=0; k<vertex[iv].nlinks; k++) {
 			ie = vertex[iv].edge[k];
@@ -4427,7 +4429,9 @@ int FixDiameters()
 				return 1;
 			}
 			if (avediameter[kp] > dmax) dmax = avediameter[kp];
+			dave += avediameter[kp];
 		}
+		dave /= n1;
 		for (k=0; k<vertex[iv].nlinks; k++) {
 			ie = vertex[iv].edge[k];
 			edge = &edgeList[ie];
@@ -4439,7 +4443,11 @@ int FixDiameters()
 				kp = edgeList[ie].pt[npts-1];
 			}
 //			printf("iv: %6d  %3d  %6d %6d %6.1f %6.1f\n",iv,n1,k,kp,avediameter[kp],dmax);
-			avediameter[kp] = dmax;
+			if (junction_max) {
+				avediameter[kp] = dmax;
+			} else {
+				avediameter[kp] = dave;
+			}
 		}
 	}
 	return 0;
@@ -4449,7 +4457,7 @@ int FixDiameters()
 //-----------------------------------------------------------------------------------------------------
 int main(int argc, char**argv)
 {
-	int uniform_flag;
+	int uniform_flag, junction_max_flag;
 	double voxelsize_x, voxelsize_y, voxelsize_z;
 	double volume;
 	char *vessFile, *skelFile;
@@ -4459,10 +4467,10 @@ int main(int argc, char**argv)
 	char errfilename[256], amfilename[256];
 	bool squeeze = true;
 
-	if (argc != 10) {
-		printf("Usage: topo skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z calib_param fixed_diam uniform_flag\n");
+	if (argc != 11) {
+		printf("Usage: topo skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z calib_param fixed_diam uniform_flag junction_max_flag\n");
 		fperr = fopen("topo_error.log","w");
-		fprintf(fperr,"Usage: topo skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z calib_param fixed_diam uniform_flag\n");
+		fprintf(fperr,"Usage: topo skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z calib_param fixed_diam uniform_flag junction_max_flag\n");
 		fprintf(fperr,"Submitted command line: argc: %d\n",argc);
 		for (int i=0; i<argc; i++) {
 			fprintf(fperr,"argv: %d: %s\n",i,argv[i]);
@@ -4492,6 +4500,7 @@ int main(int argc, char**argv)
 	sscanf(argv[7],"%lf",&calib_param);
 	sscanf(argv[8],"%f",&FIXED_DIAMETER);
 	sscanf(argv[9],"%d",&uniform_flag);
+	sscanf(argv[10],"%d",&junction_max_flag);
 
 	vsize[0] = voxelsize_x;
 	vsize[1] = voxelsize_y;
@@ -4508,11 +4517,14 @@ int main(int argc, char**argv)
 	fprintf(fpout,"Voxel size: x,y,z: %f %f %f\n",voxelsize_x, voxelsize_y,voxelsize_z);
 	printf("Uniform diameter flag: %d\n",uniform_flag);
 	fprintf(fperr,"Uniform diameter flag: %d\n",uniform_flag);
+	printf("Junction max diameter flag: %d\n",junction_max_flag);
+	fprintf(fperr,"Junction max diameter flag: %d\n",junction_max_flag);
 	if (FIXED_DIAMETER > 0) {
 		printf("Using a fixed vessel diameter: %f\n",FIXED_DIAMETER);
 		fprintf(fpout,"Using a fixed vessel diameter: %f\n",FIXED_DIAMETER);
 	}
 	uniform_diameter = (uniform_flag==1);
+	junction_max = (junction_max_flag==1);
 	fprintf(fpout,"Amira file: %s\n",amfilename);
 
 	if (USE_HEALING) {
