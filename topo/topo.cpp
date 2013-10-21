@@ -147,6 +147,7 @@ FILE *exelem, *exnode, *dotcom;
 char output_basename[512];
 bool uniform_diameter;
 bool junction_max;
+double max_ratio;
 bool dbug = false;
 
 #define PI 3.14159
@@ -4215,7 +4216,7 @@ int FixDiameters()
 {
 	EDGE *edge;
 	int ie, k, kp0, kp1, kp, npts, n0, n1, ipass, nzero, iv, err;
-	double d0, d1, diam, d2ave, dave, vsum, dmax;
+	double d0, d1, diam, d2ave, dave, vsum, dmax, dmin;
 	double len, len0, len1, lsum;
 	bool done;
 	double alpha = 0.3;
@@ -4411,6 +4412,7 @@ int FixDiameters()
 	// This is edge->pt[0] if iv == edge->vert[0], edge->pt[npts-1] if iv = edge->vert[1]
 	for (iv=0; iv<nv; iv++) {
 		if (!vertex[iv].used) continue;
+		dmin = 1.0e10;
 		dmax = 0;
 		dave = 0;
 		n1 = 0;
@@ -4428,6 +4430,7 @@ int FixDiameters()
 				printf("Error: FixDiameters: iV: %d vert: %d %d\n",iv,edge->vert[0],edge->vert[1]);
 				return 1;
 			}
+			if (avediameter[kp] < dmin) dmin = avediameter[kp];
 			if (avediameter[kp] > dmax) dmax = avediameter[kp];
 			dave += avediameter[kp];
 		}
@@ -4443,7 +4446,7 @@ int FixDiameters()
 				kp = edgeList[ie].pt[npts-1];
 			}
 //			printf("iv: %6d  %3d  %6d %6d %6.1f %6.1f\n",iv,n1,k,kp,avediameter[kp],dmax);
-			if (junction_max) {
+			if (junction_max || dmax/dmin > max_ratio) {
 				avediameter[kp] = dmax;
 			} else {
 				avediameter[kp] = dave;
@@ -4467,10 +4470,10 @@ int main(int argc, char**argv)
 	char errfilename[256], amfilename[256];
 	bool squeeze = true;
 
-	if (argc != 11) {
-		printf("Usage: topo skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z calib_param fixed_diam uniform_flag junction_max_flag\n");
+	if (argc != 12) {
+		printf("Usage: topo skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z calib_param fixed_diam uniform_flag junction_max_flag max_ratio\n");
 		fperr = fopen("topo_error.log","w");
-		fprintf(fperr,"Usage: topo skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z calib_param fixed_diam uniform_flag junction_max_flag\n");
+		fprintf(fperr,"Usage: topo skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z calib_param fixed_diam uniform_flag junction_max_flag max_ratio\n");
 		fprintf(fperr,"Submitted command line: argc: %d\n",argc);
 		for (int i=0; i<argc; i++) {
 			fprintf(fperr,"argv: %d: %s\n",i,argv[i]);
@@ -4501,6 +4504,7 @@ int main(int argc, char**argv)
 	sscanf(argv[8],"%f",&FIXED_DIAMETER);
 	sscanf(argv[9],"%d",&uniform_flag);
 	sscanf(argv[10],"%d",&junction_max_flag);
+	sscanf(argv[11],"%lf",&max_ratio);
 
 	vsize[0] = voxelsize_x;
 	vsize[1] = voxelsize_y;

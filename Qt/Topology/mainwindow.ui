@@ -348,6 +348,35 @@
      </property>
     </widget>
    </widget>
+   <widget class="QLineEdit" name="lineEditMaxRatio">
+    <property name="geometry">
+     <rect>
+      <x>290</x>
+      <y>250</y>
+      <width>31</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>2</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_maxratio">
+    <property name="geometry">
+     <rect>
+      <x>330</x>
+      <y>250</y>
+      <width>171</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Threshold ratio max/min diameter</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
@@ -379,8 +408,8 @@
    <slot>topology()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>263</x>
-     <y>207</y>
+     <x>254</x>
+     <y>332</y>
     </hint>
     <hint type="destinationlabel">
      <x>377</x>
@@ -443,12 +472,28 @@
    <slot>diamCheckBox()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>364</x>
-     <y>145</y>
+     <x>110</x>
+     <y>177</y>
     </hint>
     <hint type="destinationlabel">
      <x>408</x>
      <y>173</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>radioButton_junctionAve</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>junctionRadioButton()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>146</x>
+     <y>288</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>47</x>
+     <y>302</y>
     </hint>
    </hints>
   </connection>
@@ -459,5 +504,6 @@
   <slot>outputFileSelecter()</slot>
   <slot>topology()</slot>
   <slot>diamCheckBox()</slot>
+  <slot>junctionRadioButton()</slot>
  </slots>
 </ui>

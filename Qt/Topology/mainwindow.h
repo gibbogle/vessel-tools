@@ -20,6 +20,7 @@ public slots:
 	void skelFileSelecter();
 	void outputFileSelecter();
 	void diamCheckBox();
+    void junctionRadioButton();
 	void topology();
 
 private:

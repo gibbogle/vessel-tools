@@ -57,13 +57,22 @@ void MainWindow::outputFileSelecter()
 	ui->labelOutputFile->setText(outputFileName);
 }
 
+void MainWindow::junctionRadioButton()
+{
+    if (ui->radioButton_junctionAve->isChecked()) {
+        ui->lineEditMaxRatio->setEnabled(true);
+	} else {
+        ui->lineEditMaxRatio->setDisabled(true);
+	}
+}
+
 void MainWindow::diamCheckBox()
 {
-	if (ui->checkBoxDiam->isChecked()) {
-		ui->lineEditDiam->setEnabled(true);
-	} else {
-		ui->lineEditDiam->setDisabled(true);
-	}
+    if (ui->checkBoxDiam->isChecked()) {
+        ui->lineEditDiam->setEnabled(true);
+    } else {
+        ui->lineEditDiam->setDisabled(true);
+    }
 }
 
 void MainWindow::topology()
@@ -107,6 +116,7 @@ void MainWindow::topology()
     } else {
         qstr += "0 ";
     }
+    qstr += ui->lineEditMaxRatio->text();
     if (qstr.size()>(int)sizeof(cmdstr)-1) {
 		printf("Failed to convert qstr->cmdstr since qstr didn't fit\n");
 		resultstr = "FAILED: cmdstr not big enough for the command";
