@@ -475,12 +475,10 @@ void write_com(char *fileName)
     fprintf(dotcom, "# The radius of the vessel is stored in component 1 of field\n");
     fprintf(dotcom, "# 'vessel_radius', defined over the elements in the vessels group.\n");
     fprintf(dotcom, "# Now draw spheres using these radii with the following command.\n");
-//    fprintf(dotcom, "gfx mod g_e vessels element_points glyph sphere_hires general size \"0*0*0\" ");
-//    fprintf(dotcom, "orientation vessel_radius scale_factors \"2*2*2\" discretization \"3*3*3\" material gold");
     fprintf(dotcom, "gfx destroy node all\n");
     fprintf(dotcom, "gfx modify g_element vessels general clear\n");
-    fprintf(dotcom, "gfx modify g_element vessels cylinders coordinate coordinates tessellation default local circle_discretization 12 radius_scalar vessel_radius scale_factor 0.5 native_discretization NONE select_on material gold selected_material default_selected render_shaded\n");
-    fprintf(dotcom, "gfx modify g_element vessels node_points coordinate coordinates local glyph sphere general size \"0*0*0\" centre 0,0,0 font default orientation vessel_radius scale_factors \"1*1*1\" select_on material gold selected_material default_selected\n");
+    fprintf(dotcom, "gfx modify g_element vessels cylinders coordinate coordinates tessellation default local circle_discretization 12 radius_scalar vessel_radius scale_factor 1.0 native_discretization NONE select_on material gold selected_material default_selected render_shaded\n");
+    fprintf(dotcom, "gfx modify g_element vessels node_points coordinate coordinates local glyph sphere general size \"0*0*0\" centre 0,0,0 font default orientation vessel_radius scale_factors \"2*2*2\" select_on material gold selected_material default_selected\n");
     fprintf(dotcom, "gfx cre win 1\n");
     fprintf(dotcom, "gfx mod win 1 view perspective\n");
 }

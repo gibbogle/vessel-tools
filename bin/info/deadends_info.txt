@@ -1,1 +1,17 @@
-Program for investiaging dead ends in the vessel network.
+Program for investigating dead ends in a vessel network.
+
+Input files:
+   Amira network file (.am)
+   Tiff image file that was used to create the Amira file
+
+Output files:
+   Amira network file with just the dead-end vessels
+   Tiff image file generated from the Amira dead-end network file
+
+The sequence of steps is:
+   Supply voxel dimensions (um)
+   Supply all file names
+   Evaluate network (this reads the input files)
+   Detect dead ends
+   Evaluate dead ends (intensity computed)
+   Save dead-end files (Amira network and tiff image files are written)

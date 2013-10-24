@@ -29,6 +29,25 @@ float dist(NETWORK *net, int k1, int k2)
 }
 
 //-----------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------
+void MainWindow::showEdge(int ie, NETWORK *net)
+{
+    EDGE *edge;
+    int npts, i, k;
+
+    edge = &net->edgeList[ie];
+    npts = edge->npts;
+    printf("edge: %6d npts: %3d\n",ie,npts);
+    fprintf(fpout,"edge: %6d npts: %3d\n",ie,npts);
+    for (i=0; i<npts; i++) {
+        k = edge->pt[i];
+        printf("%3d %6d  %8.1f %8.1f %8.1f\n",i,k,net->point[k].x,net->point[k].y,net->point[k].z);
+        fprintf(fpout,"%3d %6d  %8.1f %8.1f %8.1f\n",i,k,net->point[k].x,net->point[k].y,net->point[k].z);
+        fflush(fpout);
+    }
+}
+
+//-----------------------------------------------------------------------------------------------------
 // Write Amira SpatialGraph file
 //-----------------------------------------------------------------------------------------------------
 int MainWindow::writeAmiraFile(const char *amFileOut, const char *amFileIn, NETWORK *net)
@@ -277,6 +296,10 @@ int MainWindow::readAmiraFile(const char *amFile, NETWORK *net)
     fprintf(fpout,"Edges: ne: %d ne_used: %d\n",net->ne,ne_used);
     fprintf(fpout,"Vertices: nv: %d\n",net->nv);
     fprintf(fpout,"Points: np: %d np_used: %d\n",net->np,np_used);
+//    for (k=0; k<net->np; k++) {
+//        fprintf(fpout,"%8d %8.1f %8.1f %8.1f  %8.2f\n",k,net->point[k].x,net->point[k].y,net->point[k].z,net->point[k].d);
+//    }
+    fflush(fpout);
     return 0;
 }
 
@@ -461,9 +484,11 @@ int MainWindow::createNetwork(NETWORK *net, NETWORK *deadnet, DEADEND *deadlist,
             deadnet->point[ip] = p;
             ip++;
         }
+//        showEdge(ie,deadnet);
         ie++;
     }
     printf("nv,ne,np: %d %d %d\n",deadnet->nv,deadnet->ne,deadnet->np);
+    fprintf(fpout,"nv,ne,np: %d %d %d\n",deadnet->nv,deadnet->ne,deadnet->np);
     return 0;
 }
 

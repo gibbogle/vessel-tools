@@ -63,10 +63,12 @@ MainWindow::MainWindow(QWidget *parent) :
     is_tiff_out = false;
     am_read = false;
     tiff_read = false;
+    ready = false;
     detected = false;
     evaluated = false;
     margin = 0;
     voxelsize[0] = voxelsize[1] = voxelsize[2] = 2;
+    p_im_dead = NULL;
     checkReady();
 
 //      image_view = vtkImageViewer2::New();
@@ -189,16 +191,17 @@ void MainWindow::checkReady()
     else
         voxelOK = false;
     if (voxelOK && is_am_in && is_tiff_in && is_am_out && is_tiff_out) {
-        ready = true;
-        ui->pushButtonDeadends->setEnabled(true);
         ui->pushButtonEvaluateAll->setEnabled(true);
-        if (detected) {
-            ui->pushButtonEvaluate->setEnabled(true);
-            if (evaluated)
-                ui->pushButtonSaveFile->setEnabled(true);
-        } else {
-            ui->pushButtonEvaluate->setEnabled(false);
-            ui->pushButtonSaveFile->setEnabled(false);
+        if (ready) {
+            ui->pushButtonDeadends->setEnabled(true);
+            if (detected) {
+                ui->pushButtonEvaluate->setEnabled(true);
+                if (evaluated)
+                    ui->pushButtonSaveFile->setEnabled(true);
+            } else {
+                ui->pushButtonEvaluate->setEnabled(false);
+                ui->pushButtonSaveFile->setEnabled(false);
+            }
         }
     } else {
         ready = false;
@@ -214,7 +217,7 @@ void MainWindow::checkReady()
 void MainWindow::detectDeadends()
 {
     int err;
-    QString resultstr, numstr;
+    QString resultstr;
 
     ui->labelResult->setText("");
     if (!ready) {
@@ -259,8 +262,6 @@ void MainWindow::detectDeadends()
     }
     printf("ndead: %d\n",ndead);
     fprintf(fpout,"ndead: %d\n",ndead);
-    numstr.setNum(ndead);
-    ui->lineEditNdead->setText(numstr);
     detected = true;
     checkReady();
     resultstr = "SUCCESS";
@@ -272,15 +273,19 @@ void MainWindow::detectDeadends()
 //----------------------------------------------------------------------------------------
 void MainWindow::evaluate()
 {
-    QString resultstr;
+    QString resultstr, numstr;
+    int nzero;
+
     resultstr = "working...";
     ui->labelResult->setText(resultstr);
     QCoreApplication::processEvents();
-    getIntensities(&network, deadlist, ndead);
+    getIntensities(&network, deadlist, ndead, &nzero);
     evaluated = true;
     checkReady();
     resultstr = "SUCCESS";
     ui->labelResult->setText(resultstr);
+    numstr.setNum(ndead-nzero);
+    ui->lineEditNdead->setText(numstr);
 }
 
 //----------------------------------------------------------------------------------------
@@ -295,25 +300,26 @@ void MainWindow::evaluate()
 // (3) determine the maximum intensity of this set of voxels
 // (4) record the average of the maximum intensities of all points
 //----------------------------------------------------------------------------------------
-int MainWindow::getIntensities(NETWORK *net, DEADEND *deadlist, int ndead)
+int MainWindow::getIntensities(NETWORK *net, DEADEND *deadlist, int ndead, int *nzero)
 {
     int id, ie, npts, ip, count;
     int nv, v[100000][3], maxval;
     float c[3], r, totval, sum;
     float beta = 0.5;
-    bool toobig;
+    bool zero;
     EDGE edge;
     APOINT p;
 
     printf("getIntensities: %d\n",ndead);
     fprintf(fpout,"getIntensities: %d\n",ndead);
+    *nzero = 0;
     count = 0;
     sum = 0;
     for (id=0; id<ndead; id++) {
         ie = deadlist[id].ie;
         edge = net->edgeList[ie];
         npts = edge.npts;
-        toobig = false;
+        zero = false;
         totval = 0;
         for (ip=0; ip<npts; ip++) {
             p = net->point[edge.pt[ip]];
@@ -323,6 +329,11 @@ int MainWindow::getIntensities(NETWORK *net, DEADEND *deadlist, int ndead)
             c[0] = p.x;
             c[1] = p.y;
             c[2] = p.z;
+            // r = radius of the vessel at this point on the centreline
+            // c[] = centreline point
+            // beta gives distance range (from c) to search in for lit voxels: (1-beta)*r - (1+beta)*r
+            // nv = number of lit voxels found
+            // v[] = list of voxels
             getVoxels(r,c,beta,&nv,v);
 //            printf("id, npts, ip, nv: %d %d %d %d\n",id,npts,ip,nv);
 //            fprintf(fpout,"id, npts, ip, nv: %d %d %d %d\n",id,npts,ip,nv);
@@ -331,7 +342,7 @@ int MainWindow::getIntensities(NETWORK *net, DEADEND *deadlist, int ndead)
 //                printf("getVoxels: no voxels: c, r: %6.1f %6.1f %6.1f  %6.2f\n",c[0],c[1],c[2],r);
 //                fprintf(fpout,"getVoxels: no voxels: c, r: %6.1f %6.1f %6.1f  %6.2f\n",c[0],c[1],c[2],r);
 //                exit(1);
-                toobig = true;
+                zero = true;
 //                fprintf(fpout,"Too big\n");
 //                fflush(fpout);
                 break;
@@ -345,7 +356,8 @@ int MainWindow::getIntensities(NETWORK *net, DEADEND *deadlist, int ndead)
 //            pv[1] = p.y/voxelsize[1] + 1;
 //            pv[2] = p.z/voxelsize[2] + 1;
         }
-        if (toobig) {
+        if (zero) {
+            *nzero++;
             deadlist[id].intensity = 0;
             continue;
         }
@@ -353,11 +365,264 @@ int MainWindow::getIntensities(NETWORK *net, DEADEND *deadlist, int ndead)
         sum += deadlist[id].intensity;
         count++;
 //        printf("intensity: %6d %6.1f\n",id,deadlist[id].intensity);
-        fprintf(fpout,"intensity: %6d %6.1f\n",id,deadlist[id].intensity);
-        fflush(fpout);
+//        fprintf(fpout,"intensity: %6d %6.1f\n",id,deadlist[id].intensity);
+//        fflush(fpout);
     }
-    printf("Average dead-end intensity: %6.1f\n",sum/count);
-    fprintf(fpout,"Average dead-end intensity: %6.1f\n",sum/count);
+    if (count == 0) {
+        printf("getIntensities: count = 0\n");
+        fprintf(fpout,"getIntensities: count = 0\n");
+        fflush(fpout);
+        exit(1);
+    }
+    printf("getIntensities: nzero: %d\n",nzero);
+    fprintf(fpout,"getIntensities: nzero: %d\n",nzero);
+    printf("count: %d average dead-end intensity: %6.1f\n",count,sum/count);
+    fprintf(fpout,"count: %d average dead-end intensity: %6.1f\n",count,sum/count);
+    fflush(fpout);
+    return 0;
+}
+
+//----------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
+void MainWindow::getVoxels(float r, float c[], float beta, int *nv, int v[][3])
+{
+    int i, nto[3], ix, iy, iz, k, u[3];
+    float dx, dy, dz, d2, rfr2, rto2;
+
+//    rlimit = ui->lineEditRlimit->text().toFloat();
+
+    if (r > maxRadius) {
+        *nv = 0;
+        return;
+    }
+    rfr2 = (1-beta)*(1-beta)*r*r;
+    rto2 = (1+beta)*(1+beta)*r*r;
+    for (i=0; i<3; i++) {
+        nto[i] = (1 + beta)*r/voxelsize[i] + 1;
+    }
+//    fprintf(fpout,"r, beta, rfr2, rto2: %f %f %f %f  %d %d %d\n",r,beta,rfr2,rto2,nto[0],nto[1],nto[2]);
+    k = 0;
+    for (ix=-nto[0]; ix<=nto[0]; ix++) {
+        dx = ix*voxelsize[0];
+        for (iy=-nto[1]; iy<=nto[1]; iy++) {
+            dy = iy*voxelsize[1];
+            for (iz=-nto[2]; iz<=nto[2]; iz++) {
+                dz = iz*voxelsize[2];
+                d2 = dx*dx+dy*dy+dz*dz;
+                if (d2<rfr2 || d2 > rto2) continue;
+                u[0] = (c[0] + dx)/voxelsize[0];
+                u[1] = (c[1] + dy)/voxelsize[1];
+                u[2] = (c[2] + dz)/voxelsize[2];
+//                fprintf(fpout,"%4d  %6d %6d %6d\n",k,u[0],u[1],u[2]);
+                for (i=0; i<3; i++)
+                    v[k][i] = u[i];
+                k++;
+            }
+        }
+    }
+    if (k == 0) {
+        fprintf(fpout,"\nr, beta, rfr2, rto2: %f %f %f %f\n",r,beta,rfr2,rto2);
+        fprintf(fpout,"c: %6.1f %6.1f %6.1f  voxel: %6d %6d %6d\n",c[0],c[1],c[2],int(c[0]/voxelsize[0]),int(c[1]/voxelsize[1]),int(c[2]/voxelsize[2]));
+        fprintf(fpout,"nto: %d %d %d\n",nto[0],nto[1],nto[2]);
+    }
+    *nv = k;
+}
+
+//----------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
+void MainWindow::getMaxIntensity(int nv, int v[][3], int *maxval)
+{
+    int k, x, y, z;
+    float val;
+
+    *maxval = 0;
+    for (k=0; k<nv; k++) {
+        x = v[k][0];
+        y = v[k][1];
+        z = v[k][2];
+        if (x < 0 || y < 0 || z < 0) {
+//            printf("bad index < 0:  %d %d %d\n",x,y,z);
+//            fprintf(fpout,"bad index < 0:  %d %d %d\n",x,y,z);
+            continue;
+        }
+        if (x >= width || y >= height || z >= depth) {
+//            printf("bad index too big:  %d %d %d\n",x,y,z);
+//            fprintf(fpout,"bad index too big:  %d %d %d\n",x,y,z);
+            continue;
+        }
+        val = V(x,y,z);
+        if (val > *maxval)
+            *maxval = val;
+    }
+}
+
+//----------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
+void MainWindow::saveDeadendFile()
+{
+    int err;
+    QString resultstr;
+
+    createNetwork(&network, &deadnetwork, deadlist, ndead);
+    writeAmiraFile(outputAmiraFileName.toAscii().constData(), inputAmiraFileName.toAscii().constData(), &deadnetwork);
+    printf("wrote Amira file\n");
+    fprintf(fpout,"wrote Amira file\n");
+    resultstr = "wrote Amira file, creating image data...";
+    ui->labelResult->setText(resultstr);
+    QCoreApplication::processEvents();
+    err = createTiffData(&deadnetwork);
+    if (err != 0) {
+        resultstr = "FAILED: createTiffData";
+        ui->labelResult->setText(resultstr);
+        fprintf(fpout,"createTiffData failed with err: %d\n",err);
+        return;
+    }
+    printf("created image data\n");
+    fprintf(fpout,"created image data\n");
+    resultstr = "created image data, writing tiff file...";
+    ui->labelResult->setText(resultstr);
+    err = createTiff(outputTiffFileName.toAscii().constData(),p_im_dead,width_d,height_d,depth_d);
+    if (err != 0) {
+        resultstr = "FAILED: createTiff";
+        ui->labelResult->setText(resultstr);
+        fprintf(fpout,"createTiff failed with err: %d\n",err);
+        return;
+    }
+    printf("created tiff\n");
+    fprintf(fpout,"created tiff\n");
+    resultstr = "SUCCESS";
+    ui->labelResult->setText(resultstr);
+}
+
+//----------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
+int MainWindow::createTiffData(NETWORK *net)
+{
+    int ie, ip, xc, yc, zc, ix, iy, iz, nx, ny, nz, x, y, z, npts, k, ninterp;
+    float r, r2, dx, dy, dz, wx, wy, wz, d2, x0, y0, z0, d0, x1, y1, z1, d1, xx, yy, zz, dd, alfa;
+    bool binary;
+    EDGE edge;
+    APOINT p0, p1;
+    int NINTERPOLATE = 4;
+
+    binary = ui->radioButton_tiff_binary->isChecked();
+    // First determine the required buffer size to hold the voxels
+    wx = 0;
+    wy = 0;
+    wz = 0;
+    for (ie=0; ie<net->ne; ie++) {
+        edge = net->edgeList[ie];
+        for (ip=0; ip<edge.npts; ip++) {
+//            printf("%d %d %d %d\n",ie,edge.npts,ip,edge.pt[ip]);
+//            fprintf(fpout,"%d %d %d %d\n",ie,edge.npts,ip,edge.pt[ip]);
+//            fflush(fpout);
+            p0 = net->point[edge.pt[ip]];
+//            printf("%6.1f %6.1f %6.1f  %6.2f\n",p.x,p.y,p.z,p.d);
+//            fprintf(fpout,"%6.1f %6.1f %6.1f  %6.2f\n",p.x,p.y,p.z,p.d);
+//            fflush(fpout);
+            wx = MAX(wx,(p0.x + p0.d/2));
+            wy = MAX(wy,(p0.y + p0.d/2));
+            wz = MAX(wz,(p0.z + p0.d/2));
+        }
+    }
+    width_d = (int)((wx+margin)/voxelsize[0]+10);
+    height_d = (int)((wy+margin)/voxelsize[1]+10);
+    depth_d = (int)((wz+margin)/voxelsize[2]+10);
+    xysize_d = width_d*height_d;
+    printf("width, height, depth: %d %d %d\n",width_d, height_d, depth_d);
+    fprintf(fpout,"width, height, depth: %d %d %d\n",width_d, height_d, depth_d);
+    printf("image buffer size (bytes): %d\n",width_d*height_d*depth_d);
+    fprintf(fpout,"image buffer size (bytes): %d\n",width_d*height_d*depth_d);
+    fflush(fpout);
+    if (p_im_dead != NULL) free(p_im_dead);
+    p_im_dead = (unsigned char *)malloc(width_d*height_d*depth_d*sizeof(unsigned char));
+    if (!p_im_dead) {
+        printf("buffer malloc failed\n");
+        fprintf(fpout,"buffer malloc failed\n");
+        fflush(fpout);
+        return 1;
+    }
+    memset(p_im_dead,0,width_d*height_d*depth_d);
+    for (ie=0; ie<net->ne; ie++) {
+        edge = net->edgeList[ie];
+        npts = edge.npts;
+        for (ip=0; ip<npts; ip++) {
+//            fprintf(fpout,"ie, npts,ip: %d %d %d\n",ie,edge.npts,ip);
+//            fflush(fpout);
+//            fprintf(fpout,"edge.pt[ip]: %d",edge.pt[ip]);
+//            fflush(fpout);
+            p0 = net->point[edge.pt[ip]];
+            x0 = p0.x;
+            y0 = p0.y;
+            z0 = p0.z;
+            d0 = p0.d;
+            ninterp = 1;
+            if (ip < npts-1) {
+                p1 = net->point[edge.pt[ip+1]];
+                x1 = p1.x;
+                y1 = p1.y;
+                z1 = p1.z;
+                d1 = p1.d;
+                ninterp = NINTERPOLATE;
+            }
+
+            for (k=0; k<ninterp; k++) {
+                if (k == 0) {
+                    xx = x0;
+                    yy = y0;
+                    zz = z0;
+                    dd = d0;
+                } else {
+                    alfa = float(k)/ninterp;
+                    xx = (1-alfa)*x0 + alfa*x1;
+                    yy = (1-alfa)*y0 + alfa*y1;
+                    zz = (1-alfa)*z0 + alfa*z1;
+                    dd = (1-alfa)*d0 + alfa*d1;
+                }
+                xc = xx/voxelsize[0];   // voxel nearest to the point
+                yc = yy/voxelsize[1];
+                zc = zz/voxelsize[2];
+                r = dd/2 + margin;
+    //            fprintf(fpout,"point: %d  %6.1f %6.1f %6.1f  %d %d %d  %6.2f\n",ip,p.x,p.y,p.z,x0,y0,z0,r);
+    //            fflush(fpout);
+                r2 = r*r;
+                nx = r/voxelsize[0] + 1;
+                ny = r/voxelsize[1] + 1;
+                nz = r/voxelsize[2] + 1;
+    //            printf("nx,ny,nz,x1,y1,z1: %d %d %d\n",nx,ny,nz);
+    //            fprintf(fpout,"nx,ny,nz,x1,y1,z1: %d %d %d\n",nx,ny,nz);
+    //            fflush(fpout);
+                for (ix = -nx; ix <= nx; ix++) {
+                    dx = ix*voxelsize[0];
+                    x = xc+ix;
+                    if (x < 0 || x >= width_d) continue;
+                    for (iy = -ny; iy<=ny; iy++) {
+                        dy = iy*voxelsize[1];
+                        y = yc+iy;
+                        if (y < 0 || y >= height_d) continue;
+                        for (iz = -nz; iz<=nz; iz++) {
+                            dz = iz*voxelsize[2];
+                            z = zc+iz;
+                            if (z < 0 || z >= depth_d) continue;
+                            d2 = dx*dx+dy*dy+dz*dz;
+    //                        printf("ix,iy,iz: %d %d %d  d2,r2 %f %f\n",ix,iy,iz,d2,r2);
+    //                        fprintf(fpout,"ix,iy,iz: %d %d %d  d2,r2 %f %f\n",ix,iy,iz,d2,r2);
+    //                        fflush(fpout);
+                            if (d2 < r2) {
+    //                            printf("%d %d %d\n",x0+ix,y0+iy,z0+iz);
+    //                            fprintf(fpout,"%d %d %d\n",x0+ix,y0+iy,z0+iz);
+    //                            fflush(fpout);
+                                if (binary)
+                                    V_dead(x,y,z) = 255;
+                                else
+                                    V_dead(x,y,z) = V(x,y,z);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
     return 0;
 }
 
@@ -448,197 +713,18 @@ void MainWindow::getAllIntensities()
         intensity = totval/npts;
         sum += intensity;
         count++;
-        printf("intensity: %6d %6.1f\n",ie,intensity);
-        fprintf(fpout,"intensity: %6d %6.1f\n",ie,intensity);
-        fflush(fpout);
+//        printf("intensity: %6d %6.1f\n",ie,intensity);
+//        fprintf(fpout,"intensity: %6d %6.1f\n",ie,intensity);
+//        fflush(fpout);
     }
     printf("Average vessel intensity: %6.1f\n",sum/count);
     fprintf(fpout,"Average vessel intensity: %6.1f\n",sum/count);
     resultstr = "SUCCESS";
     ui->labelResult->setText(resultstr);
+    ready = true;
+    checkReady();
     return;
 }
-
-//----------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------
-void MainWindow::getVoxels(float r, float c[], float beta, int *nv, int v[][3])
-{
-    int i, nto[3], ix, iy, iz, k, u[3];
-    float dx, dy, dz, d2, rfr2, rto2;
-
-//    rlimit = ui->lineEditRlimit->text().toFloat();
-
-    if (r > maxRadius) {
-        *nv = 0;
-        return;
-    }
-    rfr2 = (1-beta)*(1-beta)*r*r;
-    rto2 = (1+beta)*(1+beta)*r*r;
-    for (i=0; i<3; i++) {
-        nto[i] = (1 + beta)*r/voxelsize[i] + 1;
-    }
-//    fprintf(fpout,"r, beta, rfr2, rto2: %f %f %f %f  %d %d %d\n",r,beta,rfr2,rto2,nto[0],nto[1],nto[2]);
-    k = 0;
-    for (ix=-nto[0]; ix<=nto[0]; ix++) {
-        dx = ix*voxelsize[0];
-        for (iy=-nto[1]; iy<=nto[1]; iy++) {
-            dy = iy*voxelsize[1];
-            for (iz=-nto[2]; iz<=nto[2]; iz++) {
-                dz = iz*voxelsize[2];
-                d2 = dx*dx+dy*dy+dz*dz;
-                if (d2<rfr2 || d2 > rto2) continue;
-                u[0] = (c[0] + dx)/voxelsize[0];
-                u[1] = (c[1] + dy)/voxelsize[1];
-                u[2] = (c[2] + dz)/voxelsize[2];
-//                fprintf(fpout,"%4d  %6d %6d %6d\n",k,u[0],u[1],u[2]);
-                for (i=0; i<3; i++)
-                    v[k][i] = u[i];
-                k++;
-            }
-        }
-    }
-    if (k == 0) {
-        fprintf(fpout,"r, beta, rfr2, rto2: %f %f %f %f\n",r,beta,rfr2,rto2);
-        fprintf(fpout,"nto: %d %d %d\n",nto[0],nto[1],nto[2]);
-    }
-    *nv = k;
-}
-
-//----------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------
-void MainWindow::getMaxIntensity(int nv, int v[][3], int *maxval)
-{
-    int k, x, y, z;
-    float val;
-
-    *maxval = 0;
-    for (k=0; k<nv; k++) {
-        x = v[k][0];
-        y = v[k][1];
-        z = v[k][2];
-        if (x < 0 || y < 0 || z < 0) {
-            printf("bad index < 0:  %d %d %d\n",x,y,z);
-            fprintf(fpout,"bad index < 0:  %d %d %d\n",x,y,z);
-            continue;
-        }
-        if (x >= width || y >= height || z >= depth) {
-            printf("bad index too big:  %d %d %d\n",x,y,z);
-            fprintf(fpout,"bad index too big:  %d %d %d\n",x,y,z);
-            continue;
-        }
-        val = V(x,y,z);
-        if (val > *maxval)
-            *maxval = val;
-    }
-}
-
-//----------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------
-void MainWindow::saveDeadendFile()
-{
-    int err;
-    QString resultstr;
-
-    createNetwork(&network, &deadnetwork, deadlist, ndead);
-    writeAmiraFile(outputAmiraFileName.toAscii().constData(), inputAmiraFileName.toAscii().constData(), &deadnetwork);
-    resultstr = "creating image file...";
-    ui->labelResult->setText(resultstr);
-    QCoreApplication::processEvents();
-    err = createTiffData(&deadnetwork);
-    if (err != 0) {
-        resultstr = "FAILED: createTiffData";
-        ui->labelResult->setText(resultstr);
-        return;
-    }
-    err = createTiff(outputTiffFileName.toAscii().constData(),p_im,width,height,depth);
-    if (err != 0) {
-        resultstr = "FAILED: createTiff";
-        ui->labelResult->setText(resultstr);
-        return;
-    }
-}
-
-//----------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------
-int MainWindow::createTiffData(NETWORK *net)
-{
-    int ie, ip, x0, y0, z0, ix, iy, iz, nx, ny, nz, x, y, z;
-    float r, r2, dx, dy, dz, wx, wy, wz, d2;
-    EDGE edge;
-    APOINT p;
-
-    printf("ne: %d\n",net->ne);
-    fprintf(fpout,"ne: %d\n",net->ne);
-    // First determine the required buffer size to hold the voxels
-    wx = 0;
-    wy = 0;
-    wz = 0;
-    for (ie=0; ie<net->ne; ie++) {
-        edge = net->edgeList[ie];
-        for (ip=0; ip<edge.npts; ip++) {
-//            printf("%d %d %d %d\n",ie,edge.npts,ip,edge.pt[ip]);
-//            fprintf(fpout,"%d %d %d %d\n",ie,edge.npts,ip,edge.pt[ip]);
-//            fflush(fpout);
-            p = net->point[edge.pt[ip]];
-//            printf("%6.1f %6.1f %6.1f  %6.2f\n",p.x,p.y,p.z,p.d);
-//            fprintf(fpout,"%6.1f %6.1f %6.1f  %6.2f\n",p.x,p.y,p.z,p.d);
-//            fflush(fpout);
-            wx = MAX(wx,(p.x + p.d/2));
-            wy = MAX(wy,(p.y + p.d/2));
-            wz = MAX(wz,(p.z + p.d/2));
-        }
-    }
-    width = (int)((wx+margin)/voxelsize[0]+10);
-    height = (int)((wy+margin)/voxelsize[1]+10);
-    depth = (int)((wz+margin)/voxelsize[2]+10);
-    xysize = width*height;
-    printf("width, height, depth: %d %d %d\n",width, height, depth);
-    fprintf(fpout,"width, height, depth: %d %d %d\n",width, height, depth);
-    fflush(fpout);
-    if (p_im != NULL) free(p_im);
-    p_im = (unsigned char *)malloc(width*height*depth*sizeof(unsigned char));
-    memset(p_im,0,width*height*depth);
-    for (ie=0; ie<net->ne; ie++) {
-        edge = network.edgeList[ie];
-        for (ip=0; ip<edge.npts; ip++) {
-//            fprintf(fpout,"ie, npts,ip: %d %d %d\n",ie,edge.npts,ip);
-//            fflush(fpout);
-            p = net->point[edge.pt[ip]];
-            x0 = p.x/voxelsize[0];   // voxel nearest to the point
-            y0 = p.y/voxelsize[1];
-            z0 = p.z/voxelsize[2];
-            r = p.d/2 + margin;
-//            fprintf(fpout,"point: %d  %6.1f %6.1f %6.1f  %d %d %d  %6.2f\n",ip,p.x,p.y,p.z,x0,y0,z0,r);
-//            fflush(fpout);
-            r2 = r*r;
-            nx = r/voxelsize[0] + 1;
-            ny = r/voxelsize[1] + 1;
-            nz = r/voxelsize[2] + 1;
-//            printf("nx,ny,nz,x1,y1,z1: %d %d %d  %d %d %d\n",nx,ny,nz,x1,y1,z1);
-            for (ix = -nx; ix <= nx; ix++) {
-                dx = ix*voxelsize[0];
-                x = x0+ix;
-                if (x < 0 || x >= width) continue;
-                for (iy = -ny; iy<=ny; iy++) {
-                    dy = iy*voxelsize[1];
-                    y = y0+iy;
-                    if (y < 0 || y >= height) continue;
-                    for (iz = -nz; iz<=nz; iz++) {
-                        dz = iz*voxelsize[2];
-                        z = z0+iz;
-                        if (z < 0 || z >= depth) continue;
-                        d2 = dx*dx+dy*dy+dz*dz;
-                        if (d2 < r2) {
-                            V(x0+ix,y0+iy,z0+iz) = 255;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return 0;
-}
-
 
 // Need to add:
 // (1) Input for voxelsize
@@ -722,5 +808,6 @@ int MainWindow::DICOMseq()
 
       return EXIT_SUCCESS;
 }
+
 
 */

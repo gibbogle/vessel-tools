@@ -12,6 +12,7 @@
 typedef itk::Image<unsigned char,3> ImageType_u8;
 
 #define V(a,b,c)  p_im[(c)*xysize+(b)*width+(a)]
+#define V_dead(a,b,c)  p_im_dead[(c)*xysize_d+(b)*width_d+(a)]
 
 namespace Ui {
     class MainWindow;
@@ -51,11 +52,12 @@ public:
     int createNetwork(NETWORK *, NETWORK *, DEADEND *, int);
     void freeNetwork(NETWORK *);
     int findDeadends(NETWORK *, DEADEND **, int *);
-    int getIntensities(NETWORK *, DEADEND *, int);
+    int getIntensities(NETWORK *, DEADEND *, int, int *nzero);
     void getVoxels(float r, float c[], float beta, int *nv, int v[][3]);
     void getMaxIntensity(int nv, int v[][3], int *maxval);
     void getSphere();
     bool inSphere(APOINT p);
+    void showEdge(int ie, NETWORK *net);
     QString inputAmiraFileName;
     QString inputTiffFileName;
     QString outputAmiraFileName;
@@ -74,8 +76,10 @@ public:
     DEADEND *deadlist;
     ImageType_u8::Pointer im_u8;
     int width, height, depth, xysize;
+    int width_d, height_d, depth_d, xysize_d;
     int margin;
     unsigned char *p_im;
+    unsigned char *p_im_dead;
     float voxelsize[3];
     bool isSphere;
     float sphereRadius;

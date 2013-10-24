@@ -48,12 +48,12 @@ int MainWindow::readTiff(const char *tifffile, int *width, int *height, int *dep
 int MainWindow::createTiff(const char *tifffile, unsigned char *buffer, int width, int height, int depth)
 {
     bool use_compression = true;
-    unsigned char *p_u8;
+    unsigned char *p_u8_new;
     typedef itk::Image<unsigned char,3> ImageType_u8;
 //    ImageType_u8::Pointer im_u8;
     typedef itk::ImageFileReader<ImageType_u8> FileReaderType_u8;
 
-    ImageType_u8::Pointer im_u8 = ImageType_u8::New();
+    ImageType_u8::Pointer im_u8_new = ImageType_u8::New();
     ImageType_u8::SizeType imsize;
     ImageType_u8::IndexType imstart;
     ImageType_u8::RegionType imregion;
@@ -66,11 +66,11 @@ int MainWindow::createTiff(const char *tifffile, unsigned char *buffer, int widt
     imstart[2] = 0;
     imregion.SetSize(imsize);
     imregion.SetIndex(imstart);
-    im_u8->SetRegions(imregion);
-    im_u8->Allocate();
-    p_u8 = (unsigned char *)(im_u8->GetBufferPointer());
+    im_u8_new->SetRegions(imregion);
+    im_u8_new->Allocate();
+    p_u8_new = (unsigned char *)(im_u8_new->GetBufferPointer());
     // copy buffer to p_u8
-    memcpy(p_u8,buffer,(size_t)(width*height*depth));
+    memcpy(p_u8_new,buffer,(size_t)(width*height*depth));
 
 //    for (x=0; x<width; x++) {
 //        for (y=0; y<height; y++) {
@@ -87,7 +87,7 @@ int MainWindow::createTiff(const char *tifffile, unsigned char *buffer, int widt
     typedef itk::ImageFileWriter<ImageType_u8> FileWriterType;
     FileWriterType::Pointer writer = FileWriterType::New();
     writer->SetFileName(tifffile);
-    writer->SetInput(im_u8);
+    writer->SetInput(im_u8_new);
     if (use_compression) {
         writer->UseCompressionOn();
     }
