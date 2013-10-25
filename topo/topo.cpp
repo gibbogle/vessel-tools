@@ -91,7 +91,7 @@ struct edge_str
 	int npts_used;
 	int *pt;
 	int *pt_used;
-	float *avediameter;
+//	float *avediameter;
 //m	double mindiameter[MAXEDGEPTS];	// try removing mindiameter to save memory
 	double segavediam;
 	double segmindiam;
@@ -1115,24 +1115,31 @@ int getDiameter(int kp0, int kp1, int kp2)
 }
 
 //-----------------------------------------------------------------------------------------------------
+// Estimates diameters for all interior points.
+// Note that an edge with npts=2 (no intermediate points) is not processed.
+//-----------------------------------------------------------------------------------------------------
 int GetDiameters(void)
 {
 	int ie, npts, k, kp, kp0, kp1, kp2;
+	float ad;
 	EDGE *edge;
 
 	printf("GetDiameters\n");
+	for (k=0; k<np; k++) {
+		avediameter[k] = 0;
+	}
 	for (ie=0;ie<ne;ie++) {
 		edge = &edgeList[ie];
 		if (!edge->used) continue;
 		npts = edge->npts;
-		for (k=0;k<npts;k++) {
-			kp = edge->pt[k];
-			avediameter[kp] = 0;
-		}
 		for (k=1;k<npts-1;k++) {
 			kp0 = edge->pt[k-1];
 			kp1 = edge->pt[k];
 			kp2 = edge->pt[k+1];
+			if (npts < 3) {
+				printf("npts < 3: ie: %d %d\n",ie,npts);
+				return 1;
+			}
 			avediameter[kp1] = getDiameter(kp0,kp1,kp2);
 		}
 	}
@@ -2311,13 +2318,14 @@ int WriteCmguiData(void)
 			point_used[k2] = true;
 			radius[k2] = MAX(radius[k2],avediameter[k2]/2);
 			double d = dist_um(kfrom,k2);
-			if (FIXED_DIAMETER > 0 || d > 0.5*(radius[kfrom]+radius[k2]) || ip == npts-1) {
+// Since simplify() is executed, no need to drop points
+//			if (FIXED_DIAMETER > 0 || d > 0.5*(radius[kfrom]+radius[k2]) || ip == npts-1) {
 				kelem++;
 	            fprintf(exelem, "Element: %d 0 0\n", kelem);
 	            fprintf(exelem, "  Nodes: %d %d\n", kfrom+1, k2+1);
 	            fprintf(exelem, "  Scale factors: 1 1\n");
 				kfrom = k2;
-			}
+//			}
 		}
 	}
 	for (k=0; k<np; k++) {
@@ -2343,16 +2351,20 @@ int WriteCmguiData(void)
 //-----------------------------------------------------------------------------------------------------
 // A simplified network is produced by dropping close pts
 // Edges and vertices are unchanged, but the number of points on an edge is reduced.
+// The simplification is applied only if npts >= 5
 //-----------------------------------------------------------------------------------------------------
 int simplify()
 {
-	int ie, iv, kp1, kp2, kp3, ip0, ip1, nptot;
+	int ie, iv, kp1, kp2, kp3, ip0, ip1, nptot, npts, k;
+	int *pt;
 	double d12, d23, dmin, diam1, diam2;
 	EDGE edge;
 	bool dbug;
 	double fraction = 0.5;
 
 	printf("simplify\n");
+
+	pt = (int *)malloc(1000*sizeof(int));
 	nptot = 0;
 	for (ie=0; ie<ne; ie++) {
 		edge = edgeList[ie];
@@ -2361,7 +2373,8 @@ int simplify()
 		dbug = false;
 		kp1 = edge.pt[0];
 		kp3 = edge.pt[edge.npts-1];
-		edgeList[ie].pt[0] = kp1;
+//		edgeList[ie].pt[0] = kp1;
+		pt[0] = kp1;
 		diam1 = getDiameter(edge.pt[0],edge.pt[1],edge.pt[2]);
 		if (dbug) printf("diam1: %f  %d %d %d\n",diam1,edge.pt[0],edge.pt[1],edge.pt[2]);
 		ip1 = 0;
@@ -2377,8 +2390,9 @@ int simplify()
 			dmin = fraction*(diam1 + diam2)/2;
 			if (dbug) printf("ip0: %d kp2: %d diam2: %f d12,d23: %f %f dmin: %f\n",ip0,kp2,diam2,d12,d23,dmin);
 			if ((d12 > dmin &&  d23 > dmin) || ip0 == edge.npts-1) {
-				edgeList[ie].pt[ip1] = kp2;
-				edgeList[ie].pt_used[ip1] = kp2;
+//				edgeList[ie].pt[ip1] = kp2;
+//				edgeList[ie].pt_used[ip1] = kp2;
+				pt[ip1] = kp2;
 				if (dbug) printf("pt: %d %d\n",ip1,kp2);
 				ip1++;
 				kp1 = kp2;
@@ -2386,9 +2400,29 @@ int simplify()
 				nptot++;
 			}
 		}
-		edgeList[ie].npts = ip1;
-		edgeList[ie].npts_used = edgeList[ie].npts;
-		if (dbug) printf("simplify: ie: %d npts: %d -> %d\n",ie,edge.npts,edgeList[ie].npts);
+//		edgeList[ie].npts = ip1;
+//		edgeList[ie].npts_used = edgeList[ie].npts;
+		npts = ip1;
+		
+		if (npts == 2) {
+			kp1 = edge.pt[0];
+			kp2 = edge.pt[edge.npts/2];
+			kp3 = edge.pt[edge.npts-1];
+			pt[0] = kp1;
+			pt[1] = kp2;
+			pt[2] = kp3;
+			npts = 3;
+		}
+		
+		edgeList[ie].npts = npts;
+		edgeList[ie].npts_used = npts;
+		for (k=0; k<npts; k++) {
+			edgeList[ie].pt[k] = pt[k];
+			edgeList[ie].pt_used[k] = pt[k];
+		}
+		if (npts == 2) {
+			printf("simplify: ie: %d npts: %d -> %d\n",ie,edge.npts,edgeList[ie].npts);
+		}
 	}
 	printf("done: nptot: %d\n",nptot);
 	return 0;
@@ -2513,11 +2547,11 @@ int joiner(int kv)
 		ptemp[i] = newedge->pt[i];
 	free(newedge->pt);
 	free(newedge->pt_used);
-	free(newedge->avediameter);
+//	free(newedge->avediameter);
 	npts = nep[0] + nep[1] - 1;
 	newedge->pt = (int *)malloc(npts*sizeof(int));
 	newedge->pt_used = (int *)malloc(npts*sizeof(int));
-	newedge->avediameter = (float *)malloc(npts*sizeof(float));
+//	newedge->avediameter = (float *)malloc(npts*sizeof(float));
 	newedge->npts = npts;
 	newedge->npts_used = npts;
 	if (kv == newedge->vert[0]) {
@@ -2554,7 +2588,7 @@ int joiner(int kv)
 	}
 	for (i=0; i<newedge->npts; i++) {
 		newedge->pt_used[i] = newedge->pt[i];
-		newedge->avediameter[i] = FIXED_DIAMETER;
+//		newedge->avediameter[i] = FIXED_DIAMETER;
 	}
 	if (dbug) {
 		printf("newedge: %d npts: %d vert: %d %d\n",ive[0],newedge->npts,newedge->vert[0],newedge->vert[1]);
@@ -3259,11 +3293,11 @@ int tracer(void)
 					edgeList[ne].npts_used = nevox;
 					edgeList[ne].pt = (int *)malloc(nevox*sizeof(int));
 					edgeList[ne].pt_used = (int *)malloc(nevox*sizeof(int));
-					edgeList[ne].avediameter = (float *)malloc(nevox*sizeof(float));
+//					edgeList[ne].avediameter = (float *)malloc(nevox*sizeof(float));
 					for (i=0; i<nevox; i++) {
 						edgeList[ne].pt[i] = evox[i];
 						edgeList[ne].pt_used[i] = evox[i];
-						edgeList[ne].avediameter[i] = FIXED_DIAMETER;
+//						edgeList[ne].avediameter[i] = FIXED_DIAMETER;
 					}
 				}
 				ne++;
@@ -3457,7 +3491,7 @@ int joining_edge(double *e0, double *e1, int kv0, int kv1)		// was kp0, kp1
 	edgeList[ne].npts = 3;			// size of edgeList array ????????????????????????
 	edgeList[ne].pt = (int *)malloc(edgeList[ne].npts*sizeof(int));
 	edgeList[ne].pt_used = (int *)malloc(edgeList[ne].npts*sizeof(int));
-	edgeList[ne].avediameter = (float *)malloc(edgeList[ne].npts*sizeof(float));
+//	edgeList[ne].avediameter = (float *)malloc(edgeList[ne].npts*sizeof(float));
 	edgeList[ne].npts_used = 3;
 	edgeList[ne].pt[0] = kp0;
 	edgeList[ne].pt[1] = kp;
@@ -3478,8 +3512,8 @@ int joining_edge(double *e0, double *e1, int kv0, int kv1)		// was kp0, kp1
 //	edgeList[ne].vert[1] = kp1;
 	edgeList[ne].vert[0] = kv0;
 	edgeList[ne].vert[1] = kv1;
-	for (i=0; i<3; i++)
-		edgeList[ne].avediameter[i] = FIXED_DIAMETER;
+//	for (i=0; i<3; i++)
+//		edgeList[ne].avediameter[i] = FIXED_DIAMETER;
 	edgeList[ne].used = true;
 // Need to modify the two vertexes, kv0 and kv1	
 // increment nlinks, nlinks_used
@@ -4233,8 +4267,8 @@ int FixDiameters()
 		npts = edge->npts;
 		kp0 = edge->pt[0];
 		kp1 = edge->pt[npts-1];
-		edge->avediameter[0] = 0;
-		edge->avediameter[npts-1] = 0;
+//		edge->avediameter[0] = 0;
+//		edge->avediameter[npts-1] = 0;
 		for (k=1; k<npts-1; k++) {
 			kp = edge->pt[k];
 			diam = avediameter[kp];
@@ -4404,8 +4438,8 @@ int FixDiameters()
 	}
 	if (!FIX_JUNCTIONS) return 0;
 	// Finally, need to fix junction node diameters.
-	// At each junction, find the connected edges. Set the point avediameter to the maximum of the 
-	// computed uniform diameters (save) of the connected edges.
+	// At each junction, find the connected edges. Set the point avediameter to the maximum 
+	// or average of the computed diameters of the connected edges.
 	// Need to identify the point corresponding to the vertex!
 	// This is edge->pt[0] if iv == edge->vert[0], edge->pt[npts-1] if iv = edge->vert[1]
 	for (iv=0; iv<nv; iv++) {
@@ -4420,19 +4454,22 @@ int FixDiameters()
 			if (!edge->used) continue;
 			n1++;
 			npts = edge->npts;
-			if (iv == edge->vert[0]) {
-				kp = edgeList[ie].pt[1];
-			} else if (iv == edge->vert[1]) {
-				kp = edgeList[ie].pt[npts-2];
-			} else {
-				printf("Error: FixDiameters: iV: %d vert: %d %d\n",iv,edge->vert[0],edge->vert[1]);
-				return 1;
-			}
-			if (avediameter[kp] < dmin) dmin = avediameter[kp];
-			if (avediameter[kp] > dmax) dmax = avediameter[kp];
-			dave += avediameter[kp];
+//			if (npts > 2) {
+				if (iv == edge->vert[0]) {
+					kp = edgeList[ie].pt[1];
+				} else if (iv == edge->vert[1]) {
+					kp = edgeList[ie].pt[npts-2];
+				} else {
+					printf("Error: FixDiameters: iV: %d vert: %d %d\n",iv,edge->vert[0],edge->vert[1]);
+					return 1;
+				}
+				if (avediameter[kp] < dmin) dmin = avediameter[kp];
+				if (avediameter[kp] > dmax) dmax = avediameter[kp];
+				dave += avediameter[kp];
+//			}
 		}
 		dave /= n1;
+//		if (dave == 0) continue;
 		for (k=0; k<vertex[iv].nlinks; k++) {
 			ie = vertex[iv].edge[k];
 			edge = &edgeList[ie];
