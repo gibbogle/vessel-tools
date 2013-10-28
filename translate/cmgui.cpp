@@ -43,8 +43,8 @@ void write_com(FILE *dotcom, char *fileName)
 //    fprintf(dotcom, "orientation vessel_radius scale_factors \"2*2*2\" discretization \"3*3*3\" material gold");
     fprintf(dotcom, "gfx destroy node all\n");
     fprintf(dotcom, "gfx modify g_element vessels general clear\n");
-    fprintf(dotcom, "gfx modify g_element vessels cylinders coordinate coordinates tessellation default local circle_discretization 12 radius_scalar vessel_radius scale_factor 0.5 native_discretization NONE select_on material gold selected_material default_selected render_shaded\n");
-    fprintf(dotcom, "gfx modify g_element vessels node_points coordinate coordinates local glyph sphere general size \"0*0*0\" centre 0,0,0 font default orientation vessel_radius scale_factors \"1*1*1\" select_on material gold selected_material default_selected\n");
+    fprintf(dotcom, "gfx modify g_element vessels cylinders coordinate coordinates tessellation default local circle_discretization 12 radius_scalar vessel_radius scale_factor 1.0 native_discretization NONE select_on material gold selected_material default_selected render_shaded\n");
+    fprintf(dotcom, "gfx modify g_element vessels node_points coordinate coordinates local glyph sphere general size \"0*0*0\" centre 0,0,0 font default orientation vessel_radius scale_factors \"2*2*2\" select_on material gold selected_material default_selected\n");
     fprintf(dotcom, "gfx cre win 1\n");
     fprintf(dotcom, "gfx mod win 1 view perspective\n");
 }
@@ -134,25 +134,16 @@ int WriteCmguiData(char *basename)
 	int kelem = 0;
 	for (ie=0; ie<ne; ie++) {
 		edge = edgeList[ie];
-//		printf("ie: %d used: %d npts: %d\n",ie,edge.used,edge.npts);
 		if (edge.used) {
 			npts = edge.npts;
-	//		npts = edge.npts_used;
 			int kfrom = edge.pt[0];
-	//		int kfrom = edge.pt_used[0];
-	//		point_used[kfrom] = true;
-	//		fprintf(fperr,"edge: %6d npts: %3d from,to: %6d %6d  %6d\n",ie,npts,edge.pt[0],edge.pt[npts-1],kelem);
 			for (ip=1; ip<npts; ip++) {
 				int k2 = edge.pt[ip];
-	//			int k2 = edge.pt_used[ip];
-				double d = dist(kfrom,k2);
-				if (d > 0.5*(point[kfrom].d/2+point[k2].d/2) || ip == npts-1) {
-					kelem++;
-					fprintf(exelem, "Element: %d 0 0\n", kelem);
-					fprintf(exelem, "  Nodes: %d %d\n", kfrom+1, k2+1);
-					fprintf(exelem, "  Scale factors: 1 1\n");
-					kfrom = k2;
-				}
+				kelem++;
+				fprintf(exelem, "Element: %d 0 0\n", kelem);
+				fprintf(exelem, "  Nodes: %d %d\n", kfrom+1, k2+1);
+				fprintf(exelem, "  Scale factors: 1 1\n");
+				kfrom = k2;
 			}
 		}
 	}

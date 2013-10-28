@@ -522,10 +522,10 @@ int ReadAmiraFile(char *amFile)
 						return 1;
 					}
 					sscanf(line,"%f %f %f\n",&vertex[i].point.x,&vertex[i].point.y,&vertex[i].point.z);
-					kp = i;
+//					kp = i;
 					vertex[i].point.d = 0;
 //					vertex[i].point.used = true;
-					point[kp] = vertex[i].point;
+//					point[kp] = vertex[i].point;
 				}
 				kp++;
 			} else if (k == 2) {
@@ -553,8 +553,8 @@ int ReadAmiraFile(char *amFile)
 					edgeList[i].pt = (int *)malloc(edgeList[i].npts*sizeof(int));
 					edgeList[i].pt_used = (int *)malloc(edgeList[i].npts*sizeof(int));
 					npts += edgeList[i].npts;
-					edgeList[i].pt[0] = edgeList[i].vert[0];
-					edgeList[i].pt[edgeList[i].npts-1] = edgeList[i].vert[1];
+//					edgeList[i].pt[0] = edgeList[i].vert[0];
+//					edgeList[i].pt[edgeList[i].npts-1] = edgeList[i].vert[1];
 				}
 				printf("Got edge npts, total: %d\n",npts);
 			} else if (k == 4) {
@@ -566,12 +566,12 @@ int ReadAmiraFile(char *amFile)
 							printf("ERROR reading section @4\n");
 							return 1;
 						}
-						if (k > 0 && k<edge.npts-1) {
+//						if (k > 0 && k<edge.npts-1) {
 							sscanf(line,"%f %f %f",&point[kp].x,&point[kp].y,&point[kp].z);
 							edgeList[i].pt[k] = kp;
 							edgeList[i].pt_used[k] = kp;
 							kp++;
-						}
+//						}
 						if (k > 0) {
 							len = len + dist(edgeList[i].pt[k-1],edgeList[i].pt[k]);
 						}
@@ -593,9 +593,9 @@ int ReadAmiraFile(char *amFile)
 							printf("Error: ReadAmiraFile: zero diameter: i: %d npts: %d k: %d j: %d\n",i,edge.npts,k,j);
 							return 1;
 						}
-						if (j < nv) {		// because the first nv points are vertices
-							vertex[j].point.d = point[j].d;
-						}
+//						if (j < nv) {		// because the first nv points are vertices
+//							vertex[j].point.d = point[j].d;
+//						}
 						dave += point[j].d;
 						edgeList[i].segavediam = dave/edge.npts;
 					}
@@ -672,10 +672,6 @@ int squeezer(void)
 			edge.vert[j] = knew;
 		}
 		edgeList_x[ne_x] = edge;
-		if (ne_x == 1737) {
-			printf("new edge 1737 was: %d\n",i);
-			fprintf(fperr,"new edge 1737 was: %d\n",i);
-		}
 		ne_x++;
 	}
 	nv_x = np_x;
