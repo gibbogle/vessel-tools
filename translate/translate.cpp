@@ -527,7 +527,7 @@ int ReadAmiraFile(char *amFile)
 //					vertex[i].point.used = true;
 //					point[kp] = vertex[i].point;
 				}
-				kp++;
+//				kp++;
 			} else if (k == 2) {
 				for (i=0;i<ne;i++) {
 					if (fgets(line, STR_LEN, fpam) == NULL) {
