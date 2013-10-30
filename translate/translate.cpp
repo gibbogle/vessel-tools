@@ -38,11 +38,11 @@ double ratio_limit;
 int inlist(int *list, int n, int k)
 {
 	int i;
-	if (n == 0) return 0;
+	if (n == 0) return -1;
 	for (i=0; i<n; i++) {
 		if (list[i] == k) return i;
 	}
-	return 0;
+	return -1;
 }
 
 //-----------------------------------------------------------------------------------------------------
@@ -409,7 +409,7 @@ int WriteAmiraFile(char *amFileOut, char *amFileIn)
 
 	FILE *fpam = fopen(amFileOut,"w");
 	fprintf(fpam,"# AmiraMesh 3D ASCII 2.0\n");
-	fprintf(fpam,"# Created by prune.exe from: %s\n",amFileIn);
+	fprintf(fpam,"# Created by translater.exe from: %s\n",amFileIn);
 	fprintf(fpam,"\n");
 	fprintf(fpam,"define VERTEX %d\n",nv);
 	fprintf(fpam,"define EDGE %d\n",ne);
@@ -497,7 +497,7 @@ int ReadAmiraFile(char *amFile)
 
 	vertex = (VERTEX *)malloc(nv*sizeof(VERTEX));
 	edgeList = (EDGE *)malloc(nee*sizeof(EDGE));	// 2* for added joining edges
-	point = (APOINT *)malloc(npp*sizeof(APOINT));		// 2* for added joining edges
+	point = (APOINT *)malloc(npp*sizeof(APOINT));	// 2* for added joining edges
 
 	// Initialize
 	for (i=0; i<nee; i++) {
@@ -510,7 +510,6 @@ int ReadAmiraFile(char *amFile)
 	while (1) {
 		if (fgets(line, STR_LEN, fpam) == NULL) {
 			printf("Finished reading SpatialGraph file\n\n");
-//			fclose(fpam);
 			break;
 		}
 		if (line[0] == '@') {
@@ -522,12 +521,9 @@ int ReadAmiraFile(char *amFile)
 						return 1;
 					}
 					sscanf(line,"%f %f %f\n",&vertex[i].point.x,&vertex[i].point.y,&vertex[i].point.z);
-//					kp = i;
 					vertex[i].point.d = 0;
-//					vertex[i].point.used = true;
-//					point[kp] = vertex[i].point;
+					point[i] = vertex[i].point;
 				}
-//				kp++;
 			} else if (k == 2) {
 				for (i=0;i<ne;i++) {
 					if (fgets(line, STR_LEN, fpam) == NULL) {
@@ -553,11 +549,12 @@ int ReadAmiraFile(char *amFile)
 					edgeList[i].pt = (int *)malloc(edgeList[i].npts*sizeof(int));
 					edgeList[i].pt_used = (int *)malloc(edgeList[i].npts*sizeof(int));
 					npts += edgeList[i].npts;
-//					edgeList[i].pt[0] = edgeList[i].vert[0];
-//					edgeList[i].pt[edgeList[i].npts-1] = edgeList[i].vert[1];
+					edgeList[i].pt[0] = edgeList[i].vert[0];
+					edgeList[i].pt[edgeList[i].npts-1] = edgeList[i].vert[1];
 				}
 				printf("Got edge npts, total: %d\n",npts);
 			} else if (k == 4) {
+				kp = nv;
 				for (i=0;i<ne;i++) {
 					edge = edgeList[i];
 					float len = 0;
@@ -566,12 +563,12 @@ int ReadAmiraFile(char *amFile)
 							printf("ERROR reading section @4\n");
 							return 1;
 						}
-//						if (k > 0 && k<edge.npts-1) {
+						if (k > 0 && k<edge.npts-1) {
 							sscanf(line,"%f %f %f",&point[kp].x,&point[kp].y,&point[kp].z);
 							edgeList[i].pt[k] = kp;
 							edgeList[i].pt_used[k] = kp;
 							kp++;
-//						}
+						}
 						if (k > 0) {
 							len = len + dist(edgeList[i].pt[k-1],edgeList[i].pt[k]);
 						}
@@ -593,9 +590,6 @@ int ReadAmiraFile(char *amFile)
 							printf("Error: ReadAmiraFile: zero diameter: i: %d npts: %d k: %d j: %d\n",i,edge.npts,k,j);
 							return 1;
 						}
-//						if (j < nv) {		// because the first nv points are vertices
-//							vertex[j].point.d = point[j].d;
-//						}
 						dave += point[j].d;
 						edgeList[i].segavediam = dave/edge.npts;
 					}
@@ -639,12 +633,13 @@ int ReadAmiraFile(char *amFile)
 int squeezer(void)
 {
 	int i, j, k;
-	int ne_x, nv_x, np_x, knew, i_x;
+	int ne_x, nv_x, np_x, knew, i_x, kv;
 	EDGE edge;
 	EDGE *edgeList_x;
 	VERTEX *vertex_x;
 	APOINT *point_x;
 	int *oldpt;
+	APOINT p;
 
 	printf("squeezer\n");
 	vertex_x = (VERTEX *)malloc(nv*sizeof(VERTEX));
@@ -662,11 +657,13 @@ int squeezer(void)
 		edge.used = true;
 		for (j=0; j<2; j++) {
 			knew = inlist(oldpt,np_x,edgeList[i].vert[j]);
-			if (knew == 0) {
+			if (knew == -1) {
 				oldpt[np_x] = edgeList[i].vert[j];
 				vertex_x[np_x].point = point[oldpt[np_x]];
 				point_x[np_x] = point[oldpt[np_x]];
 				knew = np_x;
+//				printf("Vertex: %6d %6d %3d %6d\n",nv_x, i,j,edgeList[i].vert[j]);
+//				fprintf(fpout,"Vertex: %6d %6d %3d %6d\n",nv_x, i,j,edgeList[i].vert[j]);
 				np_x++;
 			}
 			edge.vert[j] = knew;
@@ -676,10 +673,15 @@ int squeezer(void)
 	}
 	nv_x = np_x;
 
+	//fprintf(fpout, "Original vertices: %d\n",nv);
+	//for (kv=0; kv<nv; kv++) {
+	//	p = point[kv];
+	//	fprintf(fpout,"%6d %6d %8.1f %8.1f %8.1f %8.2f\n",kv,oldpt[kv],p.x,p.y,p.z,p.d);
+	//}
+
 	// Now add the edge interior points to the list.  These occur once only.
 	i_x = 0;
 	for (i=0; i<ne; i++) {
-//		printf("edge: %d used: %d npts:%d\n",i,edgeList[i].used,edgeList[i].npts);
 		if (!edgeList[i].used) continue;
 		int npts = edgeList[i].npts;
 		if (npts < 1) {
@@ -721,6 +723,7 @@ int squeezer(void)
 	free(edgeList_x); 
 	free(point_x);
 	free(oldpt);
+	printf("Did squeezer\n");
 	return 0;
 }
 
@@ -800,8 +803,8 @@ int main(int argc, char **argv)
 	err = ReadAmiraFile(input_amfile);
 	if (err != 0) return 2;
 
-//	err = squeezer();	// must squeeze, or SpatialGraph and CMGUI files are not consistent
-//	if (err != 0) return 6;
+	err = squeezer();	// must squeeze, or SpatialGraph and CMGUI files are not consistent
+	if (err != 0) return 6;
 
 	err = WriteAmiraFile(output_amfile,input_amfile);
 	if (err != 0) return 7;
