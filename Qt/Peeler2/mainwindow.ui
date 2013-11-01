@@ -223,7 +223,7 @@
      <x>0</x>
      <y>0</y>
      <width>950</width>
-     <height>21</height>
+     <height>18</height>
     </rect>
    </property>
   </widget>
@@ -260,15 +260,15 @@
    <sender>pushButtonCompress</sender>
    <signal>clicked()</signal>
    <receiver>MainWindow</receiver>
-   <slot>peeler()</slot>
+   <slot>peeler2()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>334</x>
-     <y>285</y>
+     <x>338</x>
+     <y>291</y>
     </hint>
     <hint type="destinationlabel">
-     <x>421</x>
-     <y>318</y>
+     <x>463</x>
+     <y>311</y>
     </hint>
    </hints>
   </connection>
@@ -276,6 +276,6 @@
  <slots>
   <slot>outputFileSelecter()</slot>
   <slot>inputFileSelecter()</slot>
-  <slot>peeler()</slot>
+  <slot>peeler2()</slot>
  </slots>
 </ui>
