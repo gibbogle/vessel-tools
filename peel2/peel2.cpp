@@ -157,8 +157,7 @@ void doSeg(const CmdLineType &CmdLineObj)
     itk::Instance<itk::ShiftScaleImageFilter<MaskImType, MaskImType> > Scale1;
 	Scale1->SetInput(BinClose->GetOutput());
 	Scale1->SetScale(255.0);
-    writeImComp<MaskImType>(Scale1->GetOutput(), CmdLineObj.OutputImPrefix + "_close255" + CmdLineObj.suffix);	// (0,255)
-	return;
+//    writeImComp<MaskImType>(Scale1->GetOutput(), CmdLineObj.OutputImPrefix + "_close255" + CmdLineObj.suffix);	// (0,255)
 
   BinErode->SetInput(BinClose->GetOutput());
   BinErode->SetUseImageSpacing(true);
@@ -207,7 +206,7 @@ void doSeg(const CmdLineType &CmdLineObj)
   Comb->SetInput2(KeepBig->GetOutput());
 
 
-	writeImComp<MaskImType>(Comb->GetOutput(), CmdLineObj.OutputImPrefix + "_marker" + CmdLineObj.suffix);	//(0,1,2) 1 = desired
+//	writeImComp<MaskImType>(Comb->GetOutput(), CmdLineObj.OutputImPrefix + "_marker" + CmdLineObj.suffix);	//(0,1,2) 1 = desired
 
 
 //  printf("terminate after marker\n");
@@ -237,20 +236,20 @@ void doSeg(const CmdLineType &CmdLineObj)
   Selector->SetInsideValue(1);	//255?
   Selector->SetOutsideValue(0);
 
-  writeImComp<MaskImType>(Selector->GetOutput(), CmdLineObj.OutputImPrefix + "_wsseg" + CmdLineObj.suffix);
+//  writeImComp<MaskImType>(Selector->GetOutput(), CmdLineObj.OutputImPrefix + "_wsseg" + CmdLineObj.suffix);
 
     itk::Instance<itk::ShiftScaleImageFilter<MaskImType, MaskImType> > Scale;
 	Scale->SetInput(Selector->GetOutput());
 	Scale->SetScale(127.0);
 
-  writeImComp<MaskImType>(Scale->GetOutput(), CmdLineObj.OutputImPrefix + "_wsseg254" + CmdLineObj.suffix);
+//  writeImComp<MaskImType>(Scale->GetOutput(), CmdLineObj.OutputImPrefix + "_wsseg254" + CmdLineObj.suffix);
 
   itk::Instance<itk::BinaryErodeParaImageFilter<MaskImType, MaskImType> > Peeler;
   Peeler->SetInput(Selector->GetOutput());
   Peeler->SetUseImageSpacing(true);
   Peeler->SetRadius(CmdLineObj.peel);
 
-  writeImComp<MaskImType>(Peeler->GetOutput(), CmdLineObj.OutputImPrefix + "_peeler" + CmdLineObj.suffix);
+//  writeImComp<MaskImType>(Peeler->GetOutput(), CmdLineObj.OutputImPrefix + "_peeler" + CmdLineObj.suffix);
 
   itk::Instance<itk::MaskImageFilter<RawImType, MaskImType> > masker;
   masker->SetInput(input);
@@ -258,10 +257,10 @@ void doSeg(const CmdLineType &CmdLineObj)
 
   writeImComp<RawImType>(masker->GetOutput(), CmdLineObj.OutputImPrefix + "_masked" + CmdLineObj.suffix);
 
-  masker->SetInput(input);
-  masker->SetInput2(Selector->GetOutput());
+//  masker->SetInput(input);
+//  masker->SetInput2(Selector->GetOutput());
 
-  writeImComp<RawImType>(masker->GetOutput(), CmdLineObj.OutputImPrefix + "_nopeel" + CmdLineObj.suffix);
+//  writeImComp<RawImType>(masker->GetOutput(), CmdLineObj.OutputImPrefix + "_nopeel" + CmdLineObj.suffix);
 
 }
 
