@@ -289,6 +289,27 @@ double Q(double *e0, double *e1, double p0[], double p1[], double Vx[], double V
 }
 
 //-----------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------
+void showvertex(int iv)
+{
+	int k, ie, npts;
+	EDGE *edge;
+
+	printf("vertex: %d nlinks: %d nlinks_used: %d\n",iv,vertex[iv].nlinks, vertex[iv].nlinks_used);
+	if (!vertex[iv].used) {
+		printf("NOT USED\n");
+		return;
+	}
+	for (int k=0; k<vertex[iv].nlinks_used; k++) {
+		ie = vertex[iv].edge[k];
+		edge = &edgeList[ie];
+		npts = edge->npts;
+		printf("link: %d edge: %d npts: %d vert: %d %d endpts: %d %d\n",k,ie,npts,
+			edge->vert[0], edge->vert[1], edge->pt[0], edge->pt[npts-1]);
+	}
+}
+
+//-----------------------------------------------------------------------------------------------------
 // mode = 'D' to print diameters, 'N' to print node numbers
 //-----------------------------------------------------------------------------------------------------
 void showedge(int ie, char mode) {
@@ -4046,9 +4067,9 @@ int TraceSkeleton(int n_prune_cycles)
 				npts++;
 				next[0] = x; next[1] = y; next[2] = z;
 				if (USE_NEW)
-				nbrs = GetNeighborsNew(next,nbrlist);
+					nbrs = GetNeighborsNew(next,nbrlist);
 				else
-				nbrs = GetNeighborsOld(next,nbrlist);
+					nbrs = GetNeighborsOld(next,nbrlist);
 //				printf("nbrs: %d\n",nbrs);
 //				if (nbrs != 1) continue;	// an end point has just one neighbor
 				nbcount[nbrs] = nbcount[nbrs] + 1;
@@ -4083,10 +4104,10 @@ int TraceSkeleton(int n_prune_cycles)
 			for (x=0; x<width; x++) {
 				if (V3Dskel(x,y,z) == 0) continue;
 				next[0] = x; next[1] = y; next[2] = z;
-//				if (USE_NEW)
-//				nbrs = GetNeighborsNew(next,nbrlist);
-//				else
-				nbrs = GetNeighborsOld(next,nbrlist);
+				if (USE_NEW)
+					nbrs = GetNeighborsNew(next,nbrlist);
+				else
+					nbrs = GetNeighborsOld(next,nbrlist);
 				if (nbrs > MAXNBRS) {
 					printf("Error: TraceSkeleton: nbrs > MAXNBRS: %d  %d\n",nbrs,MAXNBRS);
 					fprintf(fperr,"Error: TraceSkeleton: nbrs > MAXNBRS: %d  %d\n",nbrs,MAXNBRS);
@@ -4128,13 +4149,13 @@ int TraceSkeleton(int n_prune_cycles)
 	// Now find the neighbour IDs
 	for (k=0; k<npts; k++) {
 		nbrs = voxel[k].nbrs;
-//		printf("Voxel: %d  %d %d %d  nbrs: %d\n",k,voxel[k].pos[0],voxel[k].pos[1],voxel[k].pos[2],nbrs);
+		if (k == 8220) printf("Voxel: %d  %d %d %d  nbrs: %d\n",k,voxel[k].pos[0],voxel[k].pos[1],voxel[k].pos[2],nbrs);
 		nhit = 0;
 		for (j=0; j<nbrs; j++) {	// look at the neighbour points one by one
 			xnb = voxel[k].nbr[j][0];
 			ynb = voxel[k].nbr[j][1];
 			znb = voxel[k].nbr[j][2];
-//			printf("nbr: %d  %d %d %d\n",j,xnb,ynb,znb);
+			if (k == 8220) printf("nbr: %d  %d %d %d\n",j,xnb,ynb,znb);
 			hit = false;
 			if (k > 0) {	// look at preceding voxels in the list
 				k1 = k;
@@ -4146,7 +4167,7 @@ int TraceSkeleton(int n_prune_cycles)
 						voxel[k].nid[j] = k1;
 						hit = true;
 						nhit++;
-//						printf("hit: %d  k1: %d  %d %d %d\n",nhit,k1,xnb,ynb,znb);
+						if (k == 8220) printf("hit: %d  k1: %d  %d %d %d\n",nhit,k1,xnb,ynb,znb);
 						break;
 					}
 				}
@@ -4162,7 +4183,7 @@ int TraceSkeleton(int n_prune_cycles)
 						voxel[k].nid[j] = k1;
 						hit = true;
 						nhit++;
-//						printf("hit: %d  k1: %d  %d %d %d\n",nhit,k1,xnb,ynb,znb);
+						if (k == 8220) printf("hit: %d  k1: %d  %d %d %d\n",nhit,k1,xnb,ynb,znb);
 						break;
 					}
 				}
@@ -4443,7 +4464,7 @@ int FixDiameters()
 	// Need to identify the point corresponding to the vertex!
 	// This is edge->pt[0] if iv == edge->vert[0], edge->pt[npts-1] if iv = edge->vert[1]
 	for (iv=0; iv<nv; iv++) {
-		if (!vertex[iv].used) continue;
+		if (!vertex[iv].used || vertex[iv].nlinks_used == 0) continue;
 		dmin = 1.0e10;
 		dmax = 0;
 		dave = 0;
@@ -4460,7 +4481,7 @@ int FixDiameters()
 				} else if (iv == edge->vert[1]) {
 					kp = edgeList[ie].pt[npts-2];
 				} else {
-					printf("Error: FixDiameters: iV: %d vert: %d %d\n",iv,edge->vert[0],edge->vert[1]);
+					printf("Error: FixDiameters: iv: %d vert: %d %d\n",iv,edge->vert[0],edge->vert[1]);
 					return 1;
 				}
 				if (avediameter[kp] < dmin) dmin = avediameter[kp];
@@ -4655,7 +4676,6 @@ int main(int argc, char**argv)
 		return 5;
 	}
 	printf("did TraceSkeleton\n");
-
 	err = simplify();
 	if (err != 0) {
 		printf("Error: simplify\n");
@@ -4675,7 +4695,7 @@ int main(int argc, char**argv)
 		}
 		err = FixDiameters();
 		if (err != 0) {
-			printf("Error: GFixDiameters\n");
+			printf("Error: FixDiameters\n");
 			fprintf(fperr,"Error: FixDiameters\n");
 			fclose(fperr);
 			return 12;

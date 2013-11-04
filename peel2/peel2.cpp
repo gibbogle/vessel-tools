@@ -110,193 +110,178 @@ void ParseCmdLine(int argc, char* argv[],
 template <class PixType, int dim>
 void doSeg(const CmdLineType &CmdLineObj)
 {
-  typedef typename itk::Image<PixType, dim> RawImType;
-  typedef typename RawImType::Pointer PRawImType;
+	typedef typename itk::Image<PixType, dim> RawImType;
+	typedef typename RawImType::Pointer PRawImType;
 
-  typedef typename itk::Image<unsigned char, dim> MaskImType;
-  typedef typename MaskImType::Pointer PMaskImType;
+	typedef typename itk::Image<unsigned char, dim> MaskImType;
+	typedef typename MaskImType::Pointer PMaskImType;
 
-  typedef typename itk::Image<unsigned int, dim> LabImType;
-  typedef typename LabImType::Pointer PLabImType;
+	typedef typename itk::Image<unsigned int, dim> LabImType;
+	typedef typename LabImType::Pointer PLabImType;
 
-  // load input
-  PRawImType input = readIm<RawImType>(CmdLineObj.InputIm);
-  // stuff to do with spacing information should go here - deal with
-  // this later.
+	// load input
+	PRawImType input = readIm<RawImType>(CmdLineObj.InputIm);
+	// stuff to do with spacing information should go here - deal with
+	// this later.
 
-  // begin filtering to produce a foreground and background marker -
-  // this uses world units for filter parameters. There is nothing
-  // special about this order of operations.
+	// begin filtering to produce a foreground and background marker -
+	// this uses world units for filter parameters. There is nothing
+	// special about this order of operations.
 
-  // Binarise first as the data seems clean
-  // filter, and it probably wouldn't make much difference. I've
-  // chosen to apply the threshold estimation step to the stage which
-  // will have the most non zero voxels.
+	// Binarise first as the data seems clean
+	// filter, and it probably wouldn't make much difference. I've
+	// chosen to apply the threshold estimation step to the stage which
+	// will have the most non zero voxels.
 
-//Gib  float delta = CmdLineObj.closingsize/2;
-  float delta = 10;
+	float delta = CmdLineObj.closingsize/2;
+	//float delta = 10;
 
-  itk::Instance<itk::BinaryThresholdImageFilter<MaskImType, MaskImType> > Thresh;
-  Thresh->SetInput(input);
-  Thresh->SetUpperThreshold(CmdLineObj.FirstThresh);
-  Thresh->SetOutsideValue(1);	
-  Thresh->SetInsideValue(0);
-  Thresh->ReleaseDataFlagOn();	//Gib
+	itk::Instance<itk::BinaryThresholdImageFilter<MaskImType, MaskImType> > Thresh;
+	Thresh->SetInput(input);
+	Thresh->SetUpperThreshold(CmdLineObj.FirstThresh);
+	Thresh->SetOutsideValue(1);	
+	Thresh->SetInsideValue(0);
+	Thresh->ReleaseDataFlagOn();	//Gib
 
-//	writeImComp<MaskImType>(Thresh->GetOutput(), CmdLineObj.OutputImPrefix + "_thresh" + CmdLineObj.suffix);
+	//	writeImComp<MaskImType>(Thresh->GetOutput(), CmdLineObj.OutputImPrefix + "_thresh" + CmdLineObj.suffix);
 
-  itk::Instance<itk::BinaryCloseParaImageFilter<MaskImType, MaskImType> > BinClose;
+	itk::Instance<itk::BinaryCloseParaImageFilter<MaskImType, MaskImType> > BinClose;
 
-  itk::Instance<itk::BinaryErodeParaImageFilter<MaskImType, MaskImType> > BinErode;
+	itk::Instance<itk::BinaryErodeParaImageFilter<MaskImType, MaskImType> > BinErode;
 
-  itk::Instance<itk::BinaryDilateParaImageFilter<MaskImType, MaskImType> > BinDilate;
+	itk::Instance<itk::BinaryDilateParaImageFilter<MaskImType, MaskImType> > BinDilate;
 
-  BinClose->SetInput(Thresh->GetOutput());
-  printf("Did Thresh\n");
-  BinClose->SetUseImageSpacing(true);
-  BinClose->SetRadius(CmdLineObj.closingsize);
-  BinClose->ReleaseDataFlagOn();	//Gib
+	BinClose->SetInput(Thresh->GetOutput());
+	printf("Did Thresh\n");
+	BinClose->SetUseImageSpacing(true);
+	BinClose->SetRadius(CmdLineObj.closingsize);
+	BinClose->ReleaseDataFlagOn();	//Gib
 
-//    writeImComp<MaskImType>(BinClose->GetOutput(), CmdLineObj.OutputImPrefix + "_close" + CmdLineObj.suffix);	// (0,1)
+	// writeImComp<MaskImType>(BinClose->GetOutput(), CmdLineObj.OutputImPrefix + "_close" + CmdLineObj.suffix);	// (0,1)
 
     itk::Instance<itk::ShiftScaleImageFilter<MaskImType, MaskImType> > Scale255;
 	Scale255->SetScale(255.0);
 	Scale255->SetInput(BinClose->GetOutput());
     writeImComp<MaskImType>(Scale255->GetOutput(), CmdLineObj.OutputImPrefix + "_close255" + CmdLineObj.suffix);	// (0,255)
 
-  BinErode->SetInput(BinClose->GetOutput());
-  BinErode->SetUseImageSpacing(true);
-  BinErode->SetRadius(delta);
-  printf("Did BinClose\n");
+	BinErode->SetInput(BinClose->GetOutput());
+	BinErode->SetUseImageSpacing(true);
+	BinErode->SetRadius(delta);
+	printf("Did BinClose\n");
 
-  // only keep big objects
-  itk::Instance<itk::BinaryShapeOpeningImageFilter<MaskImType> > KeepBig;
-  KeepBig->SetInput(BinErode->GetOutput());
-  printf("Did BinErode\n");
-  KeepBig->SetForegroundValue(255);	//1
-  KeepBig->SetLambda(CmdLineObj.SizeOpening);
-  KeepBig->SetAttribute("PhysicalSize");
-//      writeImComp<MaskImType>(KeepBig->GetOutput(), CmdLineObj.OutputImPrefix + "_big" + CmdLineObj.suffix);	// (0,1)
+	// only keep big objects
+	itk::Instance<itk::BinaryShapeOpeningImageFilter<MaskImType> > KeepBig;
+	KeepBig->SetInput(BinErode->GetOutput());
+	printf("Did BinErode\n");
+	KeepBig->SetForegroundValue(255);	//1
+	KeepBig->SetLambda(CmdLineObj.SizeOpening);
+	KeepBig->SetAttribute("PhysicalSize");
+	// writeImComp<MaskImType>(KeepBig->GetOutput(), CmdLineObj.OutputImPrefix + "_big" + CmdLineObj.suffix);	// (0,1)
 
-  BinDilate->SetInput(BinClose->GetOutput());
-  BinDilate->SetUseImageSpacing(true);
-  BinDilate->SetRadius(delta);
+	BinDilate->SetInput(BinClose->GetOutput());
+	BinDilate->SetUseImageSpacing(true);
+	BinDilate->SetRadius(delta);
 
-  bool use_simple = true;
+	bool use_simple = false;	// the close file is not adequate for masking
 
-  itk::Instance<itk::BinaryErodeParaImageFilter<MaskImType, MaskImType> > Peeler;
-  if (use_simple) {
-	  printf("This is the simplified code, using the eroded-dilated close image as Peeler input\n");
-      Peeler->SetInput(BinDilate->GetOutput());
-  } else {
+	itk::Instance<itk::BinaryErodeParaImageFilter<MaskImType, MaskImType> > Peeler;
+	if (use_simple) {
+		printf("This is the simplified code, using the eroded-dilated close image as Peeler input\n");
+		Peeler->SetInput(BinDilate->GetOutput());
+	} else {
 
-//      writeImComp<MaskImType>(BinDilate->GetOutput(), CmdLineObj.OutputImPrefix + "_dilate" + CmdLineObj.suffix);	// (0,1)
+		// writeImComp<MaskImType>(BinDilate->GetOutput(), CmdLineObj.OutputImPrefix + "_dilate" + CmdLineObj.suffix);	// (0,1)
 
-	  // invert to create background marker
-  itk::Instance<itk::BinaryThresholdImageFilter<MaskImType, MaskImType> > Invert;
-  Invert->SetInput(BinDilate->GetOutput());
-  printf("Did BinDilate\n");
-  Invert->SetUpperThreshold(1);
-  Invert->SetLowerThreshold(1);
-  Invert->SetInsideValue(0);
-  Invert->SetOutsideValue(2);	
+		// invert to create background marker
+		itk::Instance<itk::BinaryThresholdImageFilter<MaskImType, MaskImType> > Invert;
+		Invert->SetInput(BinDilate->GetOutput());
+		printf("Did BinDilate\n");
+		Invert->SetUpperThreshold(1);
+		Invert->SetLowerThreshold(1);
+		Invert->SetInsideValue(0);
+		Invert->SetOutsideValue(2);	
 
-//      writeImComp<MaskImType>(Invert->GetOutput(), CmdLineObj.OutputImPrefix + "_invert" + CmdLineObj.suffix);	// (0,0)?
+		//      writeImComp<MaskImType>(Invert->GetOutput(), CmdLineObj.OutputImPrefix + "_invert" + CmdLineObj.suffix);	// (0,0)?
 
-  // Modification (16/7/2013) to eliminate interior voids in the marker tiff
-  bool use_size_filter = true;
-  // Note change to Comb->SetInput
-  itk::Instance<itk::BinaryShapeKeepNObjectsImageFilter<MaskImType> > SizeFilter;
-  itk::Instance<itk::MaximumImageFilter<MaskImType, MaskImType, MaskImType> > Comb;
+		// Modification (16/7/2013) to eliminate interior voids in the marker tiff
+		bool use_size_filter = true;
+		// Note change to Comb->SetInput
+		itk::Instance<itk::BinaryShapeKeepNObjectsImageFilter<MaskImType> > SizeFilter;
+		itk::Instance<itk::MaximumImageFilter<MaskImType, MaskImType, MaskImType> > Comb;
 
-  if (use_size_filter) {
-	  SizeFilter->SetInput(Invert->GetOutput());
-	  printf("Did Invert\n");
-	  SizeFilter->SetBackgroundValue(0);
-	  SizeFilter->SetForegroundValue(2);
-	  SizeFilter->SetNumberOfObjects(1);
-	  SizeFilter->SetAttribute("PhysicalSize");
-	  Comb->SetInput(SizeFilter->GetOutput());
-//      writeImComp<MaskImType>(SizeFilter->GetOutput(), CmdLineObj.OutputImPrefix + "_size" + CmdLineObj.suffix);	// (0,0)?
-      printf("Did SizeFilter\n");
-  } else {
-	  Comb->SetInput(Invert->GetOutput());
-  }
-  Comb->SetInput2(KeepBig->GetOutput());
+		if (use_size_filter) {
+			SizeFilter->SetInput(Invert->GetOutput());
+			printf("Did Invert\n");
+			SizeFilter->SetBackgroundValue(0);
+			SizeFilter->SetForegroundValue(2);
+			SizeFilter->SetNumberOfObjects(1);
+			SizeFilter->SetAttribute("PhysicalSize");
+			Comb->SetInput(SizeFilter->GetOutput());
+		//      writeImComp<MaskImType>(SizeFilter->GetOutput(), CmdLineObj.OutputImPrefix + "_size" + CmdLineObj.suffix);	// (0,0)?
+			printf("Did SizeFilter\n");
+		} else {
+			Comb->SetInput(Invert->GetOutput());
+		}
+		Comb->SetInput2(KeepBig->GetOutput());
 
+		//	writeImComp<MaskImType>(Comb->GetOutput(), CmdLineObj.OutputImPrefix + "_marker" + CmdLineObj.suffix);	//(0,1,2) 1 = desired
 
-//	writeImComp<MaskImType>(Comb->GetOutput(), CmdLineObj.OutputImPrefix + "_marker" + CmdLineObj.suffix);	//(0,1,2) 1 = desired
+		// now for watershed
+		itk::Instance< itk::SmoothingRecursiveGaussianImageFilter <RawImType, RawImType> > Smoother;
+		Smoother->SetInput(input);
+		Smoother->SetSigma(CmdLineObj.sigma);
 
+		itk::Instance< itk::MorphologicalWatershedFromMarkersImageFilter<RawImType, MaskImType> > WS;
+		if (CmdLineObj.sigma > 0)
+		{
+			WS->SetInput(Smoother->GetOutput());
+		}
+		else
+		{
+			WS->SetInput(input);
+		}
 
-//  printf("terminate after marker\n");
-//  return;
+		WS->SetMarkerImage(Comb->GetOutput());	//_marker.tif
+		// throw away the background label
+		itk::Instance<itk::BinaryThresholdImageFilter<MaskImType, MaskImType> > Selector;
+		Selector->SetInput(WS->GetOutput());
+		Selector->SetUpperThreshold(1);
+		Selector->SetLowerThreshold(1);
+		Selector->SetInsideValue(1);	//255?
+		Selector->SetOutsideValue(0);
 
-  // now for watershed
-  itk::Instance< itk::SmoothingRecursiveGaussianImageFilter <RawImType, RawImType> > Smoother;
-  Smoother->SetInput(input);
-  Smoother->SetSigma(CmdLineObj.sigma);
+		Scale255->SetInput(Selector->GetOutput());
+		writeImComp<MaskImType>(Scale255->GetOutput(), CmdLineObj.OutputImPrefix + "_selector255" + CmdLineObj.suffix);	// (0,255)
 
-  itk::Instance< itk::MorphologicalWatershedFromMarkersImageFilter<RawImType, MaskImType> > WS;
-  if (CmdLineObj.sigma > 0)
-    {
-    WS->SetInput(Smoother->GetOutput());
-    }
-  else
-    {
-    WS->SetInput(input);
-    }
+		//  writeImComp<MaskImType>(Selector->GetOutput(), CmdLineObj.OutputImPrefix + "_wsseg" + CmdLineObj.suffix);
 
-  WS->SetMarkerImage(Comb->GetOutput());	//_marker.tif
-  // throw away the background label
-  itk::Instance<itk::BinaryThresholdImageFilter<MaskImType, MaskImType> > Selector;
-  Selector->SetInput(WS->GetOutput());
-  Selector->SetUpperThreshold(1);
-  Selector->SetLowerThreshold(1);
-  Selector->SetInsideValue(1);	//255?
-  Selector->SetOutsideValue(0);
+		itk::Instance<itk::ShiftScaleImageFilter<MaskImType, MaskImType> > Scale127;
+		Scale127->SetInput(Selector->GetOutput());
+		printf("Did Selector\n");
+		Scale127->SetScale(127.0);
 
-	Scale255->SetInput(Selector->GetOutput());
-    writeImComp<MaskImType>(Scale255->GetOutput(), CmdLineObj.OutputImPrefix + "_selector255" + CmdLineObj.suffix);	// (0,255)
+		writeImComp<MaskImType>(Scale127->GetOutput(), CmdLineObj.OutputImPrefix + "_wsseg254" + CmdLineObj.suffix);
 
-//  writeImComp<MaskImType>(Selector->GetOutput(), CmdLineObj.OutputImPrefix + "_wsseg" + CmdLineObj.suffix);
+		Peeler->SetInput(Selector->GetOutput());
+	}
 
-    itk::Instance<itk::ShiftScaleImageFilter<MaskImType, MaskImType> > Scale127;
-	Scale127->SetInput(Selector->GetOutput());
-	printf("Did Selector\n");
-	Scale127->SetScale(127.0);
+	Peeler->SetUseImageSpacing(true);
+	Peeler->SetRadius(CmdLineObj.peel);
+	printf("Did BinDilate\n");
 
-  writeImComp<MaskImType>(Scale127->GetOutput(), CmdLineObj.OutputImPrefix + "_wsseg254" + CmdLineObj.suffix);
+	//  writeImComp<MaskImType>(Peeler->GetOutput(), CmdLineObj.OutputImPrefix + "_peeler" + CmdLineObj.suffix);
 
-  bool use_binerode = false;
-  bool use_bindilate = true;
-  if (use_binerode) {
-    Peeler->SetInput(BinErode->GetOutput());
-  } else if (use_bindilate) {
-    Peeler->SetInput(BinDilate->GetOutput());
-  } else {
-    Peeler->SetInput(Selector->GetOutput());
-  }
-  }
+	itk::Instance<itk::MaskImageFilter<RawImType, MaskImType> > masker;
+	masker->SetInput(input);
+	masker->SetInput2(Peeler->GetOutput());
+	printf("Do Peeler\n");
 
-  Peeler->SetUseImageSpacing(true);
-  Peeler->SetRadius(CmdLineObj.peel);
-  printf("Did BinDilate\n");
+	writeImComp<RawImType>(masker->GetOutput(), CmdLineObj.OutputImPrefix + "_masked" + CmdLineObj.suffix);
+	printf("Did Peeler\n");
 
-//  writeImComp<MaskImType>(Peeler->GetOutput(), CmdLineObj.OutputImPrefix + "_peeler" + CmdLineObj.suffix);
-
-  itk::Instance<itk::MaskImageFilter<RawImType, MaskImType> > masker;
-  masker->SetInput(input);
-  masker->SetInput2(Peeler->GetOutput());
-  printf("Do Peeler\n");
-
-  writeImComp<RawImType>(masker->GetOutput(), CmdLineObj.OutputImPrefix + "_masked" + CmdLineObj.suffix);
-  printf("Did Peeler\n");
-
-  //masker->SetInput(input);
-  //masker->SetInput2(Selector->GetOutput());
-
-  //writeImComp<RawImType>(masker->GetOutput(), CmdLineObj.OutputImPrefix + "_nopeel" + CmdLineObj.suffix);
-
+	//masker->SetInput(input);
+	//masker->SetInput2(Selector->GetOutput());
+	//writeImComp<RawImType>(masker->GetOutput(), CmdLineObj.OutputImPrefix + "_nopeel" + CmdLineObj.suffix);
 }
 
 int main(int argc, char * argv[])

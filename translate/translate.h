@@ -15,6 +15,7 @@ struct vertex_str
 	int nlinks;
 	int pt[10];
 	bool used;
+	int point_index;
 };
 typedef vertex_str VERTEX;
 
