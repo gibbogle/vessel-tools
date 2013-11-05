@@ -98,8 +98,10 @@ int MainWindow::createTiff(const char *tifffile, unsigned char *buffer, int widt
     catch (itk::ExceptionObject &e)
     {
         std::cout << e << std::endl;
+//        free(p_u8);
         return 1;
     }
+//    free(p_u8);
     printf("Wrote tiff file\n");
 
     return 0;

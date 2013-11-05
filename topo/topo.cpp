@@ -333,6 +333,7 @@ void showedge(int ie, char mode) {
 	printf("\n");
 }
 
+
 //-----------------------------------------------------------------------------------------------------
 // If the value k is found in list (list[0] ... list[n-1]) then the index is returned,
 // otherwise -1 is returned.
@@ -351,6 +352,7 @@ int inlist(int *list, int n, int k)
 // Reorder element and node identifiers
 // writeCMGUIfile() does not use any vertex data
 // writeAMIRAfile() uses edge.vert[] and vertex[].pos[]
+// Need to check for verticies with only two links, join two edges into one.
 //-----------------------------------------------------------------------------------------------------
 int squeezer(void)
 {
@@ -370,6 +372,9 @@ int squeezer(void)
 	voxel_x = (VOXEL *)malloc(2*np*sizeof(VOXEL));
 	oldpt = (int *)malloc(2*np*sizeof(int));
 	avediameter_x = (float *)malloc(2*np*sizeof(float));
+	for (kv=0; kv<nv; kv++) {
+		vertex_x[kv].edge = (int *)malloc(MAXNBRS*sizeof(int));
+	}
 
 	err = 0;
 	ne_x = 0;
@@ -388,11 +393,9 @@ int squeezer(void)
 			knew = inlist(oldpt,np_x,ivox);
 			if (knew == -1) {
 				oldpt[np_x] = ivox;		//edgeList[i].vert[j];						// index in old voxel list
-				for (k=0; k<3; k++)
+				for (k=0; k<3; k++) {
 					vertex_x[np_x].pos[k] = voxel[oldpt[np_x]].pos[k];
-// TRY THIS
-//				voxel_x[np_x] = voxel[oldpt[np_x]];
-//				avediameter_x[np_x] = avediameter[oldpt[np_x]];
+				}
 				knew = np_x;
 				np_x++;
 			}
@@ -464,8 +467,15 @@ int squeezer(void)
 			fprintf(fperr,"Error: squeezer: repeated point: new edge: %d new point: %d\n",i,edge->pt[0]);
 			err = 2;
 		}
+		// Set nlinks for verticies
+		for (k=0; k<2; k++) {
+			kv = edge->vert[k];
+			vertex[kv].nlinks++;
+			vertex[kv].nlinks_used++;
+		}
 	}
 	np = np_x;
+
 	for (i=0; i<np; i++) {
 		voxel[i] = voxel_x[i];
 		avediameter[i] = avediameter_x[i];
@@ -2126,7 +2136,7 @@ int CreateDistributions()
 		edge = edgeList[ie];
 		if (!edge.used) continue;
 //		printf("ie: %d npts: %d\n",ie,edge.npts);
-		fprintf(fperr,"ie: %d npts: %d npts_used: %d\n",ie,edge.npts,edge.npts_used);
+//		fprintf(fperr,"ie: %d npts: %d npts_used: %d\n",ie,edge.npts,edge.npts_used);
 		fflush(fperr);
 		nptstot += edge.npts;
 		nptsusedtot += edge.npts_used;
@@ -2633,6 +2643,50 @@ int joiner(int kv)
 }
 
 //-----------------------------------------------------------------------------------------------------
+// Look for vertices with two links, and join the two connected edges into a single edge.
+//-----------------------------------------------------------------------------------------------------
+void checkVerticies()
+{
+	int kv, ie, nlinks, nlinks_used, n2;
+	EDGE *edge;
+
+	printf("checkVerticies\n");
+	for (kv=0; kv < nv; kv++) {
+		vertex[kv].used == false;
+		vertex[kv].nlinks = 0;			//---
+		vertex[kv].nlinks_used = 0;		//---
+	}
+//	printf("zeroed nlinks\n");
+	for (ie=0; ie<ne; ie++) {
+		edge = &edgeList[ie];
+		if (!edge->used) continue;
+//		printf("ie: %d vert: %d %d\n",ie,edge->vert[0],edge->vert[1]);
+		kv = edge->vert[0];
+		vertex[kv].edge[vertex[kv].nlinks_used] = ie;	//---
+		vertex[kv].nlinks++;			//---
+		vertex[kv].nlinks_used++;		//---
+		vertex[kv].used = true;			
+		kv = edge->vert[1];
+		vertex[kv].edge[vertex[kv].nlinks_used] = ie;	//---
+		vertex[kv].used = true;
+		vertex[kv].nlinks++;			//---
+		vertex[kv].nlinks_used++;		//---
+	}
+	n2 = 0;
+	for (kv=0; kv < nv; kv++) {
+		if (!vertex[kv].used) continue;
+		nlinks = vertex[kv].nlinks;
+		nlinks_used = vertex[kv].nlinks_used;
+		if (nlinks == 2 || nlinks_used == 2) {
+			n2++;
+			printf("vertex: %d nlinks: %d  nlinks_used: %d\n",kv,nlinks,nlinks_used);
+			joiner(kv);					//---
+		}
+	}
+	printf("Number of 2-verticies: %d\n",n2);
+}
+
+//-----------------------------------------------------------------------------------------------------
 // Check consistency of vertex nlinks_used and edges
 //-----------------------------------------------------------------------------------------------------
 int checker(void)
@@ -2645,8 +2699,9 @@ int checker(void)
 	fprintf(fperr,"checker: nv: %d\n",nv);
 	err = false;
 	nlused = (int *)malloc(nv*sizeof(int));
-	for (kv=0; kv<nv; kv++)
+	for (kv=0; kv<nv; kv++) {
 		nlused[kv] = 0;
+	}
 	for (ie=0; ie<ne; ie++) {
 		if (!edgeList[ie].used) continue;
 		for (k=0; k<2; k++) {
@@ -2662,6 +2717,10 @@ int checker(void)
 			fprintf(fperr,"checker: vertex: %d nlinks: %d nlinks_used: %d used: %d\n",kv,vertex[kv].nlinks,vertex[kv].nlinks_used,nlused[kv]);
 			err = true;
 		}
+		//if (nlused[kv] == 2) {
+		//	printf("checker: vertex: %d nlinks: %d\n",kv,2);
+		//	err = true;
+		//}
 		ivox = vertex[kv].ivox;
 	}
 	free(nlused);
@@ -2897,6 +2956,7 @@ int checkUnconnected(void)
 //-----------------------------------------------------------------------------------------------------
 // Search for loops
 // deloop works fine.  Should remove longest side when all three have nconn = 3
+// Not perfect: sometimes creates a vertex with only two links
 //-----------------------------------------------------------------------------------------------------
 int deloop(int iter)
 {
@@ -3156,6 +3216,14 @@ int deloop(int iter)
 	fprintf(fperr,"Number of loops removed: %d\n",nloops);
 	rejoin(ndropped,dropped);
 	printf("did rejoin\n");
+	// Now check for any verticies with only two links, rejoin edges
+	//for (int kv=0; kv<nv; kv++) {
+	//	if (vertex[kv].used) continue;
+	//	if (vertex[kv].nlinks_used == 2) {
+	//		joiner(kv);
+	//	}
+	//}
+
 	return nloops;
 }
 
@@ -4137,7 +4205,6 @@ int TraceSkeleton(int n_prune_cycles)
 						vertex[kv].followed[i] = false;
 					vertex[kv].nfollowed = 0;
 					vertex[kv].used = true;
-
 					kv++;
 				}
 				k++;
@@ -4149,13 +4216,11 @@ int TraceSkeleton(int n_prune_cycles)
 	// Now find the neighbour IDs
 	for (k=0; k<npts; k++) {
 		nbrs = voxel[k].nbrs;
-		if (k == 8220) printf("Voxel: %d  %d %d %d  nbrs: %d\n",k,voxel[k].pos[0],voxel[k].pos[1],voxel[k].pos[2],nbrs);
 		nhit = 0;
 		for (j=0; j<nbrs; j++) {	// look at the neighbour points one by one
 			xnb = voxel[k].nbr[j][0];
 			ynb = voxel[k].nbr[j][1];
 			znb = voxel[k].nbr[j][2];
-			if (k == 8220) printf("nbr: %d  %d %d %d\n",j,xnb,ynb,znb);
 			hit = false;
 			if (k > 0) {	// look at preceding voxels in the list
 				k1 = k;
@@ -4167,7 +4232,6 @@ int TraceSkeleton(int n_prune_cycles)
 						voxel[k].nid[j] = k1;
 						hit = true;
 						nhit++;
-						if (k == 8220) printf("hit: %d  k1: %d  %d %d %d\n",nhit,k1,xnb,ynb,znb);
 						break;
 					}
 				}
@@ -4183,7 +4247,6 @@ int TraceSkeleton(int n_prune_cycles)
 						voxel[k].nid[j] = k1;
 						hit = true;
 						nhit++;
-						if (k == 8220) printf("hit: %d  k1: %d  %d %d %d\n",nhit,k1,xnb,ynb,znb);
 						break;
 					}
 				}
@@ -4220,9 +4283,9 @@ int TraceSkeleton(int n_prune_cycles)
 		nloops = deloop(iter);
 		if (nloops < 0) return 1;
 		printf("did deloop: nloops: %d\n",nloops);
+		err = checker();
+		if (err != 0) return 1;
 	}
-	err = checker();
-	if (err != 0) return 1;
 
 	if (NEW_PRUNE) {
 		prune();
@@ -4676,6 +4739,7 @@ int main(int argc, char**argv)
 		return 5;
 	}
 	printf("did TraceSkeleton\n");
+
 	err = simplify();
 	if (err != 0) {
 		printf("Error: simplify\n");
@@ -4683,6 +4747,8 @@ int main(int argc, char**argv)
 		fclose(fperr);
 		return 7;
 	}
+	printf("did simplify\n");
+	checkVerticies();
 
 	if (FIXED_DIAMETER == 0) {
 		err = GetDiameters();
@@ -4702,12 +4768,15 @@ int main(int argc, char**argv)
 		}
 	}
 
+
 	printf("Total voxels: %d edges: %d vertices: %d points: %d\n",count,ne,nv,np);
 	printf("Voxel size: %6.2f %6.2f %6.2f\n",vsize[0],vsize[1],vsize[2]);
 	printf("Total voxel volume: %10.0f\n",volume);
 	fprintf(fpout,"Total voxels: %d edges: %d vertices: %d points: %d\n",count,ne,nv,np);
 	fprintf(fpout,"Voxel size: %6.2f %6.2f %6.2f\n",vsize[0],vsize[1],vsize[2]);
 	fprintf(fpout,"Total voxel volume: %10.0f\n",volume);
+
+//	checker();
 
 	if (squeeze) {
 		err = squeezer();
@@ -4720,8 +4789,9 @@ int main(int argc, char**argv)
 			printf("squeezed\n");
 		}
 	}
+	checkVerticies();
+	checker();
 
-//	err = CreateDistributions(voxelsize);
 	err = CreateDistributions();		// scaling for voxelsize now done in the distance calculations
 	if (err != 0) {
 		printf("Error: CreateDistributions\n");

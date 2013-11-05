@@ -172,6 +172,7 @@ int MainWindow::createTiffData(NETWORK *net)
     printf("ne: %d\n",net->ne);
     fprintf(fpout,"ne: %d\n",net->ne);
     // First determine the required buffer size to hold the voxels
+    printf("voxelsize: %f %f %f\n",voxelsize[0],voxelsize[1],voxelsize[2]);
     wx = 0;
     wy = 0;
     wz = 0;
@@ -185,14 +186,15 @@ int MainWindow::createTiffData(NETWORK *net)
 //            printf("%6.1f %6.1f %6.1f  %6.2f\n",p.x,p.y,p.z,p.d);
 //            fprintf(fpout,"%6.1f %6.1f %6.1f  %6.2f\n",p.x,p.y,p.z,p.d);
 //            fflush(fpout);
-            wx = MAX(wx,(p.x + p.d/2));
-            wy = MAX(wy,(p.y + p.d/2));
-            wz = MAX(wz,(p.z + p.d/2));
+            wx = MAX(wx,(p.x + p.d/2.));
+            wy = MAX(wy,(p.y + p.d/2.));
+            wz = MAX(wz,(p.z + p.d/2.));
         }
     }
-    width = (int)((wx+margin)/voxelsize[0]+10);
-    height = (int)((wy+margin)/voxelsize[1]+10);
-    depth = (int)((wz+margin)/voxelsize[2]+10);
+    printf("wx,wy,wz: %f %f %f\n",wx,wy,wz);
+    width = (int)((wx+margin)/voxelsize[0]+10.);
+    height = (int)((wy+margin)/voxelsize[1]+10.);
+    depth = (int)((wz+margin)/voxelsize[2]+10.);
     xysize = width*height;
     printf("width, height, depth: %d %d %d\n",width, height, depth);
     fprintf(fpout,"width, height, depth: %d %d %d\n",width, height, depth);
@@ -278,6 +280,7 @@ void MainWindow::am_tiffer()
         ui->labelResult->setText(resultstr);
         return;
     }
+    if (p_im) free(p_im);
     checkReady();
     resultstr = "SUCCESS";
     ui->labelResult->setText(resultstr);

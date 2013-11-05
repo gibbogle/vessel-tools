@@ -265,7 +265,7 @@
      <x>0</x>
      <y>0</y>
      <width>950</width>
-     <height>21</height>
+     <height>18</height>
     </rect>
    </property>
   </widget>
@@ -347,22 +347,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>lineEdit_zvoxel</sender>
-   <signal>selectionChanged()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>dataChanged()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>330</x>
-     <y>176</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>438</x>
-     <y>193</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>lineEditMargin</sender>
    <signal>textChanged(QString)</signal>
    <receiver>MainWindow</receiver>
@@ -391,6 +375,22 @@
     <hint type="destinationlabel">
      <x>426</x>
      <y>317</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>lineEdit_zvoxel</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>dataChanged()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>308</x>
+     <y>174</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>436</x>
+     <y>197</y>
     </hint>
    </hints>
   </connection>
