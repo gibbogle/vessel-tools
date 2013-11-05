@@ -842,7 +842,7 @@ int main(int argc, char **argv)
 
 	input_amfile = argv[1];
 	strcpy(outfilename,argv[2]);
-	strcpy(output_amfile,"zzz.am");
+//	strcpy(output_amfile,"zzz.am");
 	sscanf(argv[3],"%d",&cmgui_flag);
 	sscanf(argv[4],"%lf",&ddiam);
 	sscanf(argv[5],"%lf",&dlen);
@@ -851,6 +851,7 @@ int main(int argc, char **argv)
 	strcat(output_basename,dir);
 	strcat(output_basename,filename);
 	sprintf(errfilename,"%s_translate.log",output_basename);
+	sprintf(output_amfile,"%s.am",output_basename);
 //	sprintf(result_file,"%s_prune.out",output_basename);
 	fperr = fopen(errfilename,"w");
 
