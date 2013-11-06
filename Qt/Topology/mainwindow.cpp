@@ -152,6 +152,8 @@ void MainWindow::topology()
 		resultstr = "FAILED: error in WriteAmiraFile()";
     else if (res == 12)
         resultstr = "FAILED: error in FixDiameters()";
+    else if (res == 13)
+        resultstr = "FAILED: error in checkEdgeEndPts()";
     else
 		resultstr = "FAILED: some other error";
 	ui->labelResult->setText(resultstr);

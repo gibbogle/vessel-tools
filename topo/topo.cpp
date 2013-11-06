@@ -4989,7 +4989,7 @@ int main(int argc, char**argv)
 		printf("Error: checkEdgeEndPts\n");
 		fprintf(fperr,"Error: checkEdgeEndPts\n");
 		fclose(fperr);
-		return 12;
+		return 13;
 	}
 	checkVerticies(true);
 
@@ -5010,7 +5010,7 @@ int main(int argc, char**argv)
 		printf("Error: checkEdgeEndPts\n");
 		fprintf(fperr,"Error: checkEdgeEndPts\n");
 		fclose(fperr);
-		return 12;
+		return 13;
 	}
 	err = CreateDistributions();		// scaling for voxelsize now done in the distance calculations
 	if (err != 0) {
