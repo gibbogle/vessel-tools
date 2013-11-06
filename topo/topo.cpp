@@ -296,8 +296,10 @@ void showvertex(int iv)
 	EDGE *edge;
 
 	printf("vertex: %d nlinks: %d nlinks_used: %d\n",iv,vertex[iv].nlinks, vertex[iv].nlinks_used);
+	fprintf(fpout,"vertex: %d nlinks: %d nlinks_used: %d\n",iv,vertex[iv].nlinks, vertex[iv].nlinks_used);
 	if (!vertex[iv].used) {
 		printf("NOT USED\n");
+		fprintf(fpout,"NOT USED\n");
 		return;
 	}
 	for (int k=0; k<vertex[iv].nlinks_used; k++) {
@@ -305,6 +307,8 @@ void showvertex(int iv)
 		edge = &edgeList[ie];
 		npts = edge->npts;
 		printf("link: %d edge: %d npts: %d vert: %d %d endpts: %d %d\n",k,ie,npts,
+			edge->vert[0], edge->vert[1], edge->pt[0], edge->pt[npts-1]);
+		fprintf(fpout,"link: %d edge: %d npts: %d vert: %d %d endpts: %d %d\n",k,ie,npts,
 			edge->vert[0], edge->vert[1], edge->pt[0], edge->pt[npts-1]);
 	}
 }
@@ -314,25 +318,58 @@ void showvertex(int iv)
 //-----------------------------------------------------------------------------------------------------
 void showedge(int ie, char mode) {
 	EDGE *edge;
-	int npts, k, kp;
+	int npts, k, kp, kv0, kv1;
 
 	edge = &edgeList[ie];
 	npts = edge->npts;
-	printf("edge: %5d  npts: %2d: ",ie,npts);
+	kv0 = edge->vert[0];
+	kv1 = edge->vert[1];
+//	printf("\nedge: %5d  vert: %d %d -> %d %d npts: %2d: ",ie,kv0,kv1,vertex[kv0].ivox, vertex[kv1].ivox,npts);
+	fprintf(fpout,"\nedge: %5d  vert: %d %d -> %d %d npts: %2d: ",ie,kv0,kv1,vertex[kv0].ivox, vertex[kv1].ivox,npts);
 	if (!edge->used) {
-		printf("NOT USED\n");
+//		printf("NOT USED\n");
+		fprintf(fpout,"NOT USED\n");
 		return;
 	}
 	for (k=0; k<npts; k++) {
 		kp = edge->pt[k];
-		if (mode == 'N')
-			printf("%6d",kp);
-		else
-			printf("%6.1f",avediameter[kp]);
+		if (mode == 'N') {
+//			printf("%6d ",kp);
+			fprintf(fpout,"%6d ",kp);
+		} else {
+//			printf("%6.1f",avediameter[kp]);
+			fprintf(fpout,"%6.1f",avediameter[kp]);
+		}
 	}
-	printf("\n");
+//	printf("\n");
+	fprintf(fpout,"\n");
 }
 
+//-----------------------------------------------------------------------------------------------------
+// Check consistency between edge vert[] and pt[]
+//-----------------------------------------------------------------------------------------------------
+int checkEdgeEndPts()
+{
+	EDGE *edge;
+	int ie, npts, k, kp0, kp1, kv0, kv1, kvp0, kvp1, err;
+
+	err = 0;
+	for (ie=0; ie<ne; ie++) {
+		edge = &edgeList[ie];
+		npts = edge->npts;
+		kp0 = edge->pt[0];
+		kp1 = edge->pt[npts-1];
+		kv0 = edge->vert[0];
+		kv1 = edge->vert[1];
+		kvp0 = vertex[kv0].ivox;
+		kvp1 = vertex[kv1].ivox;
+		if ((kp0==kvp0 && kp1==kvp1) || (kp0==kvp1 && kp1==kvp0)) continue;
+		err = 1;
+		fprintf(fpout,"checkEdgeEndPts: edge: %d vert: %d %d -> %d %d pt: %d %d\n",ie,kv0,kv1,kvp0,kvp1,kp0,kp1);
+		fflush(fpout);
+	}
+	return err;
+}
 
 //-----------------------------------------------------------------------------------------------------
 // If the value k is found in list (list[0] ... list[n-1]) then the index is returned,
@@ -356,7 +393,7 @@ int inlist(int *list, int n, int k)
 //-----------------------------------------------------------------------------------------------------
 int squeezer(void)
 {
-	int i, j, k, kv, ivox, err;
+	int i, j, k, kv, ivox, kp, kv0, kv1, err;
 	int ne_x, nv_x, np_x, knew, i_x;
 	EDGE *edge;
 	EDGE *edgeList_x;
@@ -383,7 +420,10 @@ int squeezer(void)
 	// First process the vertices
 	for (i=0; i<ne; i++) {
 		if (!edgeList[i].used) continue;
-		if (edgeList[i].vert[0] == edgeList[i].vert[1]) continue;	// repeated pt
+		if (edgeList[i].vert[0] == edgeList[i].vert[1]) {
+			edgeList[i].used = false;
+			continue;	// repeated pt
+		}
 		dbug = false;
 		edge = &edgeList_x[ne_x];
 		edge->used = true;
@@ -400,11 +440,13 @@ int squeezer(void)
 				np_x++;
 			}
 			edge->vert[j] = knew;
+			vertex_x[knew].ivox = -1;
 		}
 		ne_x++;
 	}
 	nv_x = np_x;
 	printf("nv_x: %d\n",nv_x);
+	fprintf(fpout,"nv_x: %d\n",nv_x);
 
 // Now add the edge points to the list.
 
@@ -414,40 +456,70 @@ int squeezer(void)
 	i_x = 0;
 	for (i=0; i<ne; i++) {
 		if (!edgeList[i].used) continue;
-		if (dbug) printf("old edge: %d npts: %d  new edge: %d npts: %d\n",i,edgeList[i].npts,i_x,edgeList[i].npts_used);
+//		fprintf(fpout,"old edge: %d npts: %d  new edge: %d npts: %d\n",i,edgeList[i].npts,i_x,edgeList[i].npts_used);
 		int npts = edgeList[i].npts_used;
 		if (npts < 1) {
 			printf("squeezer: i: %d npts: %d\n",i,npts);
+			fprintf(fpout,"squeezer: i: %d npts: %d\n",i,npts);
 			return 1;
 		}
 		edgeList_x[i_x].pt = (int *)malloc(npts*sizeof(int));
 		edgeList_x[i_x].pt_used = (int *)malloc(npts*sizeof(int));
 		edge = &edgeList_x[i_x];
 		edge->npts = npts;
+		kv0 = edge->vert[0];
+		kv1 = edge->vert[1];
 		for (k=0; k<npts; k++) {
 			j = edgeList[i].pt_used[k];
 			if (j > np || j < 0) {
 				printf("i: %d k: %d  j: %d\n",i,k,j);
 				return 1;
 			}
-			oldpt[np_x] = j;
-			if (dbug) printf("k: %d oldpt: %d new pt: %d\n",k,j,np_x);
 			voxel_x[np_x] = voxel[j];
-			avediameter_x[np_x] = avediameter[j];
-			edge->pt[k] = np_x;
+//			avediameter_x[np_x] = avediameter[j];
+//			edge->pt[k] = np_x;
+
+			if (k == 0) {
+				if (vertex_x[kv0].ivox < 0) {
+					vertex_x[kv0].ivox = np_x;
+					edge->pt[k] = np_x;
+					avediameter_x[np_x] = avediameter[j];
+					np_x++;
+				} else {
+					edge->pt[k] = vertex_x[kv0].ivox;
+				}
+			} else if (k == npts-1) {
+				if (vertex_x[kv1].ivox < 0) {
+					vertex_x[kv1].ivox = np_x;
+					edge->pt[k] = np_x;
+					avediameter_x[np_x] = avediameter[j];
+					np_x++;
+				} else {
+					edge->pt[k] = vertex_x[kv1].ivox;
+				}
+			} else {
+				edge->pt[k] = np_x;
+				avediameter_x[np_x] = avediameter[j];
+				np_x++;
+			}
+
 			// Check for repeated point
 			if (edge->pt[k] == edge->pt[k-1]) {
 				printf("Error: squeezer: repeated point: old edge: %d new edge: %d old point: %d new point: %d\n",i,i_x,j,np_x);
 				fprintf(fperr,"Error: squeezer: repeated point: old edge: %d new edge: %d old point: %d new point: %d\n",i,i_x,j,np_x);
 				err = 1;
 			}
-			np_x++;
 		}
+		//kv0 = edge->vert[0];
+		//kv1 = edge->vert[1];
+		//fprintf(fpout,"edge: %d vert: %d %d -> %d %d\n",i_x,kv0,kv1,vertex_x[kv0].ivox,vertex_x[kv1].ivox);
 		i_x++;
 	}
-
 	printf("Added edge points\n");
 	printf("ne, ne_x: %d %d  nv, nv_x: %d %d  np, np_x: %d %d\n",ne,ne_x,nv,nv_x,np,np_x);
+	fprintf(fpout,"Added edge points\n");
+	fprintf(fpout,"ne, ne_x: %d %d  nv, nv_x: %d %d  np, np_x: %d %d\n",ne,ne_x,nv,nv_x,np,np_x);
+	fflush(fpout);
 
 	// Now copy the revised data back into the original arrays
 	nv = nv_x;
@@ -564,7 +636,100 @@ void write_exelem(void)
 }
 
 //-----------------------------------------------------------------------------------------------------
+// Create CMGUI files.
+// Required squeezed network description
+//-----------------------------------------------------------------------------------------------------
+int WriteCmguiData(void)
+{
+	int k, ie, ip, npts, err;
+//	int kv0, kv1;
+	EDGE edge;
+	char dotcomname[256], exelemname[256], exnodename[256];
+
+	printf("WriteCmguiData: np: %d\n",np);
+	fprintf(fperr,"WriteCmguiData: np: %d\n",np);
+	fflush(fperr);
+	err = 0;
+	sprintf(dotcomname,"%s.com.txt",output_basename);
+	printf("dotcomname: %s\n",dotcomname);
+	fprintf(fperr,"dotcomname: %s\n",dotcomname);
+	fflush(fperr);
+	sprintf(exelemname,"%s.exelem",output_basename);
+	printf("exelemname: %s\n",exelemname);
+	fprintf(fperr,"exelemname: %s\n",exelemname);
+	fflush(fperr);
+	sprintf(exnodename,"%s.exnode",output_basename);
+	fprintf(fperr,"Com file: %s exelem file: %s exnode file: %s\n",dotcomname,exelemname,exnodename);
+	fflush(fperr);
+	dotcom = fopen(dotcomname,"w");
+	exelem = fopen(exelemname,"w");
+	exnode = fopen(exnodename,"w");
+	write_com(output_basename);
+	write_exelem();
+	printf("created exelem header\n");
+	fprintf(fperr,"created exelem header\n");
+	write_exnode();
+	printf("created exnode header\n");
+	fprintf(fperr,"created exnode header\n");
+	// First set up radius values for each point.  Note that junction points occur on multiple segments,
+	// with different radius values.  Select the maximum in this case.
+	radius = (float *)malloc(np*sizeof(float));
+	point_used = (bool *)malloc(np*sizeof(bool));
+	for (k=0; k<np; k++) {
+		point_used[k] = false;
+	}
+	int kelem = 0;
+	for (ie=0; ie<ne; ie++) {
+		edge = edgeList[ie];
+		npts = edge.npts;
+		/*
+		int kfrom = edge.pt_used[0];
+		int kto = edge.pt_used[npts-1];
+		if (kfrom == kto) {
+			printf("Error: writecmguidata: repeated node: element: %d npts: %d kv0,kv1: %d %d kfrom: %d\n",ie,npts,edge.vert[0],edge.vert[1],kfrom);
+			fprintf(fperr,"repeated node: element: %d npts: %d kv0.kv1: %d %d kfrom: %d\n",ie,npts,edge.vert[0],edge.vert[1],kfrom);
+			for (k=0; k<npts; k++)
+				fprintf(fperr,"  k: %3d  pt: %6d\n",k,edge.pt_used[k]);
+			edgeList[ie].used = false;
+			continue;
+		}
+		radius[kfrom] = MAX(radius[kfrom],avediameter[kfrom]/2);
+		radius[kto] = MAX(radius[kto],avediameter[kto]/2);
+		point_used[kfrom] = true;
+		*/
+		for (ip=1; ip<npts; ip++) {
+			int k1 = edge.pt_used[ip-1];
+			int k2 = edge.pt_used[ip];
+			point_used[k1] = true;
+			point_used[k2] = true;
+			kelem++;
+	        fprintf(exelem, "Element: %d 0 0\n", kelem);
+	        fprintf(exelem, "  Nodes: %d %d\n", k1+1, k2+1);
+	        fprintf(exelem, "  Scale factors: 1 1\n");
+		}
+	}
+	for (k=0; k<np; k++) {
+		if (point_used[k]) {	// Note: after squeezing, all points are used.
+			fprintf(exnode, "Node: %d\n", k+1);
+//			if (REVISED_VERSION) {
+				fprintf(exnode, "%6.1f %6.1f %6.1f\n", vsize[0]*voxel[k].pos[0],vsize[1]*voxel[k].pos[1],vsize[2]*voxel[k].pos[2]);
+//			} else {
+//				fprintf(exnode, "%6.1f %6.1f %6.1f\n", vsize[0]*point[k][0],vsize[1]*point[k][1],vsize[2]*point[k][2]);
+//			}
+			fprintf(exnode, "%6.2f\n", avediameter[k]/2);
+		}
+	}
+	fclose(dotcom);
+	fclose(exelem);
+	fclose(exnode);
+	free(radius);
+	free(point_used);
+	return err;
+}
+
+//-----------------------------------------------------------------------------------------------------
 // Create Amira SpatialGraph file
+// This assumes that all edges are used, i.e. the network has been squeezed
 //-----------------------------------------------------------------------------------------------------
 int WriteAmiraFile(char *outFile, char *vessFile, char *skelFile)
 {
@@ -1156,6 +1321,7 @@ int GetDiameters(void)
 	EDGE *edge;
 
 	printf("GetDiameters\n");
+	fprintf(fpout,"GetDiameters\n");
 	for (k=0; k<np; k++) {
 		avediameter[k] = 0;
 	}
@@ -2136,7 +2302,7 @@ int CreateDistributions()
 		edge = edgeList[ie];
 		if (!edge.used) continue;
 //		printf("ie: %d npts: %d\n",ie,edge.npts);
-//		fprintf(fperr,"ie: %d npts: %d npts_used: %d\n",ie,edge.npts,edge.npts_used);
+		fprintf(fperr,"ie: %d npts: %d npts_used: %d\n",ie,edge.npts,edge.npts_used);
 		fflush(fperr);
 		nptstot += edge.npts;
 		nptsusedtot += edge.npts_used;
@@ -2280,8 +2446,9 @@ int CreateDistributions()
 // Does the node file need all nodes from 1 to np?
 // A quick test seems to show that neither element nor node numbers need to be consecutive.
 // This should be made to work with squeezed and unsqueezed data.
+// SOME PROBLEM HERE
 //-----------------------------------------------------------------------------------------------------
-int WriteCmguiData(void)
+int oldWriteCmguiData(void)
 {
 	int k, ie, ip, npts, err;
 //	int kv0, kv1;
@@ -2330,8 +2497,6 @@ int WriteCmguiData(void)
 
 		int kfrom = edge.pt_used[0];
 		int kto = edge.pt_used[npts-1];
-//		kv0 = edge.vert[0];
-//		kv1 = edge.vert[1];
 		if (kfrom == kto) {
 			printf("Error: writecmguidata: repeated node: element: %d npts: %d kv0,kv1: %d %d kfrom: %d\n",ie,npts,edge.vert[0],edge.vert[1],kfrom);
 			fprintf(fperr,"repeated node: element: %d npts: %d kv0.kv1: %d %d kfrom: %d\n",ie,npts,edge.vert[0],edge.vert[1],kfrom);
@@ -2378,6 +2543,7 @@ int WriteCmguiData(void)
 	free(point_used);
 	return err;
 }
+
 
 //-----------------------------------------------------------------------------------------------------
 // A simplified network is produced by dropping close pts
@@ -2644,15 +2810,17 @@ int joiner(int kv)
 
 //-----------------------------------------------------------------------------------------------------
 // Look for vertices with two links, and join the two connected edges into a single edge.
+// This creates spurious vessels!!!!
 //-----------------------------------------------------------------------------------------------------
-void checkVerticies()
+void checkVerticies(bool join)
 {
-	int kv, ie, nlinks, nlinks_used, n2;
+	int kv, ie, nlinks, nlinks_used, n2, j, k;
 	EDGE *edge;
 
 	printf("checkVerticies\n");
+	fprintf(fpout,"checkVerticies\n");
 	for (kv=0; kv < nv; kv++) {
-		vertex[kv].used == false;
+		vertex[kv].used = false;
 		vertex[kv].nlinks = 0;			//---
 		vertex[kv].nlinks_used = 0;		//---
 	}
@@ -2665,21 +2833,31 @@ void checkVerticies()
 		vertex[kv].edge[vertex[kv].nlinks_used] = ie;	//---
 		vertex[kv].nlinks++;			//---
 		vertex[kv].nlinks_used++;		//---
-		vertex[kv].used = true;			
+		vertex[kv].used = true;	
+//		if (kv == 0) fprintf(fpout,"vertex 0 on edge: %d\n",ie);
 		kv = edge->vert[1];
 		vertex[kv].edge[vertex[kv].nlinks_used] = ie;	//---
 		vertex[kv].used = true;
 		vertex[kv].nlinks++;			//---
 		vertex[kv].nlinks_used++;		//---
+//		if (kv == 0) fprintf(fpout,"vertex 0 on edge: %d\n",ie);
 	}
+	if (!join) return;
 	n2 = 0;
 	for (kv=0; kv < nv; kv++) {
 		if (!vertex[kv].used) continue;
-		nlinks = vertex[kv].nlinks;
-		nlinks_used = vertex[kv].nlinks_used;
-		if (nlinks == 2 || nlinks_used == 2) {
+		nlinks_used = vertex[kv].nlinks;
+		if (nlinks_used == 2) {
 			n2++;
-			printf("vertex: %d nlinks: %d  nlinks_used: %d\n",kv,nlinks,nlinks_used);
+//			fprintf(fpout,"vertex: %d nlinks: %d\n",kv,nlinks_used);
+			for (j=0; j<2; j++) {
+				ie = vertex[kv].edge[j];
+//				fprintf(fpout,"edge: %d %d npts: %d vert: %d %d ",j,ie,edgeList[ie].npts,edgeList[ie].vert[0],edgeList[ie].vert[1]);
+//				for (k=0; k<edgeList[ie].npts; k++) {
+//					fprintf(fpout,"%d ",edgeList[ie].pt[k]);
+//				}
+//				fprintf(fpout,"\n");
+			}
 			joiner(kv);					//---
 		}
 	}
@@ -3767,8 +3945,22 @@ void prune()
 	float len, dave;
 	bool deadend;
 	EDGE *edge;
+	int *vtmp;
 
 	printf("prune\n");
+	// Check nlinks_used
+	//vtmp = (int *)malloc(nv*sizeof(int));
+	//for (iv=0; iv<nv; iv++) {
+	//	vtmp[iv] = vertex[iv].nlinks_used;
+	//}
+	checkVerticies(false);	// To ensure that .nlinks = .nlinks_used are consistent with edgeList.
+	//for (iv=0; iv<nv; iv++) {
+	//	if (vtmp[iv] != vertex[iv].nlinks_used) {
+	//		fprintf(fpout,"iv: %d vtmp: %d nlinks_used: %d\n",iv,vtmp[iv],vertex[iv].nlinks_used);
+	//	}
+	//}
+	//exit(1);
+
 	count = 0;
 	for (iv=0; iv<nv; iv++) {
 		if (!vertex[iv].used) continue;
@@ -3815,24 +4007,38 @@ void prune()
 			dave/= edge->npts;
 //			printf("loose end: %d %d %6.1f %6.1f %6.3f\n",iecon,iv,len,dave,len/dave);
 			if (len/dave < 5) {
-//				printf("Remove the loose end\n");
+				//if (ivcon == 10016) {
+				//	fprintf(fpout,"Remove the loose end: %d edge: %d on vertex: %d\n",iv,iecon,ivcon);
+				//	showvertex(10016);
+				//}
 				edge->used = false;
 				// remove iecon from the edge list for vertex ivcon
-				for (k=0; k<vertex[ivcon].nlinks; k++) {
-					etmp[k] = vertex[ivcon].edge[k];
-				}
-				n = 0;
-				for (k=0; k<vertex[ivcon].nlinks; k++) {
-					ie = vertex[ivcon].edge[k];
-					if (ie != iecon) {
-						vertex[ivcon].edge[n] = ie;
-						n++;
-					}
-				}
-				vertex[ivcon].nlinks--;
+				//n = 0;
+				//for (k=0; k<vertex[ivcon].nlinks; k++) {
+				//	ie = vertex[ivcon].edge[k];
+				//	if (ie != iecon) {
+				//		vertex[ivcon].edge[n] = ie;
+				//		n++;
+				//	}
+				//}
+				//vertex[ivcon].nlinks--;
+				vertex[ivcon].nlinks_used--;
+				//if (ivcon == 10016) {
+				//	fprintf(fpout,"Removed the edge: %d\n",iecon);
+				//	showvertex(10016);
+				//}
 				// Now the non-deadend vertex may have nlinks=2, and the edges may need to be concatenated
 				if (vertex[ivcon].nlinks == 2) {
+					//if (ivcon == 10016) {
+					//	fprintf(fpout,"Now nlinks = 2\n");
+					//	showvertex(ivcon);
+					//}
 					joiner(ivcon);
+					//if (ivcon == 10016) {
+					//	fprintf(fpout,"did joiner: %d\n",ivcon);
+					//	showedge(18818,'N');
+					//	showedge(18824,'N');
+					//}
 				}
 			}
 		}
@@ -4275,7 +4481,7 @@ int TraceSkeleton(int n_prune_cycles)
 
 	tracer();
 	printf("did tracer\n");
-
+	fprintf(fpout,"did tracer\n");
 	err = checker();
 	if (err != 0) return 1;
 
@@ -4283,12 +4489,14 @@ int TraceSkeleton(int n_prune_cycles)
 		nloops = deloop(iter);
 		if (nloops < 0) return 1;
 		printf("did deloop: nloops: %d\n",nloops);
+		fprintf(fpout,"did deloop: nloops: %d\n",nloops);
 		err = checker();
 		if (err != 0) return 1;
 	}
 
 	if (NEW_PRUNE) {
 		prune();
+		fprintf(fpout,"did prune\n");
 	} else {
 		for (iter=0; iter<n_prune_cycles; iter++) {
 			printf("call prune: %d\n",iter);
@@ -4739,6 +4947,7 @@ int main(int argc, char**argv)
 		return 5;
 	}
 	printf("did TraceSkeleton\n");
+	fprintf(fpout,"did TraceSkeleton\n");
 
 	err = simplify();
 	if (err != 0) {
@@ -4748,11 +4957,10 @@ int main(int argc, char**argv)
 		return 7;
 	}
 	printf("did simplify\n");
-	checkVerticies();
+	fprintf(fpout,"did simplify\n");
 
 	if (FIXED_DIAMETER == 0) {
 		err = GetDiameters();
-//		err = CrudeGetDiameters();
 		if (err != 0) {
 			printf("Error: GetDiameters\n");
 			fprintf(fperr,"Error: GetDiameters\n");
@@ -4768,7 +4976,6 @@ int main(int argc, char**argv)
 		}
 	}
 
-
 	printf("Total voxels: %d edges: %d vertices: %d points: %d\n",count,ne,nv,np);
 	printf("Voxel size: %6.2f %6.2f %6.2f\n",vsize[0],vsize[1],vsize[2]);
 	printf("Total voxel volume: %10.0f\n",volume);
@@ -4777,6 +4984,14 @@ int main(int argc, char**argv)
 	fprintf(fpout,"Total voxel volume: %10.0f\n",volume);
 
 //	checker();
+	err = checkEdgeEndPts();
+	if (err != 0) {
+		printf("Error: checkEdgeEndPts\n");
+		fprintf(fperr,"Error: checkEdgeEndPts\n");
+		fclose(fperr);
+		return 12;
+	}
+	checkVerticies(true);
 
 	if (squeeze) {
 		err = squeezer();
@@ -4789,9 +5004,14 @@ int main(int argc, char**argv)
 			printf("squeezed\n");
 		}
 	}
-	checkVerticies();
 	checker();
-
+	err = checkEdgeEndPts();
+	if (err != 0) {
+		printf("Error: checkEdgeEndPts\n");
+		fprintf(fperr,"Error: checkEdgeEndPts\n");
+		fclose(fperr);
+		return 12;
+	}
 	err = CreateDistributions();		// scaling for voxelsize now done in the distance calculations
 	if (err != 0) {
 		printf("Error: CreateDistributions\n");
@@ -4800,15 +5020,15 @@ int main(int argc, char**argv)
 		return 9;
 	}
 
-	err = WriteCmguiData();
-	if (err != 0) {
-		printf("Error: WriteCmguiData\n");
-		fprintf(fperr,"Error: WriteCmguiData\n");
-		fclose(fperr);
-		return 10;
-	}
+	if (squeeze) {
+		err = WriteCmguiData();
+		if (err != 0) {
+			printf("Error: WriteCmguiData\n");
+			fprintf(fperr,"Error: WriteCmguiData\n");
+			fclose(fperr);
+			return 10;
+		}
 
-//	if (squeeze) {
 		err = WriteAmiraFile(amfilename,vessFile,skelFile);
 		if (err != 0) {
 			printf("Error: WriteAmiraFile\n");
@@ -4816,10 +5036,10 @@ int main(int argc, char**argv)
 			fclose(fperr);
 			return 11;
 		}
-	//} else {
-	//	printf("Amira file not written - data not squeezed\n");
-	//	fprintf(fperr,"Amira file not written - data not squeezed\n");
-	//}
+	} else {
+		printf("Amira and CMGUI files not written - data not squeezed\n");
+		fprintf(fperr,"Amira and CMGUI files not written - data not squeezed\n");
+	}
 	printf("Terminated normally\n");
 	fprintf(fperr,"Terminated normally\n");
 	fclose(fperr);

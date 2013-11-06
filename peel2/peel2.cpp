@@ -143,8 +143,6 @@ void doSeg(const CmdLineType &CmdLineObj)
 	Thresh->SetInsideValue(0);
 	Thresh->ReleaseDataFlagOn();	//Gib
 
-	//	writeImComp<MaskImType>(Thresh->GetOutput(), CmdLineObj.OutputImPrefix + "_thresh" + CmdLineObj.suffix);
-
 	itk::Instance<itk::BinaryCloseParaImageFilter<MaskImType, MaskImType> > BinClose;
 
 	itk::Instance<itk::BinaryErodeParaImageFilter<MaskImType, MaskImType> > BinErode;
@@ -157,12 +155,10 @@ void doSeg(const CmdLineType &CmdLineObj)
 	BinClose->SetRadius(CmdLineObj.closingsize);
 	BinClose->ReleaseDataFlagOn();	//Gib
 
-	// writeImComp<MaskImType>(BinClose->GetOutput(), CmdLineObj.OutputImPrefix + "_close" + CmdLineObj.suffix);	// (0,1)
-
     itk::Instance<itk::ShiftScaleImageFilter<MaskImType, MaskImType> > Scale255;
 	Scale255->SetScale(255.0);
 	Scale255->SetInput(BinClose->GetOutput());
-    writeImComp<MaskImType>(Scale255->GetOutput(), CmdLineObj.OutputImPrefix + "_close255" + CmdLineObj.suffix);	// (0,255)
+//    writeImComp<MaskImType>(Scale255->GetOutput(), CmdLineObj.OutputImPrefix + "_close255" + CmdLineObj.suffix);	// (0,255)
 
 	BinErode->SetInput(BinClose->GetOutput());
 	BinErode->SetUseImageSpacing(true);
@@ -210,7 +206,6 @@ void doSeg(const CmdLineType &CmdLineObj)
 	SizeFilter->SetNumberOfObjects(1);
 	SizeFilter->SetAttribute("PhysicalSize");
 	Comb->SetInput(SizeFilter->GetOutput());
-//      writeImComp<MaskImType>(SizeFilter->GetOutput(), CmdLineObj.OutputImPrefix + "_size" + CmdLineObj.suffix);	// (0,0)?
 	printf("Did SizeFilter\n");
 	Comb->SetInput2(KeepBig->GetOutput());
 
@@ -239,36 +234,28 @@ void doSeg(const CmdLineType &CmdLineObj)
 	Selector->SetInsideValue(1);
 	Selector->SetOutsideValue(0);
 
-//	Scale255->SetInput(Selector->GetOutput());
-//	writeImComp<MaskImType>(Scale255->GetOutput(), CmdLineObj.OutputImPrefix + "_selector255" + CmdLineObj.suffix);	// (0,255)
-
-	// writeImComp<MaskImType>(Selector->GetOutput(), CmdLineObj.OutputImPrefix + "_wsseg" + CmdLineObj.suffix);
-
-	//itk::Instance<itk::ShiftScaleImageFilter<MaskImType, MaskImType> > Scale127;
-	//Scale127->SetInput(Selector->GetOutput());
-	//printf("Did Selector\n");
-	//Scale127->SetScale(127.0);
-
-	writeImComp<MaskImType>(Scale255->GetOutput(), CmdLineObj.OutputImPrefix + "_wsseg255" + CmdLineObj.suffix);
+	Scale255->SetInput(Selector->GetOutput());
+	writeImComp<MaskImType>(Scale255->GetOutput(), CmdLineObj.OutputImPrefix + "_wsseg255" + CmdLineObj.suffix);	// segmentation mask
 
 	Peeler->SetInput(Selector->GetOutput());
 	Peeler->SetUseImageSpacing(true);
 	Peeler->SetRadius(CmdLineObj.peel);
-	printf("Did BinDilate\n");
 
-//	writeImComp<MaskImType>(Peeler->GetOutput(), CmdLineObj.OutputImPrefix + "_peeler" + CmdLineObj.suffix);
+	Scale255->SetInput(Peeler->GetOutput());
+	writeImComp<MaskImType>(Scale255->GetOutput(), CmdLineObj.OutputImPrefix + "_peeled" + CmdLineObj.suffix);		// peeled mask
+	printf("Did Peeler\n");
 
 	itk::Instance<itk::MaskImageFilter<RawImType, MaskImType> > masker;
 	masker->SetInput(input);
 	masker->SetInput2(Peeler->GetOutput());
-	printf("Do Peeler\n");
+	printf("Do Masker\n");
 
-//	writeImComp<RawImType>(masker->GetOutput(), CmdLineObj.OutputImPrefix + "_masked" + CmdLineObj.suffix);
+	writeImComp<RawImType>(masker->GetOutput(), CmdLineObj.OutputImPrefix + "_masked" + CmdLineObj.suffix);			// masked image
+	printf("Did Masker\n");
 
-	masker->SetInput(input);
-	masker->SetInput2(Selector->GetOutput());
-	writeImComp<RawImType>(masker->GetOutput(), CmdLineObj.OutputImPrefix + "_nopeel" + CmdLineObj.suffix);
-	printf("Did Peeler\n");
+	//masker->SetInput(input);
+	//masker->SetInput2(Selector->GetOutput());
+	//writeImComp<RawImType>(masker->GetOutput(), CmdLineObj.OutputImPrefix + "_nopeel" + CmdLineObj.suffix);
 }
 
 int main(int argc, char * argv[])
