@@ -4949,6 +4949,8 @@ int main(int argc, char**argv)
 	printf("did TraceSkeleton\n");
 	fprintf(fpout,"did TraceSkeleton\n");
 
+	checkVerticies(true);
+
 	err = simplify();
 	if (err != 0) {
 		printf("Error: simplify\n");
@@ -4991,7 +4993,7 @@ int main(int argc, char**argv)
 		fclose(fperr);
 		return 13;
 	}
-	checkVerticies(true);
+//	checkVerticies(true);
 
 	if (squeeze) {
 		err = squeezer();
