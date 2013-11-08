@@ -6,12 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>950</width>
-    <height>314</height>
+    <width>1092</width>
+    <height>347</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Computing topological data</string>
+   <string>Prune/quantify/translate Spatialgraph network</string>
   </property>
   <widget class="QWidget" name="centralWidget">
    <widget class="QPushButton" name="pushButtonInputAMFile">
@@ -32,7 +32,7 @@
      <rect>
       <x>90</x>
       <y>0</y>
-      <width>421</width>
+      <width>571</width>
       <height>21</height>
      </rect>
     </property>
@@ -43,8 +43,8 @@
    <widget class="QPushButton" name="pushButtonCompute">
     <property name="geometry">
      <rect>
-      <x>210</x>
-      <y>180</y>
+      <x>310</x>
+      <y>220</y>
       <width>75</width>
       <height>23</height>
      </rect>
@@ -56,8 +56,8 @@
    <widget class="QLabel" name="label">
     <property name="geometry">
      <rect>
-      <x>40</x>
-      <y>240</y>
+      <x>30</x>
+      <y>270</y>
       <width>41</width>
       <height>16</height>
      </rect>
@@ -69,9 +69,9 @@
    <widget class="QLabel" name="labelResult">
     <property name="geometry">
      <rect>
-      <x>80</x>
-      <y>240</y>
-      <width>491</width>
+      <x>70</x>
+      <y>270</y>
+      <width>1011</width>
       <height>16</height>
      </rect>
     </property>
@@ -82,10 +82,10 @@
    <widget class="QTextEdit" name="textEdit">
     <property name="geometry">
      <rect>
-      <x>520</x>
+      <x>670</x>
       <y>10</y>
       <width>411</width>
-      <height>221</height>
+      <height>251</height>
      </rect>
     </property>
    </widget>
@@ -107,7 +107,7 @@
      <rect>
       <x>90</x>
       <y>30</y>
-      <width>421</width>
+      <width>571</width>
       <height>21</height>
      </rect>
     </property>
@@ -118,9 +118,9 @@
    <widget class="QLineEdit" name="lineEditRatioLimit">
     <property name="geometry">
      <rect>
-      <x>100</x>
+      <x>120</x>
       <y>60</y>
-      <width>51</width>
+      <width>31</width>
       <height>20</height>
      </rect>
     </property>
@@ -141,8 +141,8 @@
    <widget class="QCheckBox" name="checkBoxPrune">
     <property name="geometry">
      <rect>
-      <x>140</x>
-      <y>100</y>
+      <x>130</x>
+      <y>150</y>
       <width>131</width>
       <height>18</height>
      </rect>
@@ -157,8 +157,8 @@
    <widget class="QCheckBox" name="checkBoxCreateCmgui">
     <property name="geometry">
      <rect>
-      <x>140</x>
-      <y>130</y>
+      <x>130</x>
+      <y>180</y>
       <width>121</width>
       <height>18</height>
      </rect>
@@ -170,13 +170,36 @@
      <bool>true</bool>
     </property>
    </widget>
+   <widget class="QLineEdit" name="lineNprunecycles">
+    <property name="geometry">
+     <rect>
+      <x>120</x>
+      <y>90</y>
+      <width>31</width>
+      <height>20</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_nprunecycles">
+    <property name="geometry">
+     <rect>
+      <x>160</x>
+      <y>90</y>
+      <width>171</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Number of prune cycles</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>950</width>
+     <width>1092</width>
      <height>18</height>
     </rect>
    </property>

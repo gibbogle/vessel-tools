@@ -53,7 +53,7 @@ void MainWindow::pruner()
 {
 	int res;
 	QString qstr, resultstr;
-	char cmdstr[256];
+    char cmdstr[1024];
 
 	qstr = QCoreApplication::applicationDirPath() + "/exec/prune ";
 	qstr += inputFileName;
@@ -62,7 +62,9 @@ void MainWindow::pruner()
 	qstr += " ";
 	qstr += ui->lineEditRatioLimit->text();
 	qstr += " ";
-	if (ui->checkBoxPrune->isChecked())
+    qstr += ui->lineNprunecycles->text();
+    qstr += " ";
+    if (ui->checkBoxPrune->isChecked())
 		qstr += "1";
 	else
 		qstr += "0";
@@ -85,12 +87,26 @@ void MainWindow::pruner()
 	else if (res == 1)
 		resultstr = "FAILED: wrong number of arguments";
 	else if (res == 2)
-		resultstr = "FAILED: Read error on input file";
+        resultstr = "FAILED: error reading input am file";
 	else if (res == 3)
-		resultstr = "FAILED: Write error on output file";
-	else if (res == 4)
-		resultstr = "FAILED: out of memory";
-	ui->labelResult->setText(resultstr);
+        resultstr = "FAILED: error in adjoinEdges";
+    else if (res == 4)
+        resultstr = "FAILED: error in deloop";
+    else if (res == 5)
+        resultstr = "FAILED: error in pruner";
+    else if (res == 6)
+        resultstr = "FAILED: error in checkEdgeEndPts";
+    else if (res == 7)
+        resultstr = "FAILED: error in squeezer";
+    else if (res == 8)
+        resultstr = "FAILED: error in WriteAmiraFile";
+    else if (res == 9)
+        resultstr = "FAILED: error in CreateDistributions";
+    else if (res == 10)
+        resultstr = "FAILED: error in WriteCmguiData";
+    else
+        resultstr = "FAILED: unknown error";
+    ui->labelResult->setText(resultstr);
 }
 
 

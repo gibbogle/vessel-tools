@@ -57,6 +57,8 @@ double ratio_limit;
 //#define RATIO_LIMIT 4	// should be an input parameter
 #define PI 3.14159
 
+#define JOIN_LOOSE_ENDS false
+
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
 #define crossProduct(a,b,c) \
@@ -124,6 +126,53 @@ int showEdge(int ie)
 			printf("  vert[1]: %d connected to edge: %d\n",kv1,i);
 	}
 	return 0;
+}
+
+//-----------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------
+bool samevalue(float v1, float v2)
+{
+	float tol = 0.01;
+
+	return (fabs(v1-v2) < tol);
+}
+
+//-----------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------
+bool samepoint(POINT *p1, POINT *p2)
+{
+	if (!samevalue(p1->x,p2->x)) return false;
+	if (!samevalue(p1->y,p2->y)) return false;
+	if (!samevalue(p1->z,p2->z)) return false;
+	return true;
+}
+
+//-----------------------------------------------------------------------------------------------------
+// Check consistency between edge vert[] and pt[]
+//-----------------------------------------------------------------------------------------------------
+int checkEdgeEndPts()
+{
+	EDGE *edge;
+	POINT *pv0, *pv1, *pt0, *pt1;
+	int ie, npts, k, kp0, kp1, kv0, kv1, kvp0, kvp1, err;
+
+	err = 0;
+	for (ie=0; ie<ne; ie++) {
+		edge = &edgeList[ie];
+		npts = edge->npts;
+		pt0 = &point[edge->pt[0]];
+		pt1 = &point[edge->pt[npts-1]];
+		kv0 = edge->vert[0];
+		kv1 = edge->vert[1];
+		pv0 = &vertex[kv0].point;
+		pv1 = &vertex[kv1].point;
+//		if ((kp0==kvp0 && kp1==kvp1) || (kp0==kvp1 && kp1==kvp0)) continue;
+		if ((samepoint(pt0,pv0) && samepoint(pt1,pv1)) || (samepoint(pt0,pv1) && samepoint(pt1,pv0))) continue;
+		err = 1;
+		fprintf(fpout,"checkEdgeEndPts: edge: %d vert: %d %d -> %d %d pt: %d %d\n",ie,kv0,kv1,kvp0,kvp1,kp0,kp1);
+		fflush(fpout);
+	}
+	return err;
 }
 
 //-----------------------------------------------------------------------------------------------------
@@ -624,41 +673,6 @@ int adjoinEdges(void)
 	return 0;
 }
 
-
-//-----------------------------------------------------------------------------------------------------
-// To combine nearby vertices, eliminating short edges.
-// On second thoughts, do not use this, because it creates vertices with four attached segments
-//-----------------------------------------------------------------------------------------------------
-int combiner(void)
-{
-	int i, j, k, kv0, kv1, njoined;
-	float len, dave, dsum;
-	EDGE edge;
-
-	printf("joiner\n");
-	for (i=0; i<ne; i++) {
-		edge = edgeList[i];
-		if (!edge.used) continue;
-		len = 0;
-		dsum = 0;
-		for (k=0; k<edge.npts; k++) {
-			j = edge.pt[k];
-			dsum += point[j].d;
-			if (k > 0) {
-				len += dist(j,edge.pt[k-1]);
-			}
-		}
-		dave = dsum/edge.npts;
-		if (len/dave < ratio_limit) {	// this edge can be eliminated, provided both vertices are not loose.
-			kv0 = edge.vert[0];
-			kv1 = edge.vert[1];
-			edgeList[i].used = false;
-			njoined++;
-		}
-	}
-	return 0;
-}
-
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
 double dotproduct(double v1[], double v2[])
@@ -944,7 +958,7 @@ int joining_edge(double *e0, double *e1, int kp0, int kp1)
 // Currently a single segment is used to join the two vertices.  Need to use intermediate points
 // to create a curve.
 //-----------------------------------------------------------------------------------------------------
-int joiner(LOOSEND end[], int nloose)
+int joinLooseEnds(LOOSEND end[], int nloose)
 {
 	int i0, i1, k, kp0, kp1, njoined, imax;
 	double *dir0, *dir1;
@@ -1100,9 +1114,8 @@ int pruner(int iter)
 		}
 	}
 
-	if (iter == 0) {
-		err = 0;
-		err = joiner(end,nloose);
+	if (iter == 0 && JOIN_LOOSE_ENDS) {
+		err = joinLooseEnds(end,nloose);
 		if (err != 0) return err;
 	}
 
@@ -1224,49 +1237,6 @@ int deloop(void)
 
 	printf("deloop\n");
 	fprintf(fpout,"deloop\n");
-	/*
-	ncmax = 0;
-	for (k=0; k<nv; k++) {
-		nc = 0;
-		for (i=0; i<ne; i++) {
-			edge = edgeList[i];
-			if (!edge.used) continue;
-			kv0 = edge.vert[0];
-			kv1 = edge.vert[1];
-			if (kv0 == k) {
-				conn[k].v[nc] = kv1;
-				nc++;
-			}
-			if (kv1 == k) {
-				conn[k].v[nc] = kv0;
-				nc++;
-			}
-		}
-		conn[k].n = nc;
-		if (nc > ncmax) {
-			ncmax = nc;
-		}
-	}
-	printf("Max connections to a vertex: %d\n",ncmax);
-	nloops = 0;
-	for (k=0; k<100; k++) {
-//		printf("k: %d  %d\n",k,conn[k].n);
-		for (j1=0; j1<conn[k].n; j1++) {
-			k1 = conn[k].v[j1];
-			for (j2=0; j2<conn[k1].n; j2++) {
-				k2 = conn[k1].v[j2];
-				for (j3=0; j3<conn[k2].n; j3++) {
-					k3 = conn[k2].v[j3];
-					if (k3 == k) {
-						printf("Loop! %6d %6d %6d %6d\n",k,k1,k2,k3);
-						nloops++;
-					}
-				}
-			}
-		}
-	}
-	printf("nloops: %d\n",nloops/6);
-	*/
 
 // Does any non-vertex point occur in more than one edge?  No.
 	
@@ -1479,18 +1449,18 @@ int squeezer(void)
 //-----------------------------------------------------------------------------------------------------
 int main(int argc, char **argv)
 {
-	int err;
+	int n_prune_cycles, err;
 	char *input_amfile;
-	char drive[32], dir[128],filename[64], ext[32];
-	char errfilename[128], output_amfile[128], outfilename[128], result_file[128];
+	char drive[32], dir[1024],filename[256], ext[32];
+	char errfilename[1024], output_amfile[1024], outfilename[1024], result_file[1024];
 	int prune_flag, cmgui_flag;
 
 	double x = 1.234 * 2.345;
 
-	if (argc != 6) {
-		printf("Usage: prune input_amfile output_amfile ratio_limit prune_flag cmgui_flag\n");
+	if (argc != 7) {
+		printf("Usage: prune input_amfile output_amfile ratio_limit n_prune_cycles prune_flag cmgui_flag\n");
 		fperr = fopen("prune_error.log","w");
-		fprintf(fperr,"Usage: prune input_amfile output_amfile ratio_limit prune_flag cmgui_flag\n");
+		fprintf(fperr,"Usage: prune input_amfile output_amfile ratio_limit n_prune_cycles prune_flag cmgui_flag\n");
 		fprintf(fperr,"Submitted command line: argc: %d\n",argc);
 		for (int i=0; i<argc; i++) {
 			fprintf(fperr,"argv: %d: %s\n",i,argv[i]);
@@ -1502,8 +1472,9 @@ int main(int argc, char **argv)
 	input_amfile = argv[1];
 	strcpy(outfilename,argv[2]);
 	sscanf(argv[3],"%lf",&ratio_limit);
-	sscanf(argv[4],"%d",&prune_flag);
-	sscanf(argv[5],"%d",&cmgui_flag);
+	sscanf(argv[4],"%d",&n_prune_cycles);
+	sscanf(argv[5],"%d",&prune_flag);
+	sscanf(argv[6],"%d",&cmgui_flag);
 	_splitpath(outfilename,drive,dir,filename,ext);
 	strcpy(output_basename,drive);
 	strcat(output_basename,dir);
@@ -1526,23 +1497,25 @@ int main(int argc, char **argv)
 		if (err != 0) return 4;
 		err = adjoinEdges();
 		if (err != 0) return 3;
-		for (int k=0; k<3; k++) {
+		for (int k=0; k<n_prune_cycles; k++) {
 			err = pruner(k);
 			if (err != 0) return 5;
 			err = adjoinEdges();
 			if (err != 0) return 3;
+			err = checkEdgeEndPts();
+			if (err != 0) return 6;
 		}
 	}
 	err = squeezer();	// must squeeze, or SpatialGraph and CMGUI files are not consistent
-	if (err != 0) return 6;
+	if (err != 0) return 7;
 
 	err = WriteAmiraFile(output_amfile,input_amfile);
-	if (err != 0) return 7;
-	err = CreateDistributions();
 	if (err != 0) return 8;
+	err = CreateDistributions();
+	if (err != 0) return 9;
 	if (cmgui_flag == 1) {
 		err = WriteCmguiData(output_basename);
-		if (err != 0) return 9;
+		if (err != 0) return 10;
 	}
 	return 0;
 }

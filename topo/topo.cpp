@@ -34,7 +34,7 @@
 #define MAXPOINTS 1
 #define MAXEDGEPTS 1000
 #define MAXEDGES 100000
-#define MAXNBRS 20
+#define MAXNBRS 10
 //#define MINSTUB 3		// remove an edge that has an unconnected end if npts <= MINSTUB 
 #define MINSEGLEN 3		// segments less than MINSEGLEN are ignored
 #define NBOX 800
@@ -4788,6 +4788,7 @@ int FixDiameters()
 int main(int argc, char**argv)
 {
 	int uniform_flag, junction_max_flag;
+	int n_prune_cycles;
 	double voxelsize_x, voxelsize_y, voxelsize_z;
 	double volume;
 	char *vessFile, *skelFile;
@@ -4797,10 +4798,10 @@ int main(int argc, char**argv)
 	char errfilename[256], amfilename[256];
 	bool squeeze = true;
 
-	if (argc != 12) {
-		printf("Usage: topo skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z calib_param fixed_diam uniform_flag junction_max_flag max_ratio\n");
+	if (argc != 13) {
+		printf("Usage: topo skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z calib_param fixed_diam uniform_flag junction_max_flag max_ratio n_prune_cycles\n");
 		fperr = fopen("topo_error.log","w");
-		fprintf(fperr,"Usage: topo skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z calib_param fixed_diam uniform_flag junction_max_flag max_ratio\n");
+		fprintf(fperr,"Usage: topo skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z calib_param fixed_diam uniform_flag junction_max_flag max_ratio n_prune_cycles\n");
 		fprintf(fperr,"Submitted command line: argc: %d\n",argc);
 		for (int i=0; i<argc; i++) {
 			fprintf(fperr,"argv: %d: %s\n",i,argv[i]);
@@ -4832,6 +4833,7 @@ int main(int argc, char**argv)
 	sscanf(argv[9],"%d",&uniform_flag);
 	sscanf(argv[10],"%d",&junction_max_flag);
 	sscanf(argv[11],"%lf",&max_ratio);
+	sscanf(argv[12],"%d",&n_prune_cycles);
 
 	vsize[0] = voxelsize_x;
 	vsize[1] = voxelsize_y;
@@ -4960,6 +4962,19 @@ int main(int argc, char**argv)
 	}
 	printf("did simplify\n");
 	fprintf(fpout,"did simplify\n");
+
+	// Prune again
+	for (int i=0; i<n_prune_cycles; i++) {
+		prune();
+		checkVerticies(true);
+		err = checkEdgeEndPts();
+		if (err != 0) {
+			printf("Error: checkEdgeEndPts\n");
+			fprintf(fperr,"Error: checkEdgeEndPts\n");
+			fclose(fperr);
+			return 13;
+		}
+	}
 
 	if (FIXED_DIAMETER == 0) {
 		err = GetDiameters();

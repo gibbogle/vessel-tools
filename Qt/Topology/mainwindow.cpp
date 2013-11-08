@@ -117,6 +117,9 @@ void MainWindow::topology()
         qstr += "0 ";
     }
     qstr += ui->lineEditMaxRatio->text();
+    qstr += " ";
+    qstr += ui->lineEditNprunecycles->text();
+
     if (qstr.size()>(int)sizeof(cmdstr)-1) {
 		printf("Failed to convert qstr->cmdstr since qstr didn't fit\n");
 		resultstr = "FAILED: cmdstr not big enough for the command";

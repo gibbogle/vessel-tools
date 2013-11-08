@@ -20,3 +20,5 @@ All results are in units of micrometres (um).
 If "Fixed diameter" is checked and a diameter value is specified, the network files are generated using this diameter for all vessels.  This aids viewing the network topology.
 
 At a junction point the diameter is set either to the maximum diameter of the connected vessel segments, or to the average.  If the average option is selected, a threshold value of the ratio of max diam to min diam must be specified.  When the ratio at the junction exceeds this threshold the max diameter is used.  A large threshold value will ensure that the average is always used.
+
+The program always carries out one pruning, and extra pruning cycles may be applied. The pruning parameter is always 5 - twigs with length/(average diameter) < 5 are pruned.  

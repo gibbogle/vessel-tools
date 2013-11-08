@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>950</width>
-    <height>396</height>
+    <height>459</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -44,7 +44,7 @@
     <property name="geometry">
      <rect>
       <x>180</x>
-      <y>300</y>
+      <y>360</y>
       <width>75</width>
       <height>23</height>
      </rect>
@@ -57,7 +57,7 @@
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>330</y>
+      <y>390</y>
       <width>41</width>
       <height>16</height>
      </rect>
@@ -70,8 +70,8 @@
     <property name="geometry">
      <rect>
       <x>60</x>
-      <y>330</y>
-      <width>671</width>
+      <y>390</y>
+      <width>871</width>
       <height>16</height>
      </rect>
     </property>
@@ -85,7 +85,7 @@
       <x>520</x>
       <y>10</y>
       <width>411</width>
-      <height>311</height>
+      <height>371</height>
      </rect>
     </property>
    </widget>
@@ -295,7 +295,7 @@
      <rect>
       <x>120</x>
       <y>190</y>
-      <width>151</width>
+      <width>161</width>
       <height>17</height>
      </rect>
     </property>
@@ -369,12 +369,41 @@
      <rect>
       <x>330</x>
       <y>250</y>
-      <width>171</width>
+      <width>181</width>
       <height>21</height>
      </rect>
     </property>
     <property name="text">
      <string>Threshold ratio max/min diameter</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="lineEditNprunecycles">
+    <property name="geometry">
+     <rect>
+      <x>120</x>
+      <y>300</y>
+      <width>21</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>0</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_nprunecycles">
+    <property name="geometry">
+     <rect>
+      <x>150</x>
+      <y>300</y>
+      <width>161</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Number of extra prune cycles</string>
     </property>
    </widget>
   </widget>

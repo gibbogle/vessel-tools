@@ -26,7 +26,6 @@ struct edge_str
 	int vert[2];
 	float segavediam;
 	float length_vox;	// voxel-voxel length
-//	double length_jun;	// junction-junction length
 	bool used;
 };
 typedef edge_str EDGE;
