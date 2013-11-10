@@ -869,8 +869,8 @@ int main(int argc, char **argv)
 
 	err = WriteAmiraFile(output_amfile,input_amfile);
 	if (err != 0) return 7;
-//	err = CreateDistributions(ddiam,dlen);
-//	if (err != 0) return 8;
+	err = CreateDistributions(ddiam,dlen);
+	if (err != 0) return 8;
 	if (cmgui_flag == 1) {
 		err = WriteCmguiData(output_basename);
 		if (err != 0) return 9;

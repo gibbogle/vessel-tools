@@ -25,7 +25,7 @@ struct edge_str
 	int *pt_used;
 	int vert[2];
 	float segavediam;
-	float length_vox;	// voxel-voxel length
+	float length_um;	// length in um
 	bool used;
 };
 typedef edge_str EDGE;

@@ -176,15 +176,197 @@ int checkEdgeEndPts()
 }
 
 //-----------------------------------------------------------------------------------------------------
-// The average diameter of a segment (edge) is now estimated by dividing the volume by the length.
+// The average diameter of a vessel (edge) is now estimated by dividing the volume by the length.
+// All distances in the .am file are in um.
 //-----------------------------------------------------------------------------------------------------
-int CreateDistributions(void)
+int CreateDistributions(double delta_diam, double delta_len)
 {
 	int adbox[NBOX], lvbox[NBOX];
 	int segadbox[NBOX];
-	double ad, len_vox, ddiam, dlen, dtot, ltot, lsum, dsum, dvol, r2, r2prev;
+	double lsegadbox[NBOX];
+//	double ddiam, dlen;
+	double ad, len, dlen, ltot, lsum, dsum, dvol, r2, r2prev, lsegdtot;
+	double ave_len, volume, d95;
+	double ave_pt_diam, ave_seg_diam;
+	int ie, ip, k, ka, kp, kpprev, ndpts, nlpts, ndtot, nsegdtot;
+	double lenlimit = 3.0;
+	EDGE edge;
+
+	for (k=0;k<NBOX;k++) {
+		adbox[k] = 0;
+		segadbox[k] = 0;
+		lsegadbox[k] = 0;
+		lvbox[k] = 0;
+	}
+	printf("Compute diameter distributions\n");
+	fprintf(fperr,"Compute diameter distributions\n");
+	// Diameters
+//	ddiam = 0.5;
+	ndtot = 0;
+	nsegdtot = 0;
+	lsegdtot = 0;
+	ave_pt_diam = 0;
+	ave_seg_diam = 0;
+	volume = 0;
+	for (ie=0; ie<ne; ie++) {
+		edge = edgeList[ie];
+		if (!edge.used) continue;
+//		printf("ie: %d npts: %d\n",ie,edge.npts);
+		fprintf(fperr,"ie: %d npts: %d\n",ie,edge.npts);
+		fflush(fperr);
+		bool dbug = false;
+		kpprev = 0;
+		r2prev = 0;
+		dsum = 0;
+		lsum = 0;
+		dvol = 0;
+		for (ip=0; ip<edge.npts; ip++) {
+			kp = edge.pt[ip];
+			ad = point[kp].d;
+//			ad = avediameter[kp];
+			ave_pt_diam += ad;
+			if (dbug) {
+				printf("%d  %d  %f  %f\n",ip,kp,ad,delta_diam);
+				fprintf(fperr,"%d  %d  %f  %f\n",ip,kp,ad,delta_diam);
+			}
+			fflush(fperr);
+//			dsum += ad;
+			if (ad < 0.001) {
+				printf("Zero point diameter: edge: %d point: %d ad: %f\n",ie,ip,ad);
+				fprintf(fperr,"Zero point diameter: edge: %d point: %d ad: %f\n",ie,ip,ad);
+				return 1;
+			}
+			ka = int(ad/delta_diam + 0.5);
+			if (ka >= NBOX) {
+				printf("Vessel too wide (point): d: %f k: %d\n",ad,ka);
+				fprintf(fperr,"Vessel too wide (point): d: %f k: %d\n",ad,ka);
+				continue;
+			}
+			adbox[ka]++;
+			ndtot++;
+			if (ip > 0) {
+				dlen = dist(kp,kpprev);
+				r2 = ad*ad/4;
+				dvol += PI*dlen*(r2 + r2prev)/2;
+				lsum += dlen;
+			}
+			kpprev = kp;
+			r2prev = r2;
+		}
+		edgeList[ie].length_um = lsum;
+		volume += dvol;
+		if (dbug) {
+			printf("lsum: %f\n",lsum);
+			fprintf(fperr,"lsum: %f\n",lsum);
+			fflush(fperr);
+			if (lsum == 0) return 1;
+		}
+//		ad = dsum/edge.npts;
+		ad = 2*sqrt(dvol/(PI*lsum));	// segment diameter
+		ave_seg_diam += ad;
+		if (ad < 0.001) {
+			printf("Zero segment diameter: edge: %d ad: %f\n",ie,ad);
+			fprintf(fperr,"Zero segment diameter: edge: %d ad: %f\n",ie,ad);
+			return 1;
+		}
+//		ka = int(ad/ddiam + 0.5);
+		ka = int(ad/delta_diam );
+		if (ka >= NBOX) {
+			printf("Vessel too wide (segment ave): d: %f k: %d\n",ad,ka);
+			fprintf(fperr,"Vessel too wide (segment ave): d: %f k: %d\n",ad,ka);
+			continue;
+		}
+		segadbox[ka]++;
+		nsegdtot++;
+		lsegadbox[ka] += lsum;
+		lsegdtot += lsum;
+	}
+	// Determine d95, the diameter that >95% of points exceed.
+	dsum = 0;
+	for (k=0; k<NBOX; k++) {
+		dsum += adbox[k]/float(ndtot);
+		if (dsum > 0.05) {
+			d95 = (k-1)*delta_diam;
+			break;
+		}
+	}
+	printf("Compute length distributions: lower limit = %6.1f um\n",lenlimit);
+	fprintf(fperr,"Compute length distributions: lower limit = %6.1f um\n",lenlimit);
+	// Lengths
+//	dlen = 1;
+	ltot = 0;
+	ave_len = 0;
+	for (ie=0; ie<ne; ie++) {
+		edge = edgeList[ie];
+		if (!edge.used) continue;
+		len = edge.length_um;
+//		k = int(len/dlen + 0.5);
+		k = int(len/delta_len);
+		if (k*delta_len <= lenlimit) continue;
+		if (k >= NBOX) {
+			printf("Edge too long: len: %d  %f  k: %d\n",ie,len,k);
+			fprintf(fperr,"Edge too long: len: %d  %f  k: %d\n",ie,len,k);
+			continue;
+		}
+		lvbox[k]++;
+		ave_len += len;
+		ltot++;
+	}
+	ave_pt_diam /= ndtot;
+	ave_seg_diam /= nsegdtot;
+	fprintf(fpout,"Total vertices: %d  points: %d\n",nv,np);
+	fprintf(fpout,"Vessels: %d\n",ne);
+	printf("Average pt diameter: %6.2f vessel diameter: %6.2f\n",ave_pt_diam, ave_seg_diam);
+	fprintf(fpout,"Average pt diameter: %6.2f vessel diameter: %6.2f\n",ave_pt_diam, ave_seg_diam);
+	printf("Average vessel length: %6.1f\n",ave_len/ltot);
+	fprintf(fpout,"Average vessel length: %6.1f\n",ave_len/ltot);
+	fprintf(fpout,"Volume: %10.0f\n\n",volume);
+
+	//ndpts = 0;
+	//for (k=0; k<NBOX; k++) {
+	//	if (adbox[k]/float(ndtot) >= 0.0005) {
+	//		ndpts = k+1;
+	//	}
+	//}
+	for (k=NBOX-1; k>=0; k--) {
+		if (segadbox[k] > 0) break;
+	}
+	ndpts = k+2;
+	fprintf(fpout,"Vessel diameter distribution\n");
+	fprintf(fpout,"'um'    number  fraction    length  fraction\n");
+	for (k=0; k<ndpts; k++) {
+		fprintf(fpout,"'%6.2f -%6.2f' %8d %9.5f  %8.0f %9.5f\n",k*delta_diam,(k+1)*delta_diam,segadbox[k],segadbox[k]/float(nsegdtot),
+			lsegadbox[k],lsegadbox[k]/lsegdtot);
+	}
+
+	//nlpts = 0;
+	//for (k=0; k<NBOX; k++) {
+	//	if (lvbox[k]/ltot >= 0.0005) {
+	//		nlpts = k+1;
+	//	}
+	//}
+	for (k=NBOX-1; k>=0; k--) {
+		if (lvbox[k] > 0) break;
+	}
+	nlpts = k+2;
+	fprintf(fpout,"\nVessel length distribution\n");
+	fprintf(fpout,"'um'    number  fraction\n");
+	for (k=0; k<nlpts; k++) {
+		fprintf(fpout,"'%6.2f -%6.2f' %8d %9.5f\n",k*delta_len,(k+1)*delta_len,lvbox[k],lvbox[k]/ltot);
+	}
+	return 0;
+}
+
+//-----------------------------------------------------------------------------------------------------
+// The average diameter of a segment (edge) is now estimated by dividing the volume by the length.
+//-----------------------------------------------------------------------------------------------------
+int oldCreateDistributions(void)
+{
+	int adbox[NBOX], lvbox[NBOX];
+	int segadbox[NBOX];
+	double ad, len_um, ddiam, dlen, dtot, ltot, lsum, dsum, dvol, r2, r2prev;
 	double segdtot;
-	double ave_len_vox, volume, d95;
+	double ave_len_um, volume, d95;
 	int ie, ip, k, ka, kp, kpprev, ndpts, nlpts;
 	double lenlimit = 3.0;
 	EDGE edge;
@@ -233,7 +415,7 @@ int CreateDistributions(void)
 			kpprev = kp;
 			r2prev = r2;
 		}
-		edgeList[ie].length_vox = lsum;
+		edgeList[ie].length_um = lsum;
 		volume += dvol;
 //		ad = dsum/edge.npts;
 		ad = 2*sqrt(dvol/(PI*lsum));
@@ -264,26 +446,26 @@ int CreateDistributions(void)
 	// Lengths
 	dlen = 1;
 	ltot = 0;
-	ave_len_vox = 0;
+	ave_len_um = 0;
 	for (ie=0; ie<ne; ie++) {
 		edge = edgeList[ie];
 		if (!edge.used) continue;
-		len_vox = edge.length_vox;
-//		if (len_vox <= d95) continue;
-		k = len_vox/dlen + 0.5;
+		len_um = edge.length_um;
+//		if (len_um <= d95) continue;
+		k = len_um/dlen + 0.5;
 		if (k*dlen <= lenlimit) continue;
 		if (k >= NBOX) {
-			printf("Edge too long: len_vox: %d  %f  k: %d\n",ie,len_vox,k);
+			printf("Edge too long: len_um: %d  %f  k: %d\n",ie,len_um,k);
 			continue;
 		}
 		lvbox[k]++;
-		ave_len_vox += len_vox;
+		ave_len_um += len_um;
 		ltot++;
 	}
 	fprintf(fpout,"Total vertices: %d  points: %d\n",nv,np);
 	fprintf(fpout,"Edges: %d\n",ne);
-	printf("Average length: vox: %f\n",ave_len_vox/ltot);
-	fprintf(fpout,"Average length: vox: %f\n",ave_len_vox/ltot);
+	printf("Average length: vox: %f\n",ave_len_um/ltot);
+	fprintf(fpout,"Average length: vox: %f\n",ave_len_um/ltot);
 	fprintf(fpout,"Volume: %10.0f\n\n",volume);
 
 	ndpts = 0;
@@ -496,7 +678,7 @@ int ReadAmiraFile(char *amFile)
 							len = len + dist(edgeList[i].pt[k-1],edgeList[i].pt[k]);
 						}
 					}
-					edgeList[i].length_vox = len;
+					edgeList[i].length_um = len;
 				}
 			} else if (k == 5) {
 				for (i=0;i<ne;i++) {
@@ -551,7 +733,6 @@ int adjoinEdges(void)
 	EDGE edge1, edge2;
 
 	printf("adjoinEdges\n");
-	fprintf(fpout,"adjoinEdges\n");
 	nvrefs = (int *)malloc(nv*sizeof(int));
 	pair = (PAIR *)malloc(nv*sizeof(PAIR));
 	for (;;) {
@@ -1048,7 +1229,6 @@ int pruner(int iter)
 	LOOSEND end[20000];
 
 	printf("pruner\n");
-	fprintf(fpout,"pruner\n");
 	nloose = 0;
 	npruned = 0;
 	// Step through edges, looking for loose ends.
@@ -1236,7 +1416,6 @@ int deloop(void)
 	bool dup;
 
 	printf("deloop\n");
-	fprintf(fpout,"deloop\n");
 
 // Does any non-vertex point occur in more than one edge?  No.
 	
@@ -1454,13 +1633,12 @@ int main(int argc, char **argv)
 	char drive[32], dir[1024],filename[256], ext[32];
 	char errfilename[1024], output_amfile[1024], outfilename[1024], result_file[1024];
 	int prune_flag, cmgui_flag;
+	double ddiam, dlen;
 
-	double x = 1.234 * 2.345;
-
-	if (argc != 7) {
-		printf("Usage: prune input_amfile output_amfile ratio_limit n_prune_cycles prune_flag cmgui_flag\n");
+	if (argc != 9) {
+		printf("Usage: prune input_amfile output_amfile ratio_limit n_prune_cycles prune_flag cmgui_flag delta_diam delta_len\n");
 		fperr = fopen("prune_error.log","w");
-		fprintf(fperr,"Usage: prune input_amfile output_amfile ratio_limit n_prune_cycles prune_flag cmgui_flag\n");
+		fprintf(fperr,"Usage: prune input_amfile output_amfile ratio_limit n_prune_cycles prune_flag cmgui_flag delta_diam delta_len\n");
 		fprintf(fperr,"Submitted command line: argc: %d\n",argc);
 		for (int i=0; i<argc; i++) {
 			fprintf(fperr,"argv: %d: %s\n",i,argv[i]);
@@ -1475,6 +1653,8 @@ int main(int argc, char **argv)
 	sscanf(argv[4],"%d",&n_prune_cycles);
 	sscanf(argv[5],"%d",&prune_flag);
 	sscanf(argv[6],"%d",&cmgui_flag);
+	sscanf(argv[7],"%lf",&ddiam);
+	sscanf(argv[8],"%lf",&dlen);
 	_splitpath(outfilename,drive,dir,filename,ext);
 	strcpy(output_basename,drive);
 	strcat(output_basename,dir);
@@ -1511,7 +1691,8 @@ int main(int argc, char **argv)
 
 	err = WriteAmiraFile(output_amfile,input_amfile);
 	if (err != 0) return 8;
-	err = CreateDistributions();
+//	err = oldCreateDistributions();
+	err = CreateDistributions(ddiam, dlen);
 	if (err != 0) return 9;
 	if (cmgui_flag == 1) {
 		err = WriteCmguiData(output_basename);
