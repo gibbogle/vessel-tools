@@ -1,0 +1,17 @@
+Program for investigating sprouts (deadends) in a vessel network.
+
+Input files:
+   Amira network file (.am)
+   Tiff image file that was used to create the Amira file
+
+Output files:
+   Amira network file with just the vessel sprouts
+   Tiff image file generated from the Amira sprout network file
+
+The sequence of steps is:
+   Supply voxel dimensions (um)
+   Supply all file names
+   Evaluate network (this reads the input files)
+   Detect sprouts
+   Evaluate sprouts (intensity computed)
+   Save sprout files (Amira network and tiff image files are written)

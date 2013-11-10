@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-PROJECT(deadends)
+PROJECT(sprouter)
 
 #IF(NOT VTK_BINARY_DIR)
 #FIND_PACKAGE(VTK)
@@ -43,7 +43,7 @@ SOURCE_GROUP("Generated" FILES
   ${RCS_SOURCES}
 )
 
-set(PROJECTNAME "deadends")
+set(PROJECTNAME "sprouter")
 set(BIN_DIR "../../bin")
 
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)

@@ -1,0 +1,11 @@
+Program to prune short twigs (sprouts, deadends...)
+
+If pruning is selected, the user must specify the pruning parameters:
+    (twig length)/diameter ratio limit - twigs with a ratio less than this value will be pruned
+    Number of pruning cycles - the pruning is carried out repeatedly if more than one cyccle is specified
+
+The program generates histograms of vessel diameter and length in the usual way, and the relevant parameters must be provided.
+
+Optionally, CMGUI files are written.
+
+(The capabilities of pruner overlap with those of translater)
