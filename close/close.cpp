@@ -1,9 +1,3 @@
-/*
- * To chop out a piece of a .tif
- * Note: now range indices are 0-based to make them conform with the coordinates in a .am file.
- * This implies a divergence from Irfanview, which uses 1-based indices.
- */
-
 #include <cstdio>
 #include <vector>
 

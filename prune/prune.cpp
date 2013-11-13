@@ -1655,13 +1655,14 @@ int main(int argc, char **argv)
 	sscanf(argv[6],"%d",&cmgui_flag);
 	sscanf(argv[7],"%lf",&ddiam);
 	sscanf(argv[8],"%lf",&dlen);
+	if (prune_flag == 0) n_prune_cycles = 0;
 	_splitpath(outfilename,drive,dir,filename,ext);
 	strcpy(output_basename,drive);
 	strcat(output_basename,dir);
 	strcat(output_basename,filename);
 	sprintf(errfilename,"%s_prune.log",output_basename);
 	sprintf(output_amfile,"%s.am",output_basename);
-	sprintf(result_file,"%s_prune.out",output_basename);
+	sprintf(result_file,"%s.out",output_basename);
 	fperr = fopen(errfilename,"w");
 
 //	fprintf(fperr,"drive: %s dir: %s filename: %s ext: %s\n",drive,dir,filename,ext);
@@ -1670,9 +1671,9 @@ int main(int argc, char **argv)
 	fpout = fopen(result_file,"w");	
 	err = ReadAmiraFile(input_amfile);
 	if (err != 0) return 2;
-	err = adjoinEdges();
-	if (err != 0) return 3;
-	if (prune_flag == 1) {
+	if (n_prune_cycles > 0) {
+		err = adjoinEdges();
+		if (err != 0) return 3;
 		err = deloop();
 		if (err != 0) return 4;
 		err = adjoinEdges();
@@ -1685,9 +1686,9 @@ int main(int argc, char **argv)
 			err = checkEdgeEndPts();
 			if (err != 0) return 6;
 		}
+		err = squeezer();	// must squeeze, or SpatialGraph and CMGUI files are not consistent
+		if (err != 0) return 7;
 	}
-	err = squeezer();	// must squeeze, or SpatialGraph and CMGUI files are not consistent
-	if (err != 0) return 7;
 
 	err = WriteAmiraFile(output_amfile,input_amfile);
 	if (err != 0) return 8;

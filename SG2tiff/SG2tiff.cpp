@@ -606,9 +606,9 @@ int main(int argc, char**argv)
 	bool use_compression = true;
 
 	if (argc != 5) {
-		printf("Usage: STL input_SGfile output_tiff delta dmin\n");
-		fperr = fopen("STL_error.log","w");
-		fprintf(fperr,"Usage: STL input_SGfile output_tiff delta dmin\n");
+		printf("Usage: SG2tiff input_SGfile output_tiff delta dmin\n");
+		fperr = fopen("SG2tiff_error.log","w");
+		fprintf(fperr,"Usage: SG2tiff input_SGfile output_tiff delta dmin\n");
 		fprintf(fperr,"Submitted command line: argc: %d\n",argc);
 		for (int i=0; i<argc; i++) {
 			fprintf(fperr,"argv: %d: %s\n",i,argv[i]);
@@ -625,8 +625,8 @@ int main(int argc, char**argv)
 	strcpy(output_basename,drive);
 	strcat(output_basename,dir);
 	strcat(output_basename,filename);
-	sprintf(errfilename,"%s_STL.log",output_basename);
-	sprintf(result_file,"%s_STL.out",output_basename);
+	sprintf(errfilename,"%s_SG2tiff.log",output_basename);
+	sprintf(result_file,"%s_SG2tiff.out",output_basename);
 	fperr = fopen(errfilename,"w");
 
 	fpout = fopen(result_file,"w");	

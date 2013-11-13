@@ -49,12 +49,12 @@ struct network_str
 };
 typedef network_str NETWORK;
 
-struct deadend_str
+struct sprout_str
 {
     int iv;
     int ie;
     float intensity;
 };
-typedef deadend_str DEADEND;
+typedef sprout_str SPROUT;
 
 #endif

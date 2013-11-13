@@ -12,7 +12,7 @@
 typedef itk::Image<unsigned char,3> ImageType_u8;
 
 #define V(a,b,c)  p_im[(c)*xysize+(b)*width+(a)]
-#define V_dead(a,b,c)  p_im_dead[(c)*xysize_d+(b)*width_d+(a)]
+#define V_sprout(a,b,c)  p_im_sprout[(c)*xysize_d+(b)*width_d+(a)]
 
 namespace Ui {
     class MainWindow;
@@ -33,11 +33,11 @@ private slots:
     void outputTiffFileSelecter();
     void voxelChanged();
     void checkReady();
-    void detectDeadends();
+    void detectSprouts();
     void evaluate();
     void getAllIntensities();
     void optionSphere();
-    void saveDeadendFile();
+    void saveSproutFile();
 private:
     Ui::MainWindow *ui;
 
@@ -49,10 +49,10 @@ public:
     int createTiff(const char *, unsigned char *, int, int, int);
     int createTiffData(NETWORK *net);
     int readNetwork(NETWORK *, const char *);
-    int createNetwork(NETWORK *, NETWORK *, DEADEND *, int);
+    int createNetwork(NETWORK *, NETWORK * sproutnet, SPROUT * sproutlist, int nsprouts);
     void freeNetwork(NETWORK *);
-    int findDeadends(NETWORK *, DEADEND **, int *);
-    int getIntensities(NETWORK *, DEADEND *, int, int *nzero);
+    int findSprouts(NETWORK *, SPROUT **, int *);
+    int getIntensities(NETWORK *, SPROUT *, int, int *nzero);
     void getVoxels(float r, float c[], float beta, int *nv, int v[][3]);
     void getMaxIntensity(int nv, int v[][3], int *maxval);
     void getSphere();
@@ -71,15 +71,15 @@ public:
     bool ready;
     bool is_network;
     NETWORK network;
-    NETWORK deadnetwork;
-    int ndead;
-    DEADEND *deadlist;
+    NETWORK sproutnetwork;
+    int nsprouts;
+    SPROUT *sproutlist;
     ImageType_u8::Pointer im_u8;
     int width, height, depth, xysize;
     int width_d, height_d, depth_d, xysize_d;
     int margin;
     unsigned char *p_im;
-    unsigned char *p_im_dead;
+    unsigned char *p_im_sprout;
     float voxelsize[3];
     bool isSphere;
     float sphereRadius;

@@ -64,7 +64,7 @@ int MainWindow::writeAmiraFile(const char *amFileOut, const char *amFileIn, NETW
 
 	FILE *fpam = fopen(amFileOut,"w");
 	fprintf(fpam,"# AmiraMesh 3D ASCII 2.0\n");
-    fprintf(fpam,"# Created by dead.exe from: %s\n",amFileIn);
+    fprintf(fpam,"# Created by sprouter.exe from: %s\n",amFileIn);
 	fprintf(fpam,"\n");
 	fprintf(fpam,"define VERTEX %d\n",net->nv);
 	fprintf(fpam,"define EDGE %d\n",net->ne);
@@ -135,7 +135,7 @@ int MainWindow::readAmiraFile(const char *amFile, NETWORK *net)
 	char line[STR_LEN];
 
 //    if (fpout == NULL) {
-//        fpout = fopen("dead.out","w");
+//        fpout = fopen("sprouter.out","w");
 //    }
     printf("ReadAmiraFile: %s\n",amFile);
     fprintf(fpout,"ReadAmiraFile: %s\n",amFile);
@@ -433,62 +433,62 @@ int CreateBlockNet(NETWORK *net0, NETWORK *net1, float x1, float x2, float y1, f
 }
 
 //-----------------------------------------------------------------------------------------------------
-// Create a network made up of the dead-end vessels of the original network
+// Create a network made up of the vessel sprouts of the original network
 //-----------------------------------------------------------------------------------------------------
-int MainWindow::createNetwork(NETWORK *net, NETWORK *deadnet, DEADEND *deadlist, int ndead)
+int MainWindow::createNetwork(NETWORK *net, NETWORK *sproutnet, SPROUT *sproutlist, int nsprouts)
 {
     int k, j, iv, ie, ip, iev;
     int *vert;
     EDGE edge;
     APOINT p;
 
-    deadnet->ne = ndead;
-    deadnet->edgeList = (EDGE *)malloc(deadnet->ne*sizeof(EDGE));
-    deadnet->nv = 2*ndead;
-    deadnet->vertex = (VERTEX *)malloc(deadnet->nv*sizeof(VERTEX));
+    sproutnet->ne = nsprouts;
+    sproutnet->edgeList = (EDGE *)malloc(sproutnet->ne*sizeof(EDGE));
+    sproutnet->nv = 2*nsprouts;
+    sproutnet->vertex = (VERTEX *)malloc(sproutnet->nv*sizeof(VERTEX));
     iv = 0;
     ie = 0;
     ip = 0;
-    for (k=0; k<ndead; k++) {
-        if (deadlist[k].intensity == 0) continue;
-        iev = deadlist[k].ie;
+    for (k=0; k<nsprouts; k++) {
+        if (sproutlist[k].intensity == 0) continue;
+        iev = sproutlist[k].ie;
         edge = net->edgeList[iev];
         vert = edge.vert;
-        deadnet->vertex[iv].point = net->vertex[vert[0]].point;
-        deadnet->vertex[iv].used = true;
-        deadnet->edgeList[ie].vert[0] = iv;
+        sproutnet->vertex[iv].point = net->vertex[vert[0]].point;
+        sproutnet->vertex[iv].used = true;
+        sproutnet->edgeList[ie].vert[0] = iv;
         iv++;
-        deadnet->vertex[iv].point = net->vertex[vert[1]].point;
-        deadnet->vertex[iv].used = true;
-        deadnet->edgeList[ie].vert[1] = iv;
+        sproutnet->vertex[iv].point = net->vertex[vert[1]].point;
+        sproutnet->vertex[iv].used = true;
+        sproutnet->edgeList[ie].vert[1] = iv;
         iv++;
-        deadnet->edgeList[ie].npts = edge.npts;
-        deadnet->edgeList[ie].npts_used = edge.npts;
-        deadnet->edgeList[ie].pt = (int *)malloc(edge.npts*sizeof(int));
+        sproutnet->edgeList[ie].npts = edge.npts;
+        sproutnet->edgeList[ie].npts_used = edge.npts;
+        sproutnet->edgeList[ie].pt = (int *)malloc(edge.npts*sizeof(int));
         ie++;
         ip += edge.npts;
     }
-    deadnet->nv = iv;
-    deadnet->ne = ie;
-    deadnet->np = ip;
-    deadnet->point = (APOINT *)malloc(deadnet->np*sizeof(APOINT));
+    sproutnet->nv = iv;
+    sproutnet->ne = ie;
+    sproutnet->np = ip;
+    sproutnet->point = (APOINT *)malloc(sproutnet->np*sizeof(APOINT));
     ip = 0;
     ie = 0;
-    for (k=0; k<ndead; k++) {
-        if (deadlist[k].intensity == 0) continue;
-        iev = deadlist[k].ie;
+    for (k=0; k<nsprouts; k++) {
+        if (sproutlist[k].intensity == 0) continue;
+        iev = sproutlist[k].ie;
         edge = net->edgeList[iev];
         for (j=0; j<edge.npts; j++) {
             p = net->point[edge.pt[j]];
-            deadnet->edgeList[ie].pt[j] = ip;
-            deadnet->point[ip] = p;
+            sproutnet->edgeList[ie].pt[j] = ip;
+            sproutnet->point[ip] = p;
             ip++;
         }
-//        showEdge(ie,deadnet);
+//        showEdge(ie,sproutnet);
         ie++;
     }
-    printf("nv,ne,np: %d %d %d\n",deadnet->nv,deadnet->ne,deadnet->np);
-    fprintf(fpout,"nv,ne,np: %d %d %d\n",deadnet->nv,deadnet->ne,deadnet->np);
+    printf("nv,ne,np: %d %d %d\n",sproutnet->nv,sproutnet->ne,sproutnet->np);
+    fprintf(fpout,"nv,ne,np: %d %d %d\n",sproutnet->nv,sproutnet->ne,sproutnet->np);
     return 0;
 }
 
@@ -502,13 +502,11 @@ int MainWindow::readNetwork(NETWORK *net, const char *amfile)
     err = readAmiraFile(amfile,net);
     if (err != 0) return 1;
     am_read = true;
-//    err = WriteAmiraFile(output_amfile,input_amfile,NP1);
-//    if (err != 0) return 4;
-//    free_network(NP1);
-
 	return 0;
 }
 
+//-----------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------
 bool MainWindow::inSphere(APOINT p)
 {
     float dx, dy, dz;
@@ -526,18 +524,18 @@ bool MainWindow::inSphere(APOINT p)
 // Within a specified sphere, find all vertices (and the associated edges) that are connected
 // to only one edge.
 //-----------------------------------------------------------------------------------------------------
-int MainWindow::findDeadends(NETWORK *net, DEADEND **deadlist, int *ndead)
+int MainWindow::findSprouts(NETWORK *net, SPROUT **sproutlist, int *nsprouts)
 {
     int iv, ie, n, iev;
     int *vert;
     APOINT p;
 
-    fprintf(fpout,"find_deadends: nv: %d\n",net->nv);
-    printf("find_deadends: nv: %d\n",net->nv);
+    fprintf(fpout,"findSprouts: nv: %d\n",net->nv);
+    printf("findSprouts: nv: %d\n",net->nv);
     fflush(fpout);
-    if (*deadlist != NULL) free(*deadlist);
-    *deadlist = (DEADEND *)malloc(net->nv*(sizeof(DEADEND)));
-    *ndead = 0;
+    if (*sproutlist != NULL) free(*sproutlist);
+    *sproutlist = (SPROUT *)malloc(net->nv*(sizeof(SPROUT)));
+    *nsprouts = 0;
     for (iv=0; iv<net->nv; iv++) {
         if (isSphere) {
             p = net->vertex[iv].point;
@@ -556,17 +554,17 @@ int MainWindow::findDeadends(NETWORK *net, DEADEND **deadlist, int *ndead)
 //        printf("iv,n: %6d %6d\n",iv,n);
 //        fflush(fpout);
         if (n == 1) {
-            (*deadlist)[*ndead].iv = iv;
-            (*deadlist)[*ndead].ie = iev;
-            (*ndead)++;
+            (*sproutlist)[*nsprouts].iv = iv;
+            (*sproutlist)[*nsprouts].ie = iev;
+            (*nsprouts)++;
 
-//            fprintf(fpout,"%d %d %d\n",iv,iev,*ndead);
-//            printf("%d %d %d\n",iv,iev,*ndead);
+//            fprintf(fpout,"%d %d %d\n",iv,iev,*nsprouts);
+//            printf("%d %d %d\n",iv,iev,*nsprouts);
 //            fflush(fpout);
         }
     }
-    fprintf(fpout,"Completed find_deadends\n");
-    printf("Completed find_deadends\n");
+    fprintf(fpout,"Completed findSprouts\n");
+    printf("Completed findSprouts\n");
     fflush(fpout);
     return 0;
 }

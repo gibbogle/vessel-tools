@@ -33,7 +33,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
 
     ui->textEdit->setReadOnly(true);
-    QString infoFile = QCoreApplication::applicationDirPath() + "/info/deadends_info.txt";
+    QString infoFile = QCoreApplication::applicationDirPath() + "/info/sprouter_info.txt";
     QFile file(infoFile);
     bool ok = file.open(QIODevice::ReadOnly | QIODevice::Text);
     if (!ok) {
@@ -50,12 +50,12 @@ MainWindow::MainWindow(QWidget *parent) :
         ui->textEdit->moveCursor(QTextCursor::Start);
     }
 
-    fpout = fopen("dead.out","w");
+    fpout = fopen("sprouter.out","w");
     network.ne = 0;
     network.nv = 0;
     network.np = 0;
-    deadlist = NULL;
-    ndead = 0;
+    sproutlist = NULL;
+    nsprouts = 0;
     isSphere = false;
     is_am_in = false;
     is_tiff_in = false;
@@ -68,7 +68,7 @@ MainWindow::MainWindow(QWidget *parent) :
     evaluated = false;
     margin = 0;
     voxelsize[0] = voxelsize[1] = voxelsize[2] = 2;
-    p_im_dead = NULL;
+    p_im_sprout = NULL;
     checkReady();
 
 //      image_view = vtkImageViewer2::New();
@@ -193,7 +193,7 @@ void MainWindow::checkReady()
     if (voxelOK && is_am_in && is_tiff_in && is_am_out && is_tiff_out) {
         ui->pushButtonEvaluateAll->setEnabled(true);
         if (ready) {
-            ui->pushButtonDeadends->setEnabled(true);
+            ui->pushButtonSprouts->setEnabled(true);
             if (detected) {
                 ui->pushButtonEvaluate->setEnabled(true);
                 if (evaluated)
@@ -205,7 +205,7 @@ void MainWindow::checkReady()
         }
     } else {
         ready = false;
-        ui->pushButtonDeadends->setEnabled(false);
+        ui->pushButtonSprouts->setEnabled(false);
         ui->pushButtonEvaluateAll->setEnabled(false);
         ui->pushButtonEvaluate->setEnabled(false);
         ui->pushButtonSaveFile->setEnabled(false);
@@ -214,7 +214,7 @@ void MainWindow::checkReady()
 
 //----------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------
-void MainWindow::detectDeadends()
+void MainWindow::detectSprouts()
 {
     int err;
     QString resultstr;
@@ -227,7 +227,7 @@ void MainWindow::detectDeadends()
     if (isSphere) {
         getSphere();
     }
-    ui->lineEditNdead->setText("");
+    ui->lineEditNsprouts->setText("");
     if (!am_read) {
         resultstr = "reading network file...";
         ui->labelResult->setText(resultstr);
@@ -254,14 +254,14 @@ void MainWindow::detectDeadends()
     resultstr = "working...";
     ui->labelResult->setText(resultstr);
     QCoreApplication::processEvents();
-    err = findDeadends(&network, &deadlist, &ndead);
+    err = findSprouts(&network, &sproutlist, &nsprouts);
     if (err != 0) {
-        resultstr = "FAILED: find_deadends";
+        resultstr = "FAILED: find_sprouts";
         ui->labelResult->setText(resultstr);
         return;
     }
-    printf("ndead: %d\n",ndead);
-    fprintf(fpout,"ndead: %d\n",ndead);
+    printf("nsprouts: %d\n",nsprouts);
+    fprintf(fpout,"nsprouts: %d\n",nsprouts);
     detected = true;
     checkReady();
     resultstr = "SUCCESS";
@@ -279,17 +279,17 @@ void MainWindow::evaluate()
     resultstr = "working...";
     ui->labelResult->setText(resultstr);
     QCoreApplication::processEvents();
-    getIntensities(&network, deadlist, ndead, &nzero);
+    getIntensities(&network, sproutlist, nsprouts, &nzero);
     evaluated = true;
     checkReady();
     resultstr = "SUCCESS";
     ui->labelResult->setText(resultstr);
-    numstr.setNum(ndead-nzero);
-    ui->lineEditNdead->setText(numstr);
+    numstr.setNum(nsprouts-nzero);
+    ui->lineEditNsprouts->setText(numstr);
 }
 
 //----------------------------------------------------------------------------------------
-// For each dead end, evaluate the image intensity of the connected vessel (edge).
+// For each sprout, evaluate the image intensity of the connected vessel (edge).
 // What makes this a bit tricky is the fact that the vessel walls are stained.  This
 // suggests that it might be more appropriate to determine the peak intensity in the
 // vicinity of the vessel, rather than the mean intensity.
@@ -300,7 +300,7 @@ void MainWindow::evaluate()
 // (3) determine the maximum intensity of this set of voxels
 // (4) record the average of the maximum intensities of all points
 //----------------------------------------------------------------------------------------
-int MainWindow::getIntensities(NETWORK *net, DEADEND *deadlist, int ndead, int *nzero)
+int MainWindow::getIntensities(NETWORK *net, SPROUT *sproutlist, int nsprouts, int *nzero)
 {
     int id, ie, npts, ip, count;
     int nv, v[100000][3], maxval;
@@ -310,13 +310,13 @@ int MainWindow::getIntensities(NETWORK *net, DEADEND *deadlist, int ndead, int *
     EDGE edge;
     APOINT p;
 
-    printf("getIntensities: %d\n",ndead);
-    fprintf(fpout,"getIntensities: %d\n",ndead);
+    printf("getIntensities: %d\n",nsprouts);
+    fprintf(fpout,"getIntensities: %d\n",nsprouts);
     *nzero = 0;
     count = 0;
     sum = 0;
-    for (id=0; id<ndead; id++) {
-        ie = deadlist[id].ie;
+    for (id=0; id<nsprouts; id++) {
+        ie = sproutlist[id].ie;
         edge = net->edgeList[ie];
         npts = edge.npts;
         zero = false;
@@ -358,14 +358,14 @@ int MainWindow::getIntensities(NETWORK *net, DEADEND *deadlist, int ndead, int *
         }
         if (zero) {
             *nzero++;
-            deadlist[id].intensity = 0;
+            sproutlist[id].intensity = 0;
             continue;
         }
-        deadlist[id].intensity = totval/npts;
-        sum += deadlist[id].intensity;
+        sproutlist[id].intensity = totval/npts;
+        sum += sproutlist[id].intensity;
         count++;
-//        printf("intensity: %6d %6.1f\n",id,deadlist[id].intensity);
-//        fprintf(fpout,"intensity: %6d %6.1f\n",id,deadlist[id].intensity);
+//        printf("intensity: %6d %6.1f\n",id,sproutlist[id].intensity);
+//        fprintf(fpout,"intensity: %6d %6.1f\n",id,sproutlist[id].intensity);
 //        fflush(fpout);
     }
     if (count == 0) {
@@ -376,8 +376,8 @@ int MainWindow::getIntensities(NETWORK *net, DEADEND *deadlist, int ndead, int *
     }
     printf("getIntensities: nzero: %d\n",nzero);
     fprintf(fpout,"getIntensities: nzero: %d\n",nzero);
-    printf("count: %d average dead-end intensity: %6.1f\n",count,sum/count);
-    fprintf(fpout,"count: %d average dead-end intensity: %6.1f\n",count,sum/count);
+    printf("count: %d average sprout intensity: %6.1f\n",count,sum/count);
+    fprintf(fpout,"count: %d average sprout intensity: %6.1f\n",count,sum/count);
     fflush(fpout);
     return 0;
 }
@@ -458,19 +458,19 @@ void MainWindow::getMaxIntensity(int nv, int v[][3], int *maxval)
 
 //----------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------
-void MainWindow::saveDeadendFile()
+void MainWindow::saveSproutFile()
 {
     int err;
     QString resultstr;
 
-    createNetwork(&network, &deadnetwork, deadlist, ndead);
-    writeAmiraFile(outputAmiraFileName.toAscii().constData(), inputAmiraFileName.toAscii().constData(), &deadnetwork);
+    createNetwork(&network, &sproutnetwork, sproutlist, nsprouts);
+    writeAmiraFile(outputAmiraFileName.toAscii().constData(), inputAmiraFileName.toAscii().constData(), &sproutnetwork);
     printf("wrote Amira file\n");
     fprintf(fpout,"wrote Amira file\n");
     resultstr = "wrote Amira file, creating image data...";
     ui->labelResult->setText(resultstr);
     QCoreApplication::processEvents();
-    err = createTiffData(&deadnetwork);
+    err = createTiffData(&sproutnetwork);
     if (err != 0) {
         resultstr = "FAILED: createTiffData";
         ui->labelResult->setText(resultstr);
@@ -481,7 +481,7 @@ void MainWindow::saveDeadendFile()
     fprintf(fpout,"created image data\n");
     resultstr = "created image data, writing tiff file...";
     ui->labelResult->setText(resultstr);
-    err = createTiff(outputTiffFileName.toAscii().constData(),p_im_dead,width_d,height_d,depth_d);
+    err = createTiff(outputTiffFileName.toAscii().constData(),p_im_sprout,width_d,height_d,depth_d);
     if (err != 0) {
         resultstr = "FAILED: createTiff";
         ui->labelResult->setText(resultstr);
@@ -534,15 +534,15 @@ int MainWindow::createTiffData(NETWORK *net)
     printf("image buffer size (bytes): %d\n",width_d*height_d*depth_d);
     fprintf(fpout,"image buffer size (bytes): %d\n",width_d*height_d*depth_d);
     fflush(fpout);
-    if (p_im_dead != NULL) free(p_im_dead);
-    p_im_dead = (unsigned char *)malloc(width_d*height_d*depth_d*sizeof(unsigned char));
-    if (!p_im_dead) {
+    if (p_im_sprout != NULL) free(p_im_sprout);
+    p_im_sprout = (unsigned char *)malloc(width_d*height_d*depth_d*sizeof(unsigned char));
+    if (!p_im_sprout) {
         printf("buffer malloc failed\n");
         fprintf(fpout,"buffer malloc failed\n");
         fflush(fpout);
         return 1;
     }
-    memset(p_im_dead,0,width_d*height_d*depth_d);
+    memset(p_im_sprout,0,width_d*height_d*depth_d);
     for (ie=0; ie<net->ne; ie++) {
         edge = net->edgeList[ie];
         npts = edge.npts;
@@ -613,9 +613,9 @@ int MainWindow::createTiffData(NETWORK *net)
     //                            fprintf(fpout,"%d %d %d\n",x0+ix,y0+iy,z0+iz);
     //                            fflush(fpout);
                                 if (binary)
-                                    V_dead(x,y,z) = 255;
+                                    V_sprout(x,y,z) = 255;
                                 else
-                                    V_dead(x,y,z) = V(x,y,z);
+                                    V_sprout(x,y,z) = V(x,y,z);
                             }
                         }
                     }
