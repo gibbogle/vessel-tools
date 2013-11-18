@@ -2277,7 +2277,7 @@ int CreateDistributions()
 	double ave_len, volume, d95;
 	double ave_pt_diam, ave_seg_diam;
 	int ie, ip, k, ka, kp, kpprev, ndpts, nlpts, ndtot, nsegdtot, nptstot, nptsusedtot;
-	double lenlimit = 3.0;
+	double lenlimit = 4.0;
 	EDGE edge;
 
 	for (k=0;k<NBOX;k++) {
@@ -2391,8 +2391,8 @@ int CreateDistributions()
 		edge = edgeList[ie];
 		if (!edge.used) continue;
 		len = edge.length_um;
-		k = len/dlen + 0.5;
-		if (k*dlen <= lenlimit) continue;
+		k = int(len/dlen);
+		if (len <= lenlimit) continue;
 		if (k >= NBOX) {
 			printf("Edge too long: ie: %d  k: %d len: %f  k: %d\n",ie,k,len);
 			fprintf(fperr,"Edge too long: ie: %d  k: %d len: %f  k: %d\n",ie,k,len);
@@ -3946,6 +3946,9 @@ void prune()
 	bool deadend;
 	EDGE *edge;
 	int *vtmp;
+
+	printf("NO prune\n");
+	return;
 
 	printf("prune\n");
 	// Check nlinks_used

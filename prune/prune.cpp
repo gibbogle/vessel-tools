@@ -189,7 +189,7 @@ int CreateDistributions(double delta_diam, double delta_len)
 	double ave_len, volume, d95;
 	double ave_pt_diam, ave_seg_diam;
 	int ie, ip, k, ka, kp, kpprev, ndpts, nlpts, ndtot, nsegdtot;
-	double lenlimit = 3.0;
+	double lenlimit = 4.0;
 	EDGE edge;
 
 	for (k=0;k<NBOX;k++) {
@@ -293,16 +293,14 @@ int CreateDistributions(double delta_diam, double delta_len)
 	printf("Compute length distributions: lower limit = %6.1f um\n",lenlimit);
 	fprintf(fperr,"Compute length distributions: lower limit = %6.1f um\n",lenlimit);
 	// Lengths
-//	dlen = 1;
 	ltot = 0;
 	ave_len = 0;
 	for (ie=0; ie<ne; ie++) {
 		edge = edgeList[ie];
 		if (!edge.used) continue;
 		len = edge.length_um;
-//		k = int(len/dlen + 0.5);
 		k = int(len/delta_len);
-		if (k*delta_len <= lenlimit) continue;
+		if (len <= lenlimit) continue;
 		if (k >= NBOX) {
 			printf("Edge too long: len: %d  %f  k: %d\n",ie,len,k);
 			fprintf(fperr,"Edge too long: len: %d  %f  k: %d\n",ie,len,k);
