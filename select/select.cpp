@@ -543,16 +543,11 @@ int CreateLargestConnectedNet(NETWORK *net1, NETWORK *net2)
 }
 
 //-----------------------------------------------------------------------------------------------------
-// Locate all edges with at least one vertex within the sphere of radius R, centre (x,y,z)
-// If cube_flag = 1, use a cube.
+// Locate all edges with diameter in a specified range.
 // The criterion is either:
 // diam_flag = 0  average
 //             1  majority
 //             2  all
-// use_average = true
-//     vessel average diameter is in the range
-// use_average = false
-//     a majority of vessel nodes are in the range
 // Note the inefficiency in keeping all points, used or not.
 //-----------------------------------------------------------------------------------------------------
 int CreateSelectNet(NETWORK *net0, NETWORK *net1, float diam_min, float diam_max, int diam_flag)
@@ -905,15 +900,6 @@ int CreateDistributions(NETWORK *net)
 
 
 //-----------------------------------------------------------------------------------------------------
-// This code assumes that the selection of a region of interest (a cube) is carried out on the 3D image.
-// This means that the cube centre (xc,yc,zc) and the width (diameter) are all specified in voxel
-// coordinates.  The values are converted to um by multiplying by voxelsize in um.  This is necessary
-// in order to specify the corresponding region in the Amira network (in which the distance unit is um).
-// To enable comparison of the zoomed network file with the cropped 3D image, either the network must
-// be scaled to use voxelsize as the distance unit (in which case direct comparison is possible in Amira),
-// or the network file coordinates can be left in units of um (in which case the voxelsize must be specified
-// when the image file is imported into Amira).  The second option has been adopted.
-// Extension:
 // If connect_flag==1, the largest connected network is found, other edges are dropped.
 //-----------------------------------------------------------------------------------------------------
 int main(int argc, char **argv)

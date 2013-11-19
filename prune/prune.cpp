@@ -1224,7 +1224,7 @@ int pruner(int iter)
 	int i, j, k, ii, kv0, kv1, n0, n1, j1, j2, k1, k2, nloose, npruned, kp0, err;
 	float len, dave, dsum;
 	EDGE edge, edge0;
-	LOOSEND end[20000];
+	LOOSEND end[50000];
 
 	printf("pruner\n");
 	nloose = 0;
@@ -1232,6 +1232,7 @@ int pruner(int iter)
 	// Step through edges, looking for loose ends.
 	for (i=0; i<ne; i++) {
 		if (!edgeList[i].used) continue;
+//		printf("edge: %d\n",i);
 		edge = edgeList[i];
 		kv0 = edge.vert[0];
 		kv1 = edge.vert[1];

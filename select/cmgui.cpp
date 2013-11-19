@@ -18,6 +18,32 @@ int testfunction(void)
 }
 
 //-----------------------------------------------------------------------------------------------------
+// Create CMGUI .com file
+//-----------------------------------------------------------------------------------------------------
+void write_com(FILE *dotcom, char *fileName)
+{
+    fprintf(dotcom, "#Lymph node structure for section %s\n\n", fileName);
+    fprintf(dotcom, "# Create a material in addition to the default.\n");
+    fprintf(dotcom, "gfx cre mat gold ambient 1 0.7 0 diffuse 1 0.7 0 specular 0.5 0.5 0.5 shininess 0.8\n");
+    fprintf(dotcom, "# Read in the reticular mesh (group vessels) and hide the axes.\n");
+    fprintf(dotcom, "gfx read nodes %s.exnode\n", fileName);
+    fprintf(dotcom, "gfx read elements %s.exelem\n", fileName);
+    fprintf(dotcom, "# Open the graphics window and turn on perspective.\n");
+//    fprintf(dotcom, "gfx mod win 1 view perspective\n");
+    fprintf(dotcom, "# Destroy the default lines.\n");
+    fprintf(dotcom, "gfx modify g_element vessels lines delete\n");
+    fprintf(dotcom, "# The radius of the vessel is stored in component 1 of field\n");
+    fprintf(dotcom, "# 'vessel_radius', defined over the elements in the vessels group.\n");
+    fprintf(dotcom, "# Now draw spheres using these radii with the following command.\n");
+    fprintf(dotcom, "gfx destroy node all\n");
+    fprintf(dotcom, "gfx modify g_element vessels general clear\n");
+    fprintf(dotcom, "gfx modify g_element vessels cylinders coordinate coordinates tessellation default local circle_discretization 12 radius_scalar vessel_radius scale_factor 1.0 native_discretization NONE select_on material gold selected_material default_selected render_shaded\n");
+    fprintf(dotcom, "gfx modify g_element vessels node_points coordinate coordinates local glyph sphere general size \"0*0*0\" centre 0,0,0 font default orientation vessel_radius scale_factors \"2*2*2\" select_on material gold selected_material default_selected\n");
+    fprintf(dotcom, "gfx cre win 1\n");
+    fprintf(dotcom, "gfx mod win 1 view perspective\n");
+}
+
+//-----------------------------------------------------------------------------------------------------
 // Write initial section of .exnode file
 //-----------------------------------------------------------------------------------------------------
 void WriteExnodeHeader(FILE *exnode)
@@ -79,14 +105,14 @@ int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[])
 {
 	int k, ie, ip, npts;
 	EDGE edge;
-	char exelemname[128], exnodename[128];
-//	char dotcomname[64];
-	FILE *exelem, *exnode;
+	char exelemname[1024], exnodename[1024];
+	char dotcomname[1024];
+	FILE *exelem, *exnode, *dotcom;
 
 	printf("WriteCmguiData: %s %d %d\n",basename,net->ne,net->np);
 	fprintf(fperr,"WriteCmguiData: %s\n",basename);
 	fflush(fperr);
-//	sprintf(dotcomname,"%s.com",output_basename);
+	sprintf(dotcomname,"%s.com.txt",basename);
 	sprintf(exelemname,"%s.exelem",basename);
 	sprintf(exnodename,"%s.exnode",basename);
 	printf("exelem file: %s\n",exelemname);
@@ -94,10 +120,10 @@ int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[])
 	fprintf(fperr,"exelem file: %s\n",exelemname);
 	fprintf(fperr,"exnode file: %s\n",exnodename);
 	fflush(fperr);
-//	dotcom = fopen(dotcomname,"w");
+	dotcom = fopen(dotcomname,"w");
 	exelem = fopen(exelemname,"w");
 	exnode = fopen(exnodename,"w");
-//	write_com(output_basename);
+	write_com(dotcom,basename);
 	WriteExelemHeader(exelem);
 	WriteExnodeHeader(exnode);
 	printf("wrote headers: ne: %d np: %d\n",net->ne,net->np);

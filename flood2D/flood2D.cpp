@@ -465,7 +465,7 @@ int main( int argc, char *argv[])
 {
 	char *infile3D, *outfile3D;
 	unsigned int limit = 4000;
-	int x, y, z;
+	int x, y, z, nfilled;
 	char axis;
 	ImageType3D::Pointer image3D;
 	typedef itk::ImageFileReader<ImageType3D> FileReaderType;
@@ -564,19 +564,20 @@ int main( int argc, char *argv[])
 	image->SetRegions(imregion);
 	image->Allocate();
 
+	nfilled = 0;
 	for (y=0; y<height; y++)
 	{
 //		p = (unsigned char *)(image->GetBufferPointer());
 		p = (short *)(image->GetBufferPointer());
 		GetSlice(axis,y);
-		printf("got xz slice: %d\n",y);
+		printf("xz slice: %d\n",y);
 
 		// Find connected objects
 		ConnectedComponentImageFilterType::Pointer labelFilter = ConnectedComponentImageFilterType::New ();
 		labelFilter->SetInput(image);
 		labelFilter->Update();
 		nobjects = labelFilter->GetObjectCount();
-		printf("nobjects: %d\n",nobjects);
+//		printf("nobjects: %d\n",nobjects);
 		labelimage = labelFilter->GetOutput();
 		plabel = (short *)(labelimage->GetBufferPointer());
 
@@ -610,10 +611,12 @@ int main( int argc, char *argv[])
 		CountPixels(axis);
 
 		for (int k=1; k<=nobjects; k++) {
-			if (npixels[k] <= limit)
+			if (npixels[k] <= limit) {
 				fill[k] = true;
-			else
+				nfilled++;
+			} else {
 				fill[k] = false;
+			}
 		}
 
 		FillPixels(axis);
@@ -628,6 +631,7 @@ int main( int argc, char *argv[])
 
 		PutSlice(axis,y);
 	}
+	printf("Number of holes filled: %d\n\n",nfilled);
 	}
 
 
@@ -650,6 +654,7 @@ int main( int argc, char *argv[])
 	image->SetRegions(imregion);
 	image->Allocate();
 
+	nfilled = 0;
 	for (x=0; x<width; x++)
 	{
 //		p = (unsigned char *)(image->GetBufferPointer());
@@ -692,10 +697,12 @@ int main( int argc, char *argv[])
 		CountPixels(axis);
 
 		for (int k=1; k<=nobjects; k++) {
-			if (npixels[k] <= limit)
+			if (npixels[k] <= limit) {
 				fill[k] = true;
-			else
+				nfilled++;
+			} else {
 				fill[k] = false;
+			}
 		}
 
 		FillPixels(axis);
@@ -710,6 +717,7 @@ int main( int argc, char *argv[])
 
 		PutSlice(axis,x);
 	}
+	printf("Number of holes filled: %d\n\n",nfilled);
 	}
 
 	// Do xy slices
@@ -731,6 +739,7 @@ int main( int argc, char *argv[])
 	image->SetRegions(imregion);
 	image->Allocate();
 
+	nfilled = 0;
 	for (z=0; z<depth; z++)
 	{
 //		p = (unsigned char *)(image->GetBufferPointer());
@@ -773,10 +782,12 @@ int main( int argc, char *argv[])
 		CountPixels(axis);
 
 		for (int k=1; k<=nobjects; k++) {
-			if (npixels[k] <= limit)
+			if (npixels[k] <= limit) {
 				fill[k] = true;
-			else
+				nfilled++;
+			} else {
 				fill[k] = false;
+			}
 		}
 
 		FillPixels(axis);
@@ -791,6 +802,7 @@ int main( int argc, char *argv[])
 
 		PutSlice(axis,z);
 	}
+	printf("Number of holes filled: %d\n\n",nfilled);
 	}
 	}
 
