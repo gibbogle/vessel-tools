@@ -270,6 +270,15 @@ void ImageWidget::subtractImage(unsigned char * psub) {
     }
 }
 
+void ImageWidget::addImage(unsigned char * psub) {
+    unsigned char *p = getBuffer();
+    int sum;
+    for (int i=0; i<imageWidth*imageHeight*imageDepth; i++) {
+        sum = p[i]+psub[i];
+        p[i] = MIN(255,sum);
+    }
+}
+
 void ImageWidget::subtract(int val)
 {
     int size, i;

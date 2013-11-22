@@ -93,6 +93,7 @@ public:
     void getInfo(int *, int *, int *, int *);
     unsigned char *getBuffer();
     void subtractImage(unsigned char *);
+    void addImage(unsigned char *);
 
 private:
 

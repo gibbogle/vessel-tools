@@ -211,6 +211,19 @@
       <string>Save Image 1</string>
      </property>
     </widget>
+    <widget class="QPushButton" name="pushButtonAddImage">
+     <property name="geometry">
+      <rect>
+       <x>240</x>
+       <y>30</y>
+       <width>91</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Add Image 2</string>
+     </property>
+    </widget>
    </widget>
    <widget class="QLabel" name="label1">
     <property name="geometry">
@@ -341,7 +354,7 @@
      <x>0</x>
      <y>0</y>
      <width>990</width>
-     <height>21</height>
+     <height>18</height>
     </rect>
    </property>
   </widget>
@@ -365,8 +378,8 @@
    <slot>prevFrame()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>524</x>
-     <y>83</y>
+     <x>530</x>
+     <y>94</y>
     </hint>
     <hint type="destinationlabel">
      <x>760</x>
@@ -397,8 +410,8 @@
    <slot>updateImages()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>500</x>
-     <y>104</y>
+     <x>460</x>
+     <y>84</y>
     </hint>
     <hint type="destinationlabel">
      <x>362</x>
@@ -430,7 +443,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>465</x>
-     <y>635</y>
+     <y>634</y>
     </hint>
     <hint type="destinationlabel">
      <x>171</x>

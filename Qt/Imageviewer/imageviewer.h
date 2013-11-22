@@ -64,6 +64,7 @@ private slots:
     void imageSelecter();
     void saveImageFile();
     bool imageEquivalence();
+    void on_pushButtonAddImage_clicked();
 
 private:
 

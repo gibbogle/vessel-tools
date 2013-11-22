@@ -178,9 +178,11 @@ void ImageViewer::updateImages()
 void ImageViewer::imageSelecter() {
     if (ui->radioButtonImage1->isChecked()) {
         ui->pushButtonSubtractImage->setText("Subtract Image 2");
+        ui->pushButtonAddImage->setText("Add Image 2");
         ui->pushButtonSaveImage->setText("Save Image 1");
      } else {
         ui->pushButtonSubtractImage->setText("Subtract Image 1");
+        ui->pushButtonAddImage->setText("Add Image 1");
         ui->pushButtonSaveImage->setText("Save Image 2");
     }
 }
@@ -201,7 +203,8 @@ void ImageViewer::subtracter(){
     imageWidget1->showFrame(iframe);
 }
 
-void ImageViewer::subtractImage(){
+void ImageViewer::subtractImage()
+{
     unsigned char *p;
 
     if (!imageEquivalence()) return;
@@ -214,6 +217,23 @@ void ImageViewer::subtractImage(){
         imageWidget2->subtractImage(p);
         imageWidget2->showFrame(iframe);
     }
+}
+
+void ImageViewer::on_pushButtonAddImage_clicked()
+{
+    unsigned char *p;
+
+    if (!imageEquivalence()) return;
+    if (ui->radioButtonImage1->isChecked()) {
+        p = imageWidget2->getBuffer();
+        imageWidget1->addImage(p);
+        imageWidget1->showFrame(iframe);
+    } else {
+        p = imageWidget1->getBuffer();
+        imageWidget2->addImage(p);
+        imageWidget2->showFrame(iframe);
+    }
+
 }
 
 void ImageViewer::saveImageFile() {
