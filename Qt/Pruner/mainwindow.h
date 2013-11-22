@@ -16,6 +16,7 @@ public:
     ~MainWindow();
 
 public slots:
+    void on_checkBox_ratio_toggled(bool checked);
 	void inputFileSelecter();
 	void outputFileSelecter();
 	void pruner();

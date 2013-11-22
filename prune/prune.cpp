@@ -51,6 +51,7 @@ FILE *fperr, *fpout;
 FILE *exelem, *exnode;
 char output_basename[128];
 double ratio_limit;
+bool use_ratio;
 
 #define NBOX 400
 #define STR_LEN 128
@@ -1301,9 +1302,16 @@ int pruner(int iter)
 	npruned = 0;
 	for (i=0; i<nloose; i++) {
 		if (end[i].joined < 0) {
-			if (end[i].len/end[i].dave < ratio_limit) {	// prune this twig 
-				edgeList[end[i].iedge].used = false;
-				npruned++;
+			if (use_ratio) {
+				if (end[i].len/end[i].dave < ratio_limit) {	// prune this twig 
+					edgeList[end[i].iedge].used = false;
+					npruned++;
+				}
+			} else {
+				if (end[i].len < ratio_limit) {	// prune this twig 
+					edgeList[end[i].iedge].used = false;
+					npruned++;
+				}
 			}
 		}
 	}
@@ -1631,13 +1639,13 @@ int main(int argc, char **argv)
 	char *input_amfile;
 	char drive[32], dir[1024],filename[256], ext[32];
 	char errfilename[1024], output_amfile[1024], outfilename[1024], result_file[1024];
-	int prune_flag, cmgui_flag;
+	int prune_flag, cmgui_flag, ratio_flag;
 	double ddiam, dlen;
 
-	if (argc != 9) {
-		printf("Usage: prune input_amfile output_amfile ratio_limit n_prune_cycles prune_flag cmgui_flag delta_diam delta_len\n");
+	if (argc != 10) {
+		printf("Usage: prune input_amfile output_amfile ratio_flag ratio_limit n_prune_cycles prune_flag cmgui_flag delta_diam delta_len\n");
 		fperr = fopen("prune_error.log","w");
-		fprintf(fperr,"Usage: prune input_amfile output_amfile ratio_limit n_prune_cycles prune_flag cmgui_flag delta_diam delta_len\n");
+		fprintf(fperr,"Usage: prune input_amfile output_amfile ratio_flag ratio_limit n_prune_cycles prune_flag cmgui_flag delta_diam delta_len\n");
 		fprintf(fperr,"Submitted command line: argc: %d\n",argc);
 		for (int i=0; i<argc; i++) {
 			fprintf(fperr,"argv: %d: %s\n",i,argv[i]);
@@ -1648,12 +1656,14 @@ int main(int argc, char **argv)
 
 	input_amfile = argv[1];
 	strcpy(outfilename,argv[2]);
-	sscanf(argv[3],"%lf",&ratio_limit);
-	sscanf(argv[4],"%d",&n_prune_cycles);
-	sscanf(argv[5],"%d",&prune_flag);
-	sscanf(argv[6],"%d",&cmgui_flag);
-	sscanf(argv[7],"%lf",&ddiam);
-	sscanf(argv[8],"%lf",&dlen);
+	sscanf(argv[3],"%d",&ratio_flag);
+	sscanf(argv[4],"%lf",&ratio_limit);
+	sscanf(argv[5],"%d",&n_prune_cycles);
+	sscanf(argv[6],"%d",&prune_flag);
+	sscanf(argv[7],"%d",&cmgui_flag);
+	sscanf(argv[8],"%lf",&ddiam);
+	sscanf(argv[9],"%lf",&dlen);
+	use_ratio = (ratio_flag == 1);
 	if (prune_flag == 0) n_prune_cycles = 0;
 	_splitpath(outfilename,drive,dir,filename,ext);
 	strcpy(output_basename,drive);

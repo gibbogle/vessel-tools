@@ -49,6 +49,16 @@ void MainWindow::outputFileSelecter()
 	ui->labelOutputFile->setText(outputFileName);
 }
 
+void MainWindow::on_checkBox_ratio_toggled(bool checked)
+{
+    if (checked) {
+        ui->labelRatioLimit->setText("Twig length/diameter ratio limit");
+    } else {
+        ui->labelRatioLimit->setText("Twig length limit (um)");
+    }
+}
+
+
 void MainWindow::pruner()
 {
 	int res;
@@ -60,7 +70,11 @@ void MainWindow::pruner()
 	qstr += " ";
 	qstr += outputFileName;
 	qstr += " ";
-	qstr += ui->lineEditRatioLimit->text();
+    if (ui->checkBox_ratio->isChecked())
+        qstr += "1 ";
+    else
+        qstr += "0 ";
+    qstr += ui->lineEditRatioLimit->text();
 	qstr += " ";
     qstr += ui->lineNprunecycles->text();
     qstr += " ";
