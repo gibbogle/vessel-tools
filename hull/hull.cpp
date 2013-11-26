@@ -1,3 +1,5 @@
+// Uses Richard Beare's code (from peel2) to create the convex hull of a tiff image
+
 #include <cstdio>
 #include <vector>
 
@@ -12,7 +14,6 @@
 #include "itkImage.h"
 #include "itkImageFileReader.h"
 #include "itkImageFileWriter.h"
-#include <itkDanielssonDistanceMapImageFilter.h>
 #include "itkSize.h"
 #include "itkThresholdImageFilter.h"
 #include "itkBinaryThresholdImageFilter.h"
@@ -137,26 +138,26 @@ int BinImWriter(char *dataFile, unsigned char *p, int nx, int ny, int nz, bool c
 int main(int argc, char**argv)
 {
 	int width, height, depth, xysize, compress, err;
-	float threshold, closingsize;
-	char *inputFile, *closeFile, *binFile;
+	float threshold, ballsize;
+	char *inputFile, *hullFile, *binFile;
 	bool compressdata = true;
 
 	if (argc != 7) {
-		printf("Usage: close input_tiff close_tiff data_file threshold closingsize compress_data\n");
+		printf("Usage: hull input_tiff hull_tiff data_file threshold ballsize compress_data\n");
 		return 0;
 	}
 	inputFile = argv[1];
-	closeFile = argv[2];
+	hullFile = argv[2];
 	binFile = argv[3];
 	sscanf(argv[4],"%f",&threshold);
-	sscanf(argv[5],"%f",&closingsize);
+	sscanf(argv[5],"%f",&ballsize);
 	sscanf(argv[6],"%d",&compress);
 	compressdata = (compress == 1);
 	printf("Input image file: %s\n",inputFile);
-	printf("Close image file: %s\n",closeFile);
-	printf("Close binary data file: %s\n",binFile);
+	printf("Hull image file: %s\n",hullFile);
+	printf("Hull binary data file: %s\n",binFile);
 	printf("threshold: %f\n",threshold);
-	printf("closingsize: %f\n",closingsize);
+	printf("ballsize: %f\n",ballsize);
 	printf("compressdata: %d\n",compressdata);
 
 	typedef itk::ImageFileReader<ImageType> FileReaderType;
@@ -206,9 +207,9 @@ int main(int argc, char**argv)
 		BinClose->SetInput(inputImage);
 	}
 	BinClose->SetUseImageSpacing(true);
-	BinClose->SetRadius(closingsize);
+	BinClose->SetRadius(ballsize);
 	BinClose->ReleaseDataFlagOn();
-	err = ImWriter(BinClose->GetOutput(),"close1.tif");
+//	err = ImWriter(BinClose->GetOutput(),"close1.tif");
 	//if (err != 0) {
 	//	printf("ImWriter error on close1 file\n");
 	//	return 1;
@@ -220,10 +221,10 @@ int main(int argc, char**argv)
 	Scale->SetInput(BinClose->GetOutput());
 	Scale->SetScale(255.0);
 
-	printf("Writing close tiff\n");
-	err = ImWriter(Scale->GetOutput(),closeFile);
+	printf("Writing hull tiff\n");
+	err = ImWriter(Scale->GetOutput(),hullFile);
 	if (err != 0) {
-		printf("ImWriter error on close file\n");
+		printf("ImWriter error on hull file\n");
 		return 1;
 	}
 

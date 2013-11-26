@@ -34,7 +34,7 @@
 #define MAXPOINTS 1
 #define MAXEDGEPTS 1000
 #define MAXEDGES 100000
-#define MAXNBRS 10
+#define MAXNBRS 20		// was 10
 //#define MINSTUB 3		// remove an edge that has an unconnected end if npts <= MINSTUB 
 #define MINSEGLEN 3		// segments less than MINSEGLEN are ignored
 #define NBOX 800
