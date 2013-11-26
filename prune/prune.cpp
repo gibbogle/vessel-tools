@@ -1303,12 +1303,12 @@ int pruner(int iter)
 	for (i=0; i<nloose; i++) {
 		if (end[i].joined < 0) {
 			if (use_ratio) {
-				if (end[i].len/end[i].dave < ratio_limit) {	// prune this twig 
+				if (end[i].len/end[i].dave <= ratio_limit) {	// prune this twig 
 					edgeList[end[i].iedge].used = false;
 					npruned++;
 				}
 			} else {
-				if (end[i].len < ratio_limit) {	// prune this twig 
+				if (end[i].len <= ratio_limit) {	// prune this twig 
 					edgeList[end[i].iedge].used = false;
 					npruned++;
 				}
