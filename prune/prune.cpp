@@ -59,6 +59,7 @@ bool use_ratio;
 #define PI 3.14159
 
 #define JOIN_LOOSE_ENDS false
+#define DROP_UNCONNECTED false
 
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
@@ -1237,11 +1238,6 @@ int pruner(int iter)
 		edge = edgeList[i];
 		kv0 = edge.vert[0];
 		kv1 = edge.vert[1];
-//		bool hit = false;
-//		if (kv0 == 33239 || kv1 == 33239) {
-//			hit = true;
-//			printf("Hit point 33239 on edge: %d\n",i);
-//		}
 		n0 = 0;
 		n1 = 0;
 		for (ii=0; ii<ne; ii++) {
@@ -1250,12 +1246,12 @@ int pruner(int iter)
 			if (edgeList[ii].vert[0] == kv0 || edgeList[ii].vert[1] == kv0) n0=1;
 			if (edgeList[ii].vert[0] == kv1 || edgeList[ii].vert[1] == kv1) n1=1;
 		}
-		if (n0+n1 == 0) {
+		if (n0+n1 == 0 && DROP_UNCONNECTED) {
 			printf("Error: pruner: edge: %d is unconnected\n",i);
 			fprintf(fperr,"Error: pruner: edge: %d is unconnected\n",i);
 			edgeList[i].used = false;
 //			return 1;
-		} else if (n0+n1 == 1) {	// This is a loose end
+		} else if ((n0+n1 == 1) || (n0+n1 == 0 && !DROP_UNCONNECTED)) {	// This is a loose end
 			// Need the length and average diameter
 			len = 0;
 			dsum = 0;
