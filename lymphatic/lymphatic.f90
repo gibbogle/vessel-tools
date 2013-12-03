@@ -18,7 +18,7 @@ real, allocatable :: point(:,:)
 
 logical(2), allocatable :: in(:,:,:)
 
-type(segment_type), allocatable :: segment(:)	! this is the list of all segments
+type(segment_type), allocatable :: segment(:)	! this is the list of all segments 
 integer, allocatable :: seglist(:,:,:,:)		! for each (ib,jb,kb), a list of segment numbers
 integer, allocatable :: nseglist(:,:,:)			! for each (ib,jb,kb), number of segments in the seglist
 real, allocatable :: bdry(:,:)					! this is the list of all bdry points
@@ -505,8 +505,6 @@ do ixb = 1,NB(1)
 			do i = 1,nseglist(ib(1),ib(2),ib(3))
 				iseg = seglist(ib(1),ib(2),ib(3),i)
 				q = segment(iseg)%mid
-!				nd = 0
-!				segdist%d2 = 1.0e10
 				d2min = 1.0e10
 				do ib1 = ibfrom(1),ibto(1)
 					do ib2 = ibfrom(2),ibto(2)
@@ -519,74 +517,19 @@ do ixb = 1,NB(1)
 								if (d2 < d2min) then
 									d2min = d2
 								endif
-!								d2min = 1.0e10
-!								do j = 1,3
-!									if (j == 1) then
-!										r = p - segment(iseg)%end1
-!										rad = segment(iseg)%r1
-!									elseif (j == 3) then
-!										r = p - segment(iseg)%end2
-!										rad = segment(iseg)%r2
-!									else
-!										r = p - segment(iseg)%mid
-!										rad = (segment(iseg)%r1 + segment(iseg)%r2)/2
-!									endif
-!									d2 = dot_product(r,r)
-!									r2 = rad*rad
-!									if (d2 < r2) cycle
-!									d2min = min(d2min,d2)
-!								enddo
-!								d2 = d2min
-!								if (nd == 0) then
-!									nd = 1
-!									segdist(nd)%iseg = iseg
-!									segdist(nd)%d2 = d2
-!								else
-!									do i = 1,nd
-!										if (d2 < segdist(i)%d2) then
-!											if (i < Nbest) then
-!												do j = Nbest,i+1,-1
-!													segdist(j) = segdist(j-1)
-!												enddo
-!											endif
-!											segdist(i)%iseg = iseg
-!											segdist(i)%d2 = d2
-!											nd = min(nd+1,Nbest)
-!											exit
-!										endif
-!									enddo
-!								endif
 							enddo
 						enddo
 					enddo
 				enddo
-
-!			if (nd == 0) then
-!				cycle
-!			endif
-!			! We have a list of the nd closest segments (mid-points)
-!			dmin = 1.0e10
-!			hit = .false.
-!			do i = 1,nd
-!				iseg = segdist(i)%iseg
-!				call get_segdist(p,iseg,d)
-!				if (d == 0) cycle
-!				dmin = min(dmin,d)
-!!				write(*,*) i,nd,d,dmin
-!				hit = .true.
-!			enddo
-!			if (.not.hit) cycle
-
 				dmin = sqrt(d2min)
-				np = np+1
-!				totweight = totweight + segment(iseg)%len
-				id = min(npdist,int(dmin/delp + 1))
-	!			write(*,*) dmin,delp,id
-				pdist(id) = pdist(id) + 1
-				idmax = max(idmax,id)
-	!			if (dmin < 0.5) then
-	!				write(*,'(3i5,e12.3,2i4)') ix,iy,iz,dmin,id,idmax	
-	!			endif
+				if (dmin/delp > npdist) then
+!					write(*,*) 'Big distance: ',int(dmin/delp), dmin
+				else
+					np = np+1
+					id = min(npdist,int(dmin/delp + 1))
+					pdist(id) = pdist(id) + 1
+					idmax = max(idmax,id)
+				endif
 			enddo
 		enddo
 	enddo
@@ -595,7 +538,7 @@ write(*,*)
 totweight = sum(pdist)
 pdist = pdist/totweight
 open(nfdist,file=distfile,status='replace')
-write(nfdist,*) 'totweight: ',totweight
+write(nfdist,*) 'Number of points: ',totweight
 write(nfdist,*)
 do i = 1,npdist
 	write(nfdist,'(f6.2,e12.4)') (i-0.5)*delp,pdist(i)

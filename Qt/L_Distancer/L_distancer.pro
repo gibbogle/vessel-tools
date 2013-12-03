@@ -10,8 +10,7 @@ TARGET = L_distancer
 TEMPLATE = app
 
 
-SOURCES += main.cpp\
-        mainwindow.cpp
+SOURCES += main.cpp mainwindow.cpp
 
 HEADERS  += mainwindow.h
 
