@@ -92,7 +92,7 @@ int nfore_pts[NPLANES], nback_pts[NPLANES];
 int fore_pt[NPLANES][MAX_SLICE][3];
 int back_pt[NPLANES][MAX_SLICE][3];
 
-bool HEAL=true;
+bool HEAL=false;
 
 //----------------------------------------------------------------------------------------------------------------
 // The 25 planes are defined by their unit normals.
@@ -530,7 +530,11 @@ int main(int argc, char**argv)
 			return 4;
 		}
 		printf("Number of inside candidates: %d\n",ncand);
-
+		if (HEAL) {
+			printf("Healing will be applied\n");
+		} else {
+			printf("Healing will NOT be applied\n");
+		}
 		nhlim = insideHitLimit;
 		for (sweep=0; sweep<nsweeps; sweep++)
 		{
@@ -547,7 +551,9 @@ int main(int argc, char**argv)
 					candidate[icand].val = 255;
 					continue;
 				}
+				nhlim = insideHitLimit;		// added here 9/12/13
 				prober(x,y,z,nhlim,&nhits,&dirmin,&d2min,d2hit);
+				/*		Commented 9/12/13
 				if (x < 8 || y < 8 || z < 8 || x > width-1-8 || y > height-1-8 || z > depth-1-8)
 				{
 					int ne = 6;		// range of edge adjustment
@@ -571,6 +577,7 @@ int main(int argc, char**argv)
 				{
 					nhlim = insideHitLimit;
 				}
+				*/
 				if (nhits >= nhlim)
 				{
 					n = filler(x,y,z,d2min,d2hit,flist);

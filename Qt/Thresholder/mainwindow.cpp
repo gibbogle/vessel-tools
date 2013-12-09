@@ -39,25 +39,24 @@ MainWindow::~MainWindow()
 void MainWindow::inFileSelecter()
 {
 	ui->labelResult->setText("");
-	infileName = QFileDialog::getOpenFileName(this,
-		tr("Input file"), ".", tr("TIFF Files (*.tif)"));
+    infileName = QFileDialog::getOpenFileName(this, tr("Input file"), ".", tr("TIFF Files (*.tif)"));
 	ui->labelInFile->setText(infileName);
 }
 
 void MainWindow::backFileSelecter()
 {
 	ui->labelResult->setText("");
-	backfileName = QFileDialog::getOpenFileName(this,
-		tr("Input file"), ".", tr("TIFF Files (*.tif)"));
+    backfileName = QFileDialog::getOpenFileName(this, tr("Input file"), ".", tr("TIFF Files (*.tif)"));
 	ui->labelBackFile->setText(backfileName);
 }
 void MainWindow::outFileSelecter()
 {
 	ui->labelResult->setText("");
-	QFileDialog dialog(this);
-	dialog.setFileMode(QFileDialog::AnyFile);
-	outfileName = dialog.getSaveFileName(this,
-						tr("Output file"), ".", tr("TIFF Files (*.tif)"));
+    outfileName = QFileDialog::getSaveFileName(this, tr("Output file"), ".", tr("TIFF Files (*.tif)"));
+//  QFileDialog dialog(this);
+//	dialog.setFileMode(QFileDialog::AnyFile);
+//	outfileName = dialog.getSaveFileName(this,
+//						tr("Output file"), ".", tr("TIFF Files (*.tif)"));
 //	QString outfileName = QFileDialog::getOpenFileName(this,
 //		tr("Output file"), "/users/gib/ln_structure", tr("TIFF Files (*.tif)"));
 	ui->labelOutFile->setText(outfileName);

@@ -36,18 +36,18 @@ MainWindow::~MainWindow()
 void MainWindow::inFileSelecter()
 {
 	ui->labelResult->setText("");
-	infileName = QFileDialog::getOpenFileName(this,
-		tr("Input file"), ".", tr("TIFF Files (*.tif)"));
+    infileName = QFileDialog::getOpenFileName(this, tr("Input file"), ".", tr("TIFF Files (*.tif)"));
 	ui->labelInFile->setText(infileName);
 }
 
 void MainWindow::outFileSelecter()
 {
 	ui->labelResult->setText("");
-	QFileDialog dialog(this);
-	dialog.setFileMode(QFileDialog::AnyFile);
-	outfileName = dialog.getSaveFileName(this,tr("Output file"), ".", tr("TIFF Files (*.tif)"));
-	ui->labelOutFile->setText(outfileName);
+//	QFileDialog dialog(this);
+//	dialog.setFileMode(QFileDialog::AnyFile);
+//	outfileName = dialog.getSaveFileName(this,tr("Output file"), ".", tr("TIFF Files (*.tif)"));
+    outfileName = QFileDialog::getSaveFileName(this, tr("Output file"), ".", tr("TIFF Files (*.tif)"));
+    ui->labelOutFile->setText(outfileName);
 }
 
 void MainWindow::smoother()
