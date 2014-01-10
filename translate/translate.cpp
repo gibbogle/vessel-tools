@@ -80,9 +80,9 @@ int CreateDistributions(double delta_diam, double delta_len)
 	volume = 0;
 	for (ie=0; ie<ne; ie++) {
 		edge = edgeList[ie];
-		if (!edge.used) continue;
+		if (!edge.used || edge.npts == 2) continue;
 //		printf("ie: %d npts: %d\n",ie,edge.npts);
-		fprintf(fperr,"ie: %d npts: %d\n",ie,edge.npts);
+//		fprintf(fperr,"ie: %d npts: %d\n",ie,edge.npts);
 		fflush(fperr);
 		bool dbug = false;
 		kpprev = 0;
@@ -167,7 +167,7 @@ int CreateDistributions(double delta_diam, double delta_len)
 	ave_len = 0;
 	for (ie=0; ie<ne; ie++) {
 		edge = edgeList[ie];
-		if (!edge.used) continue;
+		if (!edge.used || edge.npts == 2) continue;
 		len = edge.length_um;
 		k = int(len/delta_len);
 		if (len <= lenlimit) continue;
@@ -182,12 +182,17 @@ int CreateDistributions(double delta_diam, double delta_len)
 	}
 	ave_pt_diam /= ndtot;
 	ave_seg_diam /= nsegdtot;
+	printf("Total vertices: %d  points: %d\n",nv,np);
 	fprintf(fpout,"Total vertices: %d  points: %d\n",nv,np);
-	fprintf(fpout,"Vessels: %d\n",ne);
+	printf("Vessels: %d  used: %d\n",ne,int(ltot));
+	fprintf(fpout,"Vessels: %d  used: %d\n",ne,int(ltot));
 	printf("Average pt diameter: %6.2f vessel diameter: %6.2f\n",ave_pt_diam, ave_seg_diam);
 	fprintf(fpout,"Average pt diameter: %6.2f vessel diameter: %6.2f\n",ave_pt_diam, ave_seg_diam);
 	printf("Average vessel length: %6.1f\n",ave_len/ltot);
 	fprintf(fpout,"Average vessel length: %6.1f\n",ave_len/ltot);
+	printf("Total vessel length: %10.0f\n",ave_len);
+	fprintf(fpout,"Total vessel length: %10.0f\n",ave_len);
+	printf("Volume: %10.0f\n\n",volume);
 	fprintf(fpout,"Volume: %10.0f\n\n",volume);
 
 	//ndpts = 0;
@@ -668,7 +673,7 @@ int ReadAmiraFile(char *amFile)
 			if (edge.pt[0] == edge.pt[1]) {
 				printf("Error: repeated end points on edge: %d  %d\n",i,edge.pt[0]);
 				fprintf(fperr,"Error: repeated end points on edge: %d  %d\n",i,edge.pt[0]);
-				err = 1;
+//				err = 1;
 			}
 			// Check for same end points with different indices
 			int j1 = edge.pt[0];
@@ -676,7 +681,7 @@ int ReadAmiraFile(char *amFile)
 			if (point[j1].x == point[j2].x && point[j1].y == point[j2].y && point[j1].z == point[j2].z) {
 				printf("edge: %d vertices: %d %d same pos: %f %f %f\n",i,j1,j2,point[j1].x,point[j1].y,point[j1].z);
 				fprintf(fperr,"edge: %d vertices: %d %d same pos: %f %f %f\n",i,j1,j2,point[j1].x,point[j1].y,point[j1].z);
-				err = 1;
+//				err = 1;
 			}
 		}
 	}
