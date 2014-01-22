@@ -34,6 +34,15 @@ unsigned char *p;
 NETWORK *NP;
 FILE *fperr, *fpout;
 int iesel;
+float delta, dmin, dbox;
+double netmin[3], netmax[3];
+int N[3];
+int Nbox[3];
+int ****vlist;
+int ***nvlist;
+int maxvlist;
+
+bool dbug;
 
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
@@ -56,6 +65,18 @@ double dist(double x1, double y1, double z1, double x2, double y2, double z2)
 }
 
 //-----------------------------------------------------------------------------------------------------
+// Length of a vector
+//-----------------------------------------------------------------------------------------------------
+double vnorm(double v[3])
+{
+	double sum=0;
+	for (int i=0; i<3; i++) {
+		sum += v[i]*v[i];
+	}
+	return sqrt(sum);
+}
+
+//-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
 double cosangle(double v1[3], double v2[3])
 {
@@ -71,7 +92,7 @@ double cosangle(double v1[3], double v2[3])
 }
 
 //-----------------------------------------------------------------------------------------------------
-// Crossproduct of u and v is the determinant:
+// Crossproduct of u and v, u x v, is the determinant:
 //
 //  | i  j  k  |
 //  | ux uy uz |
@@ -81,9 +102,9 @@ double cosangle(double v1[3], double v2[3])
 //-----------------------------------------------------------------------------------------------------
 void crossproduct(double u[3], double v[3], double cross[3])
 {
-	cross[0] = u[1]*v[2] - u[2]*v[1];
-	cross[1] = -(u[0]*v[2] - u[2]*v[0]);
-	cross[2] = u[0]*v[1] - u[1]*v[0];
+	cross[0] =  u[1]*v[2] - u[2]*v[1];
+	cross[1] = -u[0]*v[2] + u[2]*v[0];
+	cross[2] =  u[0]*v[1] - u[1]*v[0];
 }
 
 //-----------------------------------------------------------------------------------------------------
@@ -157,6 +178,7 @@ bool InsideTube(double vx[3], double vy[3], double vz[3], double d, double r, do
 		return false;
 	if (tpos[1]*tpos[1]+tpos[2]*tpos[2] > r*r)
 		return false;
+	if (dbug) printf("tpos: %6.1f %6.1f %6.1f   %6.1f\n",tpos[0],tpos[1],tpos[2],sqrt(tpos[1]*tpos[1]+tpos[2]*tpos[2]));
 	return true;
 }
 
@@ -237,12 +259,12 @@ bool InsideSphere(NDPOINT *p, double pos[3])
 //-----------------------------------------------------------------------------------------------------
 // Check if pos[] is inside a truncated cone with end points (x1,y1,z1), (x2,y2,z2) and diameters d1, d2.
 //-----------------------------------------------------------------------------------------------------
-bool InsideSegment(int ie, int iseg, double pos[3])
+int InsideSegment(int ie, int iseg, double pos[3])
 {
 	int ip1, ip2, i;
 	double x0, y0, z0, x1, y1, z1, r1, x2, y2, z2, r2;
 	double d12, d01, h, a0, cone_cosa, cosa, v[3], vcone[3], d, dcone;
-	double vx[3], vy[3], vz[3];
+	double vx[3], vy[3], vz[3], rpos[3];
 	NDPOINT *p1, *p2;
 
 	ip1 = NP->edgeList[ie].pt[iseg];
@@ -251,15 +273,15 @@ bool InsideSegment(int ie, int iseg, double pos[3])
 	p2 = &NP->point[ip2];
 	// Check spheres
 	if (InsideSphere(p1,pos)) 
-		return true;
+		return 1;
 	if (InsideSphere(p2,pos)) 
-		return true;
+		return 1;
 	if (p1->d == p2->d) {
 		// Special case, cone is a tube
 		// Define local axes for the tube:
 		// vx along P1-P2
 		// vy normal to vx and some reference direction
-		// vz normal to vx and vy = vx cross vy
+		// vz normal to vx and vy, vz = vx cross vy
 		x1 = p1->x;
 		y1 = p1->y;
 		z1 = p1->z;
@@ -267,6 +289,7 @@ bool InsideSegment(int ie, int iseg, double pos[3])
 		y2 = p2->y;
 		z2 = p2->z;
 		d12 = dist(x1,y1,z1,x2,y2,z2);
+		if (dbug) printf("P1,P2,d12: %6.2f %6.2f %6.2f  %6.2f %6.2f %6.2f  %6.2f\n",x1,y1,z1,x2,y2,z2,d12);
 		vcone[0] = x2 - x1;
 		vcone[1] = y2 - y1;
 		vcone[2] = z2 - z1;
@@ -276,10 +299,23 @@ bool InsideSegment(int ie, int iseg, double pos[3])
 		if (cosangle(vx,v) > 0.9) {
 			v[0] = 0; v[1] = 1; v[2] = 0;
 		}
+		if (dbug) printf("vx,v: %6.2f %6.2f %6.2f  %6.2f %6.2f %6.2f\n",vx[0],vx[1],vx[2],v[0],v[1],v[2]);
 		crossproduct(vx,v,vy);
+		d = vnorm(vy);
+		if (dbug) printf("vy: %6.1f %6.1f %6.1f  length of vy: %6.1f\n",vy[0],vy[1],vy[2],d);
+		for (i=0; i<3; i++)
+			vy[i] = vy[i]/d;
 		crossproduct(vx,vy,vz);
-		if (InsideTube(vx,vy,vz,d12,p1->d/2,pos))
-			return true;
+		if (dbug) printf("vy,vz:  %6.2f %6.2f %6.2f  %6.2f %6.2f %6.2f\n",vy[0],vy[1],vy[2],vz[0],vz[1],vz[2]);
+		// Determine point position relative to P1
+		rpos[0] = pos[0] - x1;
+		rpos[1] = pos[1] - y1;
+		rpos[2] = pos[2] - z1;
+		if (dbug) printf("rpos: %6.1f %6.1f %6.1f\n",rpos[0],rpos[1],rpos[2]);
+		if (InsideTube(vx,vy,vz,d12,p1->d/2,rpos)) {
+			if (dbug) printf("inside\n");
+			return 2;
+		}
 	} else {
 		if (p2->d < p1->d) {
 			p1 = &NP->point[ip2];
@@ -313,7 +349,7 @@ bool InsideSegment(int ie, int iseg, double pos[3])
 		v[2] = pos[2] - z0;
 		cosa = cosangle(v,vcone);
 		if (cosa < cone_cosa)
-			return false;
+			return 0;
 		// Now need to check that the point falls within the segment section of the cone.
 		// d = distance from the apex
 		d = dist(x0,y0,z0,pos[0],pos[1],pos[2]);
@@ -322,10 +358,10 @@ bool InsideSegment(int ie, int iseg, double pos[3])
 //		printf("d12: %6.1f  d01: %6.1f a0: %6.3f apex: %6.1f %6.1f %6.1f\n",d12,d01,a0,x0,y0,z0);
 //		printf("h: %6.1f  cone_cosa: %8.5f cosa: %8.5f dcone: %6.1f\n",h,cone_cosa,cosa,dcone);
 		if (dcone >= d01 && dcone <= d01+d12) {
-			return true;
+			return 2;
 		}
 	}
-	return false;
+	return 0;
 }
 
 //-----------------------------------------------------------------------------------------------------
@@ -348,7 +384,7 @@ bool InsideVertex(int ie, int iv, double pos[3])
 
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
-bool InsideEdge(int ie, double pos[3])
+int InsideVessel(int ie, double pos[3])
 {
 	int iseg, i;
 	bool inseg;
@@ -378,7 +414,22 @@ bool InsideEdge(int ie, double pos[3])
 		}
 		if (!inseg) continue;
 		// pos[] may fall within segment iseg
-		if (InsideSegment(ie, iseg, pos)) {
+		int res = InsideSegment(ie, iseg, pos);
+		if (res > 0) {
+			return res;
+		}
+	}
+	return 0;
+}
+
+//-----------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------
+bool InsideNetwork_old(double pos[3])
+{
+	int ie;
+
+	for (ie=0; ie<NP->ne; ie++) {
+		if (InsideVessel(ie, pos)) {
 			return true;
 		}
 	}
@@ -387,23 +438,28 @@ bool InsideEdge(int ie, double pos[3])
 
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
-bool InsideNetwork(double pos[3])
+int InsideNetwork(double pos[3])
 {
-	int ie;
+	int i, ie, xb, yb, zb, res;
 
-	for (ie=0; ie<NP->ne; ie++) {
-		if (InsideEdge(ie, pos)) {
-			return true;
+	xb = int((pos[0] - netmin[0])/dbox);
+	yb = int((pos[1] - netmin[1])/dbox);
+	zb = int((pos[2] - netmin[2])/dbox);
+	for (i=0; i<nvlist[xb][yb][zb]; i++) {
+		ie = vlist[xb][yb][zb][i];
+		res = InsideVessel(ie, pos);
+		if (res > 0) {
+			return res;
 		}
 	}
-	return false;
+	return 0;
 }
 
 //-----------------------------------------------------------------------------------------------------
 // Read Amira SpatialGraph file
 // A minimum diameter is imposed.
 //-----------------------------------------------------------------------------------------------------
-int ReadAmiraFile(char *amFile, NETWORK *net, double dmin)
+int ReadAmiraFile(char *amFile, NETWORK *net, float dmin)
 {
 	int i, j, k, kp, npts;
 	int np_used, ne_used;
@@ -590,15 +646,128 @@ void ShowEdge(int ie)
 
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
+bool inlist(int ie, int *list, int nlist)
+{
+	if (nlist == 0) 
+		return false;
+	for (int i=0; i<nlist; i++) {
+		if (list[i] == ie) return true;
+	}
+	return false;
+}
+
+//-----------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------
+void CreateBoxList()
+{
+	int i, xb, yb, zb, ie, iseg, kbox, k1[3], k2[3];
+	EDGE *edge;
+	float range[3], minrange, maxrange;
+
+	dbox = 100;
+	maxvlist = 100;
+	SetEdgeBnds(netmin,netmax);
+	/*
+	iesel = 42;
+	int ie = iesel;
+	for (int i=0; i<3; i++) {
+		netmin[i] = NP->edgeList[ie].emin.pos[i];
+		netmax[i] = NP->edgeList[ie].emax.pos[i];
+	}
+	ShowEdge(ie);
+	*/
+
+	for (i=0; i<3; i++) {
+		netmin[i] -= 5;	// int(netmin[i] - 5);
+		netmax[i] += 5;	// int(netmax[i] + 5);
+	}
+
+	printf("Network bounds:\n");
+	printf("x:  %6.1f  %6.1f\n",netmin[0],netmax[0]);
+	printf("y:  %6.1f  %6.1f\n",netmin[1],netmax[1]);
+	printf("z:  %6.1f  %6.1f\n",netmin[2],netmax[2]);
+	minrange = 1.0e10;
+	maxrange = -1.0e10;
+	for (i=0; i<3; i++) {
+		range[i] = netmax[i] - netmin[i];
+		minrange = MIN(minrange,range[i]);
+		maxrange = MAX(maxrange,range[i]);
+	}
+	for (i=0; i<3; i++) {
+		N[i] = int(range[i]/delta + 1);
+		Nbox[i] = range[i]/dbox + 1;
+		printf("N, Nbox: %d  %6d  %4d delta: %f\n",i,N[i],Nbox[i],delta);
+	}
+
+	// Allocate arrays:
+	nvlist = new int**[Nbox[0]];
+	vlist = new int***[Nbox[0]];
+	for (xb=0; xb<Nbox[0]; xb++) {
+		nvlist[xb] = new int*[Nbox[1]];
+		vlist[xb] = new int**[Nbox[1]];
+		for (yb=0; yb<Nbox[1]; yb++) {
+			nvlist[xb][yb] = new int[Nbox[2]];
+			vlist[xb][yb] = new int*[Nbox[2]];
+			for (zb=0; zb<Nbox[2]; zb++) {
+				vlist[xb][yb][zb] = new int[maxvlist];
+			}
+		}
+	}
+	for (xb=0; xb<Nbox[0]; xb++) {
+		for (yb=0; yb<Nbox[1]; yb++) {
+			for (zb=0; zb<Nbox[2]; zb++) {
+				nvlist[xb][yb][zb] = 0;
+			}
+		}
+	}
+
+	// Set up vessel lists
+	// Note that segment iseg of edge spans edge->smin[iseg].pos[i] -> edge->smax[iseg].pos[i]
+	// We need to create lists of edges that intersect boxes
+	int nsum = 0;
+	for (ie=0; ie<NP->ne; ie++) {
+		edge = &(NP->edgeList[ie]);
+		for (i=0; i<3; i++) {
+			k1[i] = 999;
+			k2[i] = -999;
+		}
+		for (iseg=0; iseg<edge->npts-1; iseg++) {
+			for (i=0; i<3; i++) {
+				kbox = int((edge->smin[iseg].pos[i] - netmin[i])/dbox);
+				k1[i] = MIN(k1[i],kbox);
+				kbox = int((edge->smax[iseg].pos[i] - netmin[i])/dbox);
+				k2[i] = MAX(k2[i],kbox);
+			}
+		}
+		for (xb=k1[0]; xb<=k2[0]; xb++) {
+			for (yb=k1[1]; yb<=k2[1]; yb++) {
+				for (zb=k1[2]; zb<=k2[2]; zb++) {
+					if (!inlist(ie,vlist[xb][yb][zb],nvlist[xb][yb][zb])) {
+						vlist[xb][yb][zb][nvlist[xb][yb][zb]] = ie;
+						nvlist[xb][yb][zb]++;
+						nsum++;
+					}
+				}
+			}
+		}
+	}
+	xb = Nbox[0]/2;
+	yb = Nbox[1]/2;
+//	zb = Nbox[2]/2;
+	for (zb=0; zb<Nbox[2]; zb++) {
+		printf("%6d %4d\n",zb,nvlist[xb][yb][zb]);
+	}
+	printf("nsum: %d\n",nsum);
+}
+
+//-----------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------
 int main(int argc, char**argv)
 {
 	int err;
-	int x, y, z, val;
+	int x, y, z, val, res;
 	int width, height, depth, xysize;
-	double dmin, pos[3];
-	double netmin[3], netmax[3];
-	int N[3];
-	float range[3], minrange, delta;
+	double pos[3];
 	char *input_SGfile;
 	char drive[32], dir[128],filename[256], ext[32];
 	char errfilename[256], output_tiff[256], result_file[256];
@@ -629,6 +798,8 @@ int main(int argc, char**argv)
 	sprintf(result_file,"%s_SG2tiff.out",output_basename);
 	fperr = fopen(errfilename,"w");
 
+	printf("delta, dmin: %f %f\n",delta,dmin);
+
 	fpout = fopen(result_file,"w");	
 	NP = (NETWORK *)malloc(sizeof(NETWORK));
 	err = ReadAmiraFile(input_SGfile,NP,dmin);
@@ -637,38 +808,7 @@ int main(int argc, char**argv)
 		return 2;
 	}
 
-	SetEdgeBnds(netmin,netmax);
-	/*
-	iesel = 42;
-	int ie = iesel;
-	for (int i=0; i<3; i++) {
-		netmin[i] = NP->edgeList[ie].emin.pos[i];
-		netmax[i] = NP->edgeList[ie].emax.pos[i];
-	}
-	ShowEdge(ie);
-	*/
-
-	for (int i=0; i<3; i++) {
-		netmin[i] -= 10;
-		netmax[i] += 10;
-	}
-
-	printf("Network bounds:\n");
-	printf("x:  %6.1f  %6.1f\n",netmin[0],netmax[0]);
-	printf("y:  %6.1f  %6.1f\n",netmin[1],netmax[1]);
-	printf("z:  %6.1f  %6.1f\n",netmin[2],netmax[2]);
-	minrange = 1.0e10;
-	for (int i=0; i<3; i++) {
-		range[i] = netmax[i] - netmin[i];
-		minrange = MIN(minrange,range[i]);
-	}
-//	int Nmin = 100;
-//	delta = minrange/(Nmin-1);
-//	delta = 1;
-
-	for (int i=0; i<3; i++) {
-		N[i] = int(range[i]/delta + 1);
-	}
+	CreateBoxList();
 
 	width = N[0];
 	height = N[1];
@@ -691,6 +831,7 @@ int main(int argc, char**argv)
 	p = (unsigned char *)(im->GetBufferPointer());
 	xysize = width*height;
 
+	dbug = false;
 	int n = 0;
 	for (x=0; x<N[0]; x++) {
 		pos[0] = netmin[0] + x*delta;
@@ -700,9 +841,16 @@ int main(int argc, char**argv)
 //			printf(".");
 			for (z=0; z<N[2]; z++) {
 				pos[2] = netmin[2] + z*delta;
-				if (InsideNetwork(pos)) {
+//	dbug = (x == 40 && y == 8 && z == 10);
+	if (dbug) printf("x,y,z: %d %d %d  %6.1f %6.1f %6.1f\n",x,y,z,pos[0],pos[1],pos[2]);
+				res = InsideNetwork(pos);
+				if (res > 0) {
 					n++;
 					val = 255;
+					//if (res == 1)
+					//	val = 255;		// sphere
+					//else if (res == 2)
+					//	val = 128;		// tube
 				} else {
 					val = 0;
 				}
