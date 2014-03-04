@@ -17,6 +17,7 @@
 #include "itkImageFileReader.h"
 #include "itkImageFileWriter.h"
 #include "itkSize.h"
+#include "itkTIFFImageIO.h"
 
 typedef itk::Image<unsigned char,3> ImageType;
 ImageType::Pointer im;
@@ -251,8 +252,12 @@ int main(int argc, char**argv)
 	FileWriterType::Pointer writer = FileWriterType::New();
 	writer->SetFileName(argv[2]);
 	writer->SetInput(im2);
+	typedef  itk::TIFFImageIO TIFFIOType;
+	TIFFIOType::Pointer tiffIO = TIFFIOType::New();
+	writer->SetImageIO(tiffIO);
 	if (use_compression) {
 		writer->UseCompressionOn();
+		tiffIO->SetCompressionToDeflate();
 	}
 	try
 	{

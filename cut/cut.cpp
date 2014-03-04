@@ -17,10 +17,7 @@
 #include "itkImageFileReader.h"
 #include "itkImageFileWriter.h"
 #include "itkSize.h"
-
 #include "itkTIFFImageIO.h"
-#include "itkRGBAPixel.h"
-
 
 typedef itk::Image<unsigned char,3> ImageType;
 ImageType::Pointer im, im1, im2;
@@ -60,7 +57,7 @@ int main(int argc, char**argv)
 	
 	printf("Input image file: %s\n",argv[1]);
 	sscanf(argv[2],"%c",&axis);
-	sscanf(argv[3],"%d",&pos);
+	sscanf(argv[3],"%ld",&pos);
 	sscanf(argv[4],"%c",&comp);
 	if (axis == 'X') axis = 'x';
 	if (axis == 'Y') axis = 'y';
@@ -109,19 +106,19 @@ int main(int argc, char**argv)
 	height = im->GetLargestPossibleRegion().GetSize()[1];
 	depth = im->GetLargestPossibleRegion().GetSize()[2];
 	xysize = width*height;
-	printf("Image dimensions: width, height, depth: %d %d %d\n",width,height,depth);
+	printf("Image dimensions: width, height, depth: %ld %ld %ld\n",width,height,depth);
 	p = (unsigned char *)(im->GetBufferPointer());
 
 	if (axis == 'x' && pos >= width-1) {
-		printf("Bad cut position: %c = %d\n",axis,pos);
+		printf("Bad cut position: %c = %ld\n",axis,pos);
 		return 4;
 	}
 	if (axis == 'y' && pos >= height-1) {
-		printf("Bad cut position: %c = %d\n",axis,pos);
+		printf("Bad cut position: %c = %ld\n",axis,pos);
 		return 4;
 	}
 	if (axis == 'z' && pos >= depth-1) {
-		printf("Bad cut position: %c = %d\n",axis,pos);
+		printf("Bad cut position: %c = %ld\n",axis,pos);
 		return 4;
 	}
 
@@ -148,8 +145,6 @@ int main(int argc, char**argv)
 		zstart2 = depth1;
 	}
 	
-	printf("depth1: %d  depth2: %d  zstart2: %d\n",depth1,depth2,zstart2);
-
 	ImageType::Pointer im1 = ImageType::New();
 	ImageType::SizeType imsize; 
 	ImageType::IndexType imstart; 
@@ -175,20 +170,14 @@ int main(int argc, char**argv)
 			}
 		}
 	}
-	printf("Writing LE file: %s  dimensions: width, height, depth: %d %d %d\n",LEfile,width1,height1,depth1);
+	printf("Writing LE file: %s  dimensions: width, height, depth: %ld %ld %ld\n",LEfile,width1,height1,depth1);
 	typedef itk::ImageFileWriter<ImageType> FileWriterType;
 	FileWriterType::Pointer writer = FileWriterType::New();
-//	writer->SetFileName(argv[2]);
-	writer->SetFileName(LEfile);
-  typedef  itk::TIFFImageIO TIFFIOType;
-//  WriterType::Pointer writer = WriterType::New();
-  TIFFIOType::Pointer tiffIO = TIFFIOType::New();
-//  tiffIO->SetPixelType(itk::ImageIOBase::GRAYSCALE);
-//  writer->SetFileName(outputFilename);
-  writer->SetInput(im1);
-  writer->SetImageIO(tiffIO);
-
 	writer->SetInput(im1);
+	writer->SetFileName(LEfile);
+	typedef  itk::TIFFImageIO TIFFIOType;
+	TIFFIOType::Pointer tiffIO = TIFFIOType::New();
+	writer->SetImageIO(tiffIO);
 	if (use_compression) {
 		writer->UseCompressionOn();
 		tiffIO->SetCompressionToDeflate();
@@ -229,13 +218,13 @@ int main(int argc, char**argv)
 		}
 	}
 
-	printf("Writing GT file: %s  dimensions: width, height, depth: %d %d %d\n",GTfile,width2,height2,depth2);
+	printf("Writing GT file: %s  dimensions: width, height, depth: %ld %ld %ld\n",GTfile,width2,height2,depth2);
 
 	writer->SetFileName(GTfile);
 	writer->SetInput(im2);
 	if (use_compression) {
 		writer->UseCompressionOn();
-		tiffIO->SetCompressionToLZW();
+		tiffIO->SetCompressionToDeflate();
 	}
 	try
 	{
