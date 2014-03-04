@@ -18,6 +18,10 @@
 #include "itkImageFileWriter.h"
 #include "itkSize.h"
 
+#include "itkTIFFImageIO.h"
+#include "itkRGBAPixel.h"
+
+
 typedef itk::Image<unsigned char,3> ImageType;
 ImageType::Pointer im, im1, im2;
 unsigned char *p, *p1, *p2;
@@ -28,15 +32,19 @@ unsigned char *p, *p1, *p2;
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
+#ifdef __linux__
+void _splitpath(const char* Path, char* Drive, char* Directory, char* Filename, char* Extension);
+#endif
+
 //----------------------------------------------------------------------------
 //----------------------------------------------------------------------------
 int main(int argc, char**argv)
 {
-	int x, y, z, xx, yy, zz, pos;
-	int width, height, depth, xysize;
-	int width1, height1, depth1, xysize1;
-	int width2, height2, depth2, xysize2;
-	int xstart2, ystart2, zstart2;
+	long int x, y, z, xx, yy, zz, pos;
+	long int width, height, depth, xysize;
+	long int width1, height1, depth1, xysize1;
+	long int width2, height2, depth2, xysize2;
+	long int xstart2, ystart2, zstart2;
 	char axis, comp;
 	char LEfile[256], GTfile[256], tag[13];
 	char drive[32], dir[256],filename[256], ext[32];
@@ -172,9 +180,18 @@ int main(int argc, char**argv)
 	FileWriterType::Pointer writer = FileWriterType::New();
 //	writer->SetFileName(argv[2]);
 	writer->SetFileName(LEfile);
+  typedef  itk::TIFFImageIO TIFFIOType;
+//  WriterType::Pointer writer = WriterType::New();
+  TIFFIOType::Pointer tiffIO = TIFFIOType::New();
+//  tiffIO->SetPixelType(itk::ImageIOBase::GRAYSCALE);
+//  writer->SetFileName(outputFilename);
+  writer->SetInput(im1);
+  writer->SetImageIO(tiffIO);
+
 	writer->SetInput(im1);
 	if (use_compression) {
 		writer->UseCompressionOn();
+		tiffIO->SetCompressionToDeflate();
 	}
 	try
 	{
@@ -218,6 +235,7 @@ int main(int argc, char**argv)
 	writer->SetInput(im2);
 	if (use_compression) {
 		writer->UseCompressionOn();
+		tiffIO->SetCompressionToLZW();
 	}
 	try
 	{
