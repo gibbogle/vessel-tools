@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8)
 
 # On Visual Studio 8 MS deprecated C. This removes all 1.276E1265 security
 # warnings
@@ -25,19 +25,25 @@ IF(WIN32)
   ENDIF(NOT BORLAND)
 ENDIF(WIN32)
 
-PROJECT(equalize)
-FIND_PACKAGE(ITK)
-IF(ITK_FOUND)
-INCLUDE(${ITK_USE_FILE})
-ELSE(ITK_FOUND)
-MESSAGE(FATAL_ERROR
-"ITK not found. Please set ITK_DIR.")
-ENDIF(ITK_FOUND)
+include (GenerateExportHeader)
 
-set(PROJECTNAME "equalize")
-ADD_EXECUTABLE(${PROJECTNAME} equalize.cpp)
-TARGET_LINK_LIBRARIES(${PROJECTNAME} ${ITK_LIBRARIES} )
-ADD_CUSTOM_COMMAND(TARGET ${PROJECTNAME} POST_BUILD COMMAND copy \"$(TargetPath)\" \"../bin/exec\")
+PROJECT(loesslib)
 
+set(PROJECTNAME "loesslib")
+SET (LIB_TYPE SHARED)
+ADD_LIBRARY(${PROJECTNAME} ${LIB_TYPE} loess.cpp loess.h throw.h varkitversion.h)
+
+GENERATE_EXPORT_HEADER( ${PROJECTNAME}
+             BASE_NAME ${PROJECTNAME}
+             EXPORT_MACRO_NAME ${PROJECTNAME}_EXPORT
+             EXPORT_FILE_NAME ${PROJECTNAME}_Export.h
+             STATIC_DEFINE ${PROJECTNAME}_BUILT_AS_STATIC
+)
+
+#IF(WIN32)
+#ADD_CUSTOM_COMMAND(TARGET ${PROJECTNAME} POST_BUILD COMMAND copy \"$(TargetPath)\" \"../bin/exec\")
+#ELSE(WIN32)
+#ADD_CUSTOM_COMMAND(TARGET ${PROJECTNAME} POST_BUILD COMMAND cp \"${PROJECTNAME}\" \"../bin/exec\")
+#ENDIF(WIN32)
 
 

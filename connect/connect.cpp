@@ -37,7 +37,7 @@ using namespace std;
 
 typedef itk::Image<unsigned char,3> ImageType;
 ImageType::Pointer im;
-int width, height, depth, imsize;
+long long width, height, depth, imsize;
 unsigned char *p;
 //unsigned short *label;
 unsigned int *label;

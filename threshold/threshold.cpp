@@ -26,7 +26,7 @@
 
 typedef itk::Image<unsigned char,3> ImageType;
 ImageType::Pointer im, background;
-int width, height, depth, imsize;
+long long width, height, depth, imsize;
 
 #define V(a,b,c)  p[(c)*imsize+(b)*width+(a)]
 #define B(a,b,c)  back[(c)*imsize+(b)*width+(a)]

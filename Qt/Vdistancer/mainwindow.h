@@ -22,8 +22,6 @@ public slots:
     void tiffFileSelecter();
     void distancer();
     void tiffer();
-    void sphereOption();
-//    void randomOption();
     void imageOption();
     void imageChange();
 
@@ -38,6 +36,9 @@ public:
     bool is_tiff;
     bool tiff_ready;
     QString tempfileName;
+private slots:
+    void on_checkBox_use_close_toggled(bool checked);
+    void on_checkBoxSubregion_toggled(bool checked);
 };
 
 #endif // MAINWINDOW_H

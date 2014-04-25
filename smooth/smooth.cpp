@@ -25,7 +25,7 @@
 
 typedef itk::Image<unsigned char,3> ImageType;
 ImageType::Pointer im;
-int width, height, depth, imsize;
+long long width, height, depth, imsize;
 unsigned char *p, *average;
 bool dbug;
 
@@ -86,10 +86,10 @@ void adder(int xmin, int xmax,int ymin, int ymax, int zmin, int zmax, double *av
 //----------------------------------------------------------------------------------------------
 void fastsmth(int R, int npar)
 {
-	int N, x, y, z, xx, dy, dz, k, sum, sumXYZ, sumYZ[64];
+	int N, x, y, z, xx, dy, dz, k, sum, sumYZ[64];
 	int z1, z2, kpar,dzpar;
 	int xmin,xmax,ymin,ymax,zmin,zmax;
-	double ave;
+	double ave, sumXYZ;
 
 	N = 2*R + 1;
 	dbug = false;
@@ -110,10 +110,11 @@ void fastsmth(int R, int npar)
 	for (z=z1; z<=z2; z++)
 	{
 		printf(".");
-//		printf("z: %d\n",z);
+		if (dbug) printf("z: %d\n",z);
 		for (y=R; y<=height-R-1; y++)
 		{
-//			printf("y: %d\n",y);
+//			dbug = (z >= 77 && y == 107);
+			if (dbug) printf("y: %d\n",y);
 			sumXYZ = 0;				//sumXYZ is the cube sum
 			for (xx=0; xx<N; xx++)
 			{
@@ -122,15 +123,16 @@ void fastsmth(int R, int npar)
 				{
 					for (dz=-R; dz<=R; dz++)
 					{
+						if (dbug) printf("%d %d %d   %lld\n",xx,y+dy,z+dz,(z+dz)*imsize+(y+dy)*width+(xx));
 						sumYZ[xx] += V(xx,y+dy,z+dz);
 					}
 				}
 				sumXYZ += sumYZ[xx];
 			}
-//			printf("y: %d sumXYZ: %d\n",y,sumXYZ);
+			if (dbug) printf("y: %d sumXYZ: %d\n",y,sumXYZ);
 			for (x=R; x<=width-R-1; x++)
 			{
-//				printf("x,R: %d %d\n",x,R);
+				if (dbug) printf("x,R: %d %d\n",x,R);
 				if (x > R)
 				{
 					sum = 0;
@@ -138,6 +140,7 @@ void fastsmth(int R, int npar)
 					{
 						for (dz=-R; dz<=R; dz++)
 						{
+							if (dbug) printf("%d %d %d   %lld\n",x+R,y+dy,z+dz,(z+dz)*imsize+(y+dy)*width+(x+R));
 							sum += V(x+R,y+dy,z+dz);
 						}
 					}
@@ -146,10 +149,7 @@ void fastsmth(int R, int npar)
 						sumYZ[k-1] = sumYZ[k];
 					sumYZ[N-1] = sum;
 				}
-				A(x,y,z) = sumXYZ/(N*N*N) + 0.5;
-//				if (z == 8 && x == width/2) {
-//					printf("y: %d A: %d\n",y,A(x,y,z));
-//				}
+				A(x,y,z) = (unsigned char)(sumXYZ/(N*N*N) + 0.5);
 			}
 		}
 	}
@@ -186,14 +186,14 @@ void fastsmth(int R, int npar)
 					xmin = MAX(x-R,0);
 					xmax = x+R;
 					adder(xmin,xmax,ymin,ymax,zmin,zmax,&ave);
-					A(x,y,z) = ave + 0.5;
+					A(x,y,z) = (unsigned char)(ave + 0.5);
 				}
 				for (x=width-R; x<width; x++)
 				{
 					xmin = x-R;
 					xmax = MIN(x+R,width-1);
 					adder(xmin,xmax,ymin,ymax,zmin,zmax,&ave);
-					A(x,y,z) = ave + 0.5;
+					A(x,y,z) = (unsigned char)(ave + 0.5);
 				}
 			}
 			for (x=R; x<width-R; x++)
@@ -205,14 +205,14 @@ void fastsmth(int R, int npar)
 					ymin = MAX(y-R,0);
 					ymax = y+R;
 					adder(xmin,xmax,ymin,ymax,zmin,zmax,&ave);
-					A(x,y,z) = ave + 0.5;
+					A(x,y,z) = (unsigned char)(ave + 0.5);
 				}
 				for (y=height-R; y<height; y++)
 				{
 					ymin = y-R;
 					ymax = MIN(y+R,height-1);
 					adder(xmin,xmax,ymin,ymax,zmin,zmax,&ave);
-					A(x,y,z) = ave + 0.5;
+					A(x,y,z) = (unsigned char)(ave + 0.5);
 				}
 			}
 		}
@@ -241,7 +241,7 @@ void fastsmth(int R, int npar)
 //					else
 //						dbug = false;
 					adder(xmin,xmax,ymin,ymax,zmin,zmax,&ave);
-					A(x,y,z) = ave + 0.5;
+					A(x,y,z) = (unsigned char)(ave + 0.5);
 				}
 			}
 		}
@@ -254,6 +254,7 @@ void fastsmth(int R, int npar)
 int main(int argc, char**argv)
 {
 	int radius, npar;
+	long long longsize;
 	time_t t1;
 	t1 = time(NULL);
 	FILE *fp;
@@ -315,7 +316,10 @@ int main(int argc, char**argv)
 	imsize = width*height;
 
 	printf("Image dimensions: width, height, depth: %d %d %d\n",width,height,depth);
-	printf("Array size: %d\n",width*height*depth);
+	longsize = width;
+	longsize *= height;
+	longsize *= depth;
+	printf("Array size: %lld\n",longsize);
 
 	if (!USE_ITK_FILTER)
 	{

@@ -122,7 +122,7 @@ typedef loosend_str LOOSEND;
 #define V3D(a,b,c)  p[(c)*imsize_xy+(b)*width+(a)]
 typedef itk::Image<unsigned char,3> ImageType;
 ImageType::Pointer im, imskel;
-int width, height, depth, imsize_xy;
+long long width, height, depth, imsize_xy;
 unsigned char *pskel, *p;
 int nv, ne, negmin, np, np_used;
 int ne_max, np_max;
@@ -1286,7 +1286,7 @@ int CrudeGetDiameters(void)
 // to be well separated, i.e. this must be applied to the simplified network.
 // It can be used only for the interior pts, therefore not when npts = 2.
 //-----------------------------------------------------------------------------------------------------
-int getDiameter(int kp0, int kp1, int kp2)
+double getDiameter(int kp0, int kp1, int kp2)
 {
 	int i;
 	double p1[3], p2[3], p0[3];
@@ -4787,6 +4787,49 @@ int FixDiameters()
 }
 
 //-----------------------------------------------------------------------------------------------------
+// To track down the problem with r2=0
+//-----------------------------------------------------------------------------------------------------
+int checkDiameter()
+{
+	int i, x, y, z, dx, dy, dz;
+	double p1[3], p2[3], p0[3];
+	double r2_ave, r2_min, diam, factor;
+//	double alpha = 0.0;
+	double dlim = 50.0;
+	unsigned char val;
+	int v0[]={1332,744,57};
+	int v1[]={1330,744,57};
+	int v2[]={1334,744,57};
+
+	for (dx=-2; dx<=2; dx++) {
+		for (dy=-2; dy<=2; dy++) {
+			for (dz=-2; dz<=2; dz++) {
+				x = v0[0]+dx;
+				y = v0[1]+dy;
+				z = v0[2]+dz;
+				val = V3D(x,y,z);
+				fprintf(fpout,"val: %d %d %d  %d\n",x,y,z,val);
+			}
+		}
+	}
+	for (i=0; i<3; i++) {
+		p0[i] = vsize[i]*(v0[i] + 0.5);		// Note: centres of voxel cubes
+		p1[i] = vsize[i]*(v1[i] + 0.5);
+		p2[i] = vsize[i]*(v2[i] + 0.5);
+	}
+	// This estimates the average and minimum diameter at the point p1, centreline p0 -> p2
+	EstimateDiameter(p0,p1,p2,&r2_ave,&r2_min);
+	diam = 2*sqrt(r2_ave);
+	if (calib_param != 0) {
+		//factor = 1.0 + calib_param*diam/dlim;
+		//diam = factor*diam;
+		diam *= calib_param;
+	}
+	fprintf(fpout,"diam: %f\n",diam);
+	return 0;
+}
+
+//-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
 int main(int argc, char**argv)
 {
@@ -4894,10 +4937,10 @@ int main(int argc, char**argv)
 	depth = imskel->GetLargestPossibleRegion().GetSize()[2];
 	imsize_xy = width*height;
 
-	printf("Image dimensions: width, height, depth: %d %d %d\n",width,height,depth);
+	printf("Image dimensions: width, height, depth: %lld %lld %lld\n",width,height,depth);
 	pskel = (unsigned char *)(imskel->GetBufferPointer());
 	int nt = 0;
-	for (int i=0; i<width*height*depth; i++) {
+	for (long long i=0; i<width*height*depth; i++) {
 		if (pskel[i] > 0) nt++;
 	}
 
@@ -4935,13 +4978,47 @@ int main(int argc, char**argv)
 	p = (unsigned char *)(im->GetBufferPointer());
 
 	count = 0;
-	for (int i=0; i<width*height*depth; i++) {
+	for (long long i=0; i<width*height*depth; i++) {
 		if (p[i] > 0) count++;
 	}
+	//for (int x=0; x<width; x++) {
+	//	for (int y=0; y<height; y++) {
+	//		for (int z=0; z<depth; z++) {
+	//			if (V3D(x,y,z) > 0) {
+	//				count++;
+	//				if (z == 57) fprintf(fpout,"%d %d %d\n",x,y,z);
+	//				printf("%d %d %d\n",x,y,z);
+	//			}
+	//		}
+	//	}
+	//}
 	volume = count*vsize[0]*vsize[1]*vsize[2];
 
-//	}
-			
+	fprintf(fpout,"lit voxel count: %d\n",count);
+
+	/*
+	checkDiameter();
+
+	typedef itk::ImageFileWriter<ImageType> FileWriterType;
+	FileWriterType::Pointer writer = FileWriterType::New();
+	writer->SetFileName("zzz.tif");
+	writer->SetInput(im);
+	writer->UseCompressionOn();
+	try
+	{
+		printf("Writing vessel file: %s\n","zzz.tif");
+		writer->Update();
+	}
+	catch (itk::ExceptionObject &e)
+	{
+		std::cout << e << std::endl;
+		fprintf(fperr,"Write error on vessel file\n");
+		fclose(fperr);
+		return 3;	// Read error on input file
+	}
+	return 1;
+	*/
+
 	InitVector();
 
 	err = TraceSkeleton(1);

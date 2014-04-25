@@ -35,8 +35,8 @@ int main(int argc, char**argv)
 {
 	int x1, x2, y1, y2, z1, z2;
 	int x, y, z, xx, yy, zz;
-	int width, height, depth, xysize;
-	int width2, height2, depth2, xysize2;
+	long long width, height, depth, xysize;
+	long long width2, height2, depth2, xysize2;
 	char comp;
 	bool use_compression;
 

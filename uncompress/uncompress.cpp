@@ -51,6 +51,7 @@ int main(int argc, char**argv)
 	typedef itk::ImageFileReader<ImageType> FileReaderType;
 	FileReaderType::Pointer reader = FileReaderType::New();
 
+	printf("attempting read\n");
 	reader->SetFileName(argv[1]);
 	try
 	{
@@ -59,6 +60,7 @@ int main(int argc, char**argv)
 	catch (itk::ExceptionObject &e)
 	{
 		std::cout << e << std::endl;
+		printf("Read error on input file\n");
 		fprintf(fp,"Read error on input file\n");
 		fclose(fp);
 		return 2;	// Read error on input file

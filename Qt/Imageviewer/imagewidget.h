@@ -41,9 +41,6 @@ typedef itk::ImageToVTKImageFilter <ImageType2> vtkConnectorType;
 typedef itk::ImageToVTKImageFilter <RGBImageType> RGBVtkConnectorType;
 typedef itk::ImageToVTKImageFilter <FloatImageType> vtkFloatConnectorType;
 
-
-  
-
 class ImageWidget : public QWidget {
     Q_OBJECT
 
@@ -94,6 +91,10 @@ public:
     unsigned char *getBuffer();
     void subtractImage(unsigned char *);
     void addImage(unsigned char *);
+    void AddNumber(int *);
+
+public slots:
+    void tallyMark(QMouseEvent* event);
 
 private:
 
@@ -126,6 +127,9 @@ private:
     /** flag for a flipped image */
     bool isFlipped;
 
+    /** flag for kind of fit to the render window */
+    bool horizontalFit;
+
     /**
      * to display the loaded image in the QVTKwidget
      * @param image vtkImageData
@@ -147,6 +151,8 @@ private:
     void getFrame(int z);
 
     void show2DImage();
+
+    void getImageXY(int pos[], int xy[]);
 
     int imageWidth;
     int imageHeight;

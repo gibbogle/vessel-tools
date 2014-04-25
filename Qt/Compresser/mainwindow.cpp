@@ -52,13 +52,20 @@ void MainWindow::outputFileSelecter()
 void MainWindow::compresser()
 {
 	int res;
-	QString qstr, resultstr;
-	char cmdstr[256];
+    QString qstr, resultstr;
+    char cmdstr[2048];
 
     qstr = QCoreApplication::applicationDirPath() + "/exec/compress ";
 	qstr += inputFileName;
 	qstr += " ";
 	qstr += outputFileName;
+    if (ui->radioButtonPackbits->isChecked()) {
+        qstr += " P";
+    } else if (ui->radioButtonLZW->isChecked()) {
+        qstr += " L";
+    } else if (ui->radioButtonZip->isChecked()) {
+        qstr += " Z";
+    }
 
 	if (qstr.size()>(int)sizeof(cmdstr)-1) {
 		printf("Failed to convert qstr->cmdstr since qstr didn't fit\n");

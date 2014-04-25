@@ -1,25 +1,26 @@
 Vdistancer generates a probability distribution for the distance from the nearest blood vessel.
 
-The analysis can be either for the whole network, or for a spherical subregion.
+The analysis can be either for the whole network, or for a cubic or spherical subregion.
 
 Input files:
 
 1. Network file (.am)
-2. Close file (.bin)  The close (or hull) file is used to define the tissue region.
-   NOTE: This is not a tiff file!  It is a special binary format that effectively compresses the tiff data (the data uses less memory than the image when loaded).  DO NOT USE THE CORRESPONDING .tif FILE
-3. Output file (.out)  This is a simple text file to hold the generated distribution.
+2. Output file (.out)  This is a simple text file to hold the generated distribution.
+3. Close file (.bin)  The close (or hull) file is used to define the tissue region.
+   NOTE: This is not required if 
+   NOTE: This is not a tiff file!  It is a special binary format that effectively compresses the tiff data (the data uses less memory than the image when loaded).  
+   DO NOT USE THE CORRESPONDING .tif FILE
 
 Parameters:
-
-(Note that all distances are in microns)
+              (Note that all distances are in microns)
 
 Grid spacing (grid_dx).  This is the spacing of the regular 3D grid of points where the distance is computed.  
 Note that a value that is too small will cause the program to exceed available memory and fail. 
 For the whole network a value in the range 3 - 5 um is usually appropriate.  For a subregion a smaller value can be used.
 
-If the sphere subregion option is selected:
-
-(x0,y0,z0) is the centre of the sphere with the specified radius.  In this case all grid points within the sphere are used.
+If the cube/sphere subregion option is selected:
+(x0,y0,z0) is the centre of the cube or sphere with the specified radius (which for a cube is half the side length). 
+In this case all grid points within the subregion are used.
 
 If Image hypoxic regions is selected, a tiff file is created.  Points greater than the specified distance from the nearest vessel will generate lit voxels.
 The voxel size will equal the specified grid size (um).

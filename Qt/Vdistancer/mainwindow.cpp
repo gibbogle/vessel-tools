@@ -80,34 +80,6 @@ void MainWindow::tiffFileSelecter()
     is_tiff = true;
 }
 
-//void MainWindow::randomOption()
-//{
-//    if (ui->checkBoxRandom->isChecked()) {
-//        ui->lineEditGrid_dx->setEnabled(false);
-//    } else {
-//        ui->lineEditGrid_dx->setEnabled(true);
-//    }
-//    ui->labelResult->setText("");
-//    ui->labelResultImage->setText("");
-//}
-
-void MainWindow::sphereOption()
-{
-    if (ui->checkBoxSphere->isChecked()) {
-        ui->lineEditX0->setEnabled(true);
-        ui->lineEditY0->setEnabled(true);
-        ui->lineEditZ0->setEnabled(true);
-        ui->lineEditRadius->setEnabled(true);
-    } else {
-        ui->lineEditX0->setEnabled(false);
-        ui->lineEditY0->setEnabled(false);
-        ui->lineEditZ0->setEnabled(false);
-        ui->lineEditRadius->setEnabled(false);
-    }
-    ui->labelResult->setText("");
-    ui->labelResultImage->setText("");
-}
-
 void MainWindow::imageOption()
 {
     if (ui->checkBoxImage->isChecked()) {
@@ -142,9 +114,8 @@ void MainWindow::distancer()
     qstr += " ";
     qstr += ui->lineEdit_ncpu->text();
     qstr += " ";
-//    qstr += ui->lineEditFraction->text();
-    qstr += "0";    // always use the close file, no need for random grid points
-    qstr += " ";
+//    qstr += "0";    // no need for random grid points
+//    qstr += " ";
 
     if (ui->checkBoxImage->isChecked()) {
         qstr += ui->lineEditThreshold->text();
@@ -160,8 +131,12 @@ void MainWindow::distancer()
     qstr += " ";
     qstr += ui->lineEditVz->text();
 
-    if (ui->checkBoxSphere->isChecked()) {
-        qstr += " ";
+    if (ui->checkBoxSubregion->isChecked()) {
+        if (ui->radioButtonCube->isChecked()) {
+            qstr += " C ";
+        } else {
+            qstr += " S ";
+        }
         qstr += ui->lineEditX0->text();
         qstr += " ";
         qstr += ui->lineEditY0->text();
@@ -170,9 +145,11 @@ void MainWindow::distancer()
         qstr += " ";
         qstr += ui->lineEditRadius->text();
     }
-    // always use close file
-    qstr += " ";
-    qstr += closefileName;
+    // NOT always use close file
+    if (ui->checkBox_use_close->isChecked()) {
+        qstr += " ";
+        qstr += closefileName;
+    }
 
     if (qstr.size()>(int)sizeof(cmdstr)-1) {
 		printf("Failed to convert qstr->cmdstr since qstr didn't fit\n");
@@ -246,4 +223,20 @@ void MainWindow::tiffer() {
     ui->labelResultImage->setText(resultstr);
 }
 
+void MainWindow::on_checkBox_use_close_toggled(bool checked)
+{
+    ui->pushButtonCloseFile->setEnabled(checked);
+}
 
+void MainWindow::on_checkBoxSubregion_toggled(bool checked)
+{
+    ui->lineEditX0->setEnabled(checked);
+    ui->lineEditY0->setEnabled(checked);
+    ui->lineEditZ0->setEnabled(checked);
+    ui->lineEditRadius->setEnabled(checked);
+    ui->radioButtonCube->setEnabled(checked);
+    ui->radioButtonSphere->setEnabled(checked);
+    ui->labelResult->setText("");
+    ui->labelResultImage->setText("");
+
+}

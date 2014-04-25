@@ -51,8 +51,7 @@ typedef litvoxel LITVOXEL;
 CPOINT *candidate;
 int maxcand, ncand;
 int candHitLimit, insideHitLimit;
-int width, height, depth;
-int imsize;
+long long width, height, depth, imsize;
 typedef itk::Image<unsigned char,3> ImageType;
 ImageType::Pointer im;
 

@@ -43,7 +43,8 @@ real :: sphere_centre(3), sphere_radius, constant_r, threshold_d
 integer :: Nsegpts, N(3), NB(3), Nsegments, Mnodes, np_random, np_grid, offset(3)
 integer :: nx, ny, nz, nx8, ny8, nz8, nmbytes, nxm, nym, nzm
 character*(128) :: amfile, distfile, datafile, closefile
-logical :: use_sphere, use_random, use_constant_radius, save_imagedata, use_close
+logical :: use_random, use_constant_radius, save_imagedata, use_close
+logical :: use_sphere, use_cube, use_subregion
 
 logical :: dbug
 
@@ -62,6 +63,7 @@ subroutine input(res)
 integer :: res
 integer :: nlen, cnt, i, k, status
 character*(2048) :: c, progname
+character :: shape
 
 call get_command (c, nlen, status)
 if (status .ne. 0) then
@@ -84,35 +86,37 @@ cnt = command_argument_count ()
 write (*,*) 'number of command arguments = ', cnt
 write (nfout,*) 'number of command arguments = ', cnt
 res = 0
-if (cnt == 10) then
-	use_sphere = .false.
+if (cnt == 9) then
+	use_subregion = .false.
 	use_close = .false.
-elseif (cnt == 11) then
-	use_sphere = .false.
+elseif (cnt == 10) then
+	use_subregion = .false.
 	use_close = .true.
 elseif (cnt == 14) then
-	use_sphere = .true.
+	use_subregion = .true.
 	use_close = .false.
 elseif (cnt == 15) then
-	use_sphere = .true.
+	use_subregion = .true.
 	use_close = .true.
 else
     write(*,*) 'Bad command line argument count'
     write(nfout,*) 'Bad command line argument count'
 	res = 2
     write(*,*) 'Use either: ',trim(progname), &
-    ' amfile distfile grid_dx ncpu pt_factor threshold datafile vx vy vz' ! 10
+    ' amfile distfile grid_dx ncpu threshold datafile vx vy vz' ! 10
     write(*,*) ' to analyze the whole network'
     write(*,*) 'or: ',trim(progname), &
-    ' amfile distfile grid_dx ncpu pt_factor threshold datafile vx vy vz x0 y0 z0 R'  ! 14
-    write(*,*) ' to analyze a spherical subregion with centre (x0,y0,z0), radius R'
+    ' amfile distfile grid_dx ncpu threshold datafile vx vy vz shape x0 y0 z0 R'  ! 14
+    write(*,*) ' to analyze a cubic/spherical subregion with centre (x0,y0,z0), radius R'
+    write(*,*) ' shape = C for a cube, = S for a sphere'
     write(*,*) 'or: ',trim(progname), &
-    ' amfile distfile grid_dx ncpu pt_factor threshold datafile vx vy vz close_file' ! 11
+    ' amfile distfile grid_dx ncpu threshold datafile vx vy vz close_file' ! 11
     write(*,*) ' to analyze the whole network using the close file to determine insideness'
     write(*,*) 'or: ',trim(progname), &
-    ' amfile distfile grid_dx ncpu pt_factor threshold datafile vx vy vz x0 y0 z0 R close_file'  ! 15
+    ' amfile distfile grid_dx ncpu threshold datafile vx vy vz shape x0 y0 z0 R close_file'  ! 15
+    write(*,*) ' to analyze a cubic/spherical subregion with centre (x0,y0,z0), radius R, using the close file'
+    write(*,*) ' shape = C for a cube, = S for a sphere'
     write(*,*) ' datafile is the temporary file used to pass the distribution data to maketiff which does the conversion'
-    write(*,*) ' to analyze a spherical subregion with centre (x0,y0,z0), radius R, using the close file'
     write(*,*) ' If grid_dx = 0 the sampling points and randomly placed'
 !   write(*,*) ' If constant_radius != 0 all vessels are given this radius'
     write(*,*) ' If threshold != 0 the sampling points are used to generate the image_file data, voxel=255 if distance > threshold'
@@ -120,6 +124,7 @@ else
     return
 endif
 
+pt_factor = 0
 do i = 1, 10
     call get_command_argument (i, c, nlen, status)
     if (status .ne. 0) then
@@ -144,35 +149,35 @@ do i = 1, 10
         read(c(1:nlen),*) Mnodes
         write(*,*) 'Mnodes: ',Mnodes															
         write(nfout,*) 'Mnodes: ',Mnodes															
+!    elseif (i == 5) then
+!        read(c(1:nlen),*) pt_factor
+!        write(*,*) 'pt_factor: ',pt_factor
+!        write(nfout,*) 'pt_factor: ',pt_factor
     elseif (i == 5) then
-        read(c(1:nlen),*) pt_factor
-        write(*,*) 'pt_factor: ',pt_factor
-        write(nfout,*) 'pt_factor: ',pt_factor
-    elseif (i == 6) then
         read(c(1:nlen),*) threshold_d
         write(*,*) 'threshold_d: ',threshold_d
         write(nfout,*) 'threshold_d: ',threshold_d
-    elseif (i == 7) then
+    elseif (i == 6) then
         read(c(1:nlen),*) datafile		
         write(*,*) 'datafile: ',datafile													
         write(nfout,*) 'datafile: ',datafile													
-    elseif (i == 8) then
+    elseif (i == 7) then
         read(c(1:nlen),*) voxelsize(1)																
         write(*,*) 'voxelsize(1): ',voxelsize(1)
         write(nfout,*) 'voxelsize(1): ',voxelsize(1)
-    elseif (i == 9) then
+    elseif (i == 8) then
         read(c(1:nlen),*) voxelsize(2)																
         write(*,*) 'voxelsize(2): ',voxelsize(2)
         write(nfout,*) 'voxelsize(2): ',voxelsize(2)
-    elseif (i == 10) then
+    elseif (i == 9) then
         read(c(1:nlen),*) voxelsize(3)	
         write(*,*) 'voxelsize(3): ',voxelsize(3)
         write(nfout,*) 'voxelsize(3): ',voxelsize(3)
     endif
 enddo
-k = 10
-if (use_sphere) then
-    do i = k+1, k+4
+k = 9
+if (use_subregion) then
+    do i = k+1, k+5
         call get_command_argument (i, c, nlen, status)
         if (status .ne. 0) then
             write (*,*) 'get_command_argument failed: status = ', status, ' arg = ', i
@@ -181,24 +186,33 @@ if (use_sphere) then
             return
         end if														
         if (i == k+1) then
+            read(c(1:nlen),*) shape
+            if (shape == 'C') then
+				use_cube = .true.
+				use_sphere = .false.
+			elseif (shape == 'S') then
+				use_cube = .false.
+				use_sphere = .true.
+			endif
+        elseif (i == k+2) then
             read(c(1:nlen),*) sphere_centre(1)
             write(*,*) 'sphere_centre(1): ',sphere_centre(1)																
             write(nfout,*) 'sphere_centre(1): ',sphere_centre(1)																
-        elseif (i == k+2) then
+        elseif (i == k+3) then
             read(c(1:nlen),*) sphere_centre(2)																
             write(*,*) 'sphere_centre(2): ',sphere_centre(2)																
             write(nfout,*) 'sphere_centre(2): ',sphere_centre(2)																
-        elseif (i == k+3) then
+        elseif (i == k+4) then
             read(c(1:nlen),*) sphere_centre(3)																
             write(*,*) 'sphere_centre(3): ',sphere_centre(3)																
             write(nfout,*) 'sphere_centre(3): ',sphere_centre(3)																
-        elseif (i == k+4) then
+        elseif (i == k+5) then
             read(c(1:nlen),*) sphere_radius
             write(*,*) 'sphere_radius: ',sphere_radius
             write(nfout,*) 'sphere_radius: ',sphere_radius
         endif
     enddo
-    k = k+4
+    k = k+5
 endif
 if (use_close) then
     i = k+1
@@ -216,7 +230,7 @@ endif
 if (grid_dx == 0) then
     use_random = .true.
 else
-    use_random = .false.
+    use_random = .false.	! always
 endif
 constant_r = 0
 if (constant_r > 0) then
@@ -232,6 +246,9 @@ endif
 if (use_sphere) then
 	write(*,'(a,4f8.2)') 'Sphere centre, radius: ',sphere_centre,sphere_radius
 	write(nfout,'(a,4f8.2)') 'Sphere centre, radius: ',sphere_centre,sphere_radius
+elseif (use_cube) then
+	write(*,'(a,4f8.2)') 'Cube centre, radius: ',sphere_centre,sphere_radius
+	write(nfout,'(a,4f8.2)') 'Cube centre, radius: ',sphere_centre,sphere_radius
 endif
 end subroutine
 
@@ -292,8 +309,12 @@ do i = 1,nsegments
 	k = k+1
 	point(k,:) = segment(i)%end2
 enddo
-if (use_sphere) then
-	write(*,'(a,4f8.2)') 'Using sphere: centre, radius: ',sphere_centre,sphere_radius
+if (use_subregion) then
+	if (use_cube) then
+		write(*,'(a,4f8.2)') 'Using cube: centre, radius: ',sphere_centre,sphere_radius
+	else
+		write(*,'(a,4f8.2)') 'Using sphere: centre, radius: ',sphere_centre,sphere_radius
+	endif
 	rmin = sphere_centre - sphere_radius
 	rmax = sphere_centre + sphere_radius
 elseif (use_close) then     ! get ranges from the close file
@@ -326,14 +347,10 @@ integer :: res
 integer :: i, j, k, ip(3), indx(3), ix, iy, iz, ierr, Ngridpts, kpar=0
 real :: R(3), rsum, xyz(3), v(3), tri(3,3)
 logical :: localize = .true.
+logical :: old_method = .false.
 
 write(*,*) 'create_in'
 res = 0
-!if (use_sphere) then
-!	write(*,'(a,4f8.2)') 'Using sphere: centre, radius: ',sphere_centre,sphere_radius
-!	rmin = sphere_centre - sphere_radius
-!	rmax = sphere_centre + sphere_radius
-!endif
 
 !rmin = rmin - 1
 !rmax = rmax + 1
@@ -355,7 +372,7 @@ endif
 in = .false.
 np_grid = 0
 !del = (rmax-rmin)/(N-1)
-if (use_sphere) then
+if (use_subregion) then
 	do ix = 1,N(1)
 		xyz(1) = rmin(1) + (ix-1)*del(1)
 		do iy = 1,N(2)
@@ -363,31 +380,48 @@ if (use_sphere) then
 			do iz = 1,N(3)
 				xyz(3) = rmin(3) + (iz-1)*del(3)
 				v = xyz - sphere_centre
-				if (dot_product(v,v) < sphere_radius*sphere_radius) then
-				    if (use_close) then
-				        in(ix,iy,iz) = in_close(xyz)
-				    else
-    					in(ix,iy,iz) = .true.
-                    endif
-                    if (in(ix,iy,iz)) np_grid = np_grid + 1
+				if (use_sphere) then
+					if (dot_product(v,v) < sphere_radius*sphere_radius) then
+						if (use_close) then
+							in(ix,iy,iz) = in_close(xyz)
+						else
+    						in(ix,iy,iz) = .true.
+						endif
+						if (in(ix,iy,iz)) np_grid = np_grid + 1
+					endif
+				else
+					if (abs(v(1)) < sphere_radius .and. &
+					    abs(v(2)) < sphere_radius .and. &
+					    abs(v(3)) < sphere_radius) then
+						if (use_close) then
+							in(ix,iy,iz) = in_close(xyz)
+						else
+    						in(ix,iy,iz) = .true.
+						endif
+						if (in(ix,iy,iz)) np_grid = np_grid + 1
+					endif
 				endif
 			enddo
 		enddo
 	enddo
 else
-    if (use_close) then
+    if (use_close .or..not.old_method) then
 	    do ix = 1,N(1)
 		    xyz(1) = rmin(1) + (ix-1)*del(1)
 		    do iy = 1,N(2)
 			    xyz(2) = rmin(2) + (iy-1)*del(2)
 			    do iz = 1,N(3)
 				    xyz(3) = rmin(3) + (iz-1)*del(3)
-                    in(ix,iy,iz) = in_close(xyz)
+				    if (use_close) then
+	                    in(ix,iy,iz) = in_close(xyz)
+	                else
+						in(ix,iy,iz) = .true.
+					endif
                     if (in(ix,iy,iz)) np_grid = np_grid + 1
                 enddo
             enddo
         enddo
-    else
+    elseif (old_method) then
         Ngridpts = pt_factor*N(1)*N(2)*N(3)
         write(*,*) 'Generating random interior grid points: ',Ngridpts
         write(nfdist,*) 'Generating random interior grid points: ',Ngridpts
@@ -562,6 +596,7 @@ tri(3,:) = segment(iseg)%end2
 end subroutine
 
 !-----------------------------------------------------------------------------------------
+! NOT USED since use_random = .false.
 !-----------------------------------------------------------------------------------------
 subroutine create_random_pts(res)
 integer :: res
@@ -744,9 +779,14 @@ if (ip /= npoints) then
 endif
 open(nfdist,file=distfile,status='replace')
 write(nfdist,'(a,a)') 'Spatialgraph file: ',amfile
-if (use_sphere) then
-    write(*,'(a,3f8.1,a,f6.1)') 'Sphere with centre: ',sphere_centre,'  radius: ',sphere_radius
-    write(nfdist,'(a,3f8.1,a,f6.1)') 'Sphere with centre: ',sphere_centre,'  radius: ',sphere_radius
+if (use_subregion) then
+	if (use_sphere) then
+		write(*,'(a,3f8.1,a,f6.1)') 'Sphere with centre: ',sphere_centre,'  radius: ',sphere_radius
+		write(nfdist,'(a,3f8.1,a,f6.1)') 'Sphere with centre: ',sphere_centre,'  radius: ',sphere_radius
+	else
+		write(*,'(a,3f8.1,a,f6.1)') 'Cube with centre: ',sphere_centre,'  radius: ',sphere_radius
+		write(nfdist,'(a,3f8.1,a,f6.1)') 'Cube with centre: ',sphere_centre,'  radius: ',sphere_radius
+	endif
 endif
 write(nfdist,'(a,f6.2)') 'grid_dx: ',grid_dx
 if (use_random) write(nfdist,'(a)') 'Random sampling points'

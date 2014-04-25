@@ -23,6 +23,20 @@
 #include <vtkInteractorStyleImage.h>
 #include <vtkObjectFactory.h>
 
+// For picking
+#include <vtkAbstractPicker.h>
+#include <vtkVectorText.h>
+#include <vtkTransform.h>
+#include <vtkTransformPolyDataFilter.h>
+#include "vtkPolyDataMapper.h"
+#include <vtkPolyDataMapper2D.h>
+#include <vtkCoordinate.h>
+#include <vtkActor.h>
+#include <vtkActor2D.h>
+#include <vtkProperty.h>
+#include <vtkProperty2D.h>
+#include "vtkDiskSource.h"
+
 #include "imagewidget.h"
 //#include "medianFilterDialog.h"
 //#include "GADFilterDialog.h"
@@ -34,15 +48,15 @@ ImageWidget::ImageWidget(QWidget *page)
 	this->setAttribute(Qt::WA_DeleteOnClose);
 
 	qvtkWidget = new QVTKWidget(this);
-	//    qvtkWidget->resize(640, 480);
 
 	QVBoxLayout *layout = new QVBoxLayout;
 	layout->setContentsMargins(0, 0, 0, 0);
-	layout->setSpacing(0);
-	layout->addWidget(qvtkWidget);
-//	this->setLayout(layout);
+    layout->setSpacing(0);
+    layout->addWidget(qvtkWidget);
     // Associate the layout with page (copied from myvtk.cpp)
     page->setLayout(layout);
+
+    connect(qvtkWidget,SIGNAL(mouseEvent(QMouseEvent*)),this, SLOT(tallyMark(QMouseEvent*)));
 
 	// Create image actor
 	actor = vtkSmartPointer<vtkImageActor>::New();
@@ -52,12 +66,8 @@ ImageWidget::ImageWidget(QWidget *page)
     
 	// A renderer and render window
 	renderer = vtkSmartPointer<vtkRenderer>::New();
-//	renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
     renderWindow = qvtkWidget->GetRenderWindow();   // (as in myvtk.cpp)
     renderWindow->AddRenderer(renderer);
-
-//    qvtkWidget->SetRenderWindow(renderWindow);
-
 }
 
 ImageWidget::~ImageWidget()
@@ -383,145 +393,13 @@ void ImageWidget::saveImage(QString saveFileName) {
     fileName = saveFileName;
 }
 
-/*
-void ImageWidget::medianFilter()
+
+void ImageWidget::getImageXY(int pos[], int xy[])
 {
-	// create and show the median filter dialog 
-	MedianFilterDialog filterDialog(this);
-    
-    // if the user don't cancel the action
-	if (filterDialog.exec()) {
-		// get selected value from dialog
-		int intensity = filterDialog.spinBox->value();
-
-		// if the itkImage is not loaded, then vtkImage is converted to itkImage 
-		if (itkImage2.IsNull()) {
-			this->setITKImageFromVTK();
-		}
-
-		// setup the itk median filter
-		typedef itk::MedianImageFilter<ImageType2, ImageType2> FilterType;
-
-		FilterType::Pointer filter = FilterType::New();
-		FilterType::InputSizeType radius;
-		radius.Fill(intensity);
-
-		filter->SetRadius(radius);
-		filter->SetInput(itkImage2);
-        filter->Update();
-        
-        
-		// setup and connect itk with vtk, to transform the itkImage to vtkImage
-		vtkConnectorType::Pointer vtkConnector = vtkConnectorType::New();
-		vtkConnector->GetExporter()->SetInput(filter->GetOutput());
-		vtkConnector->GetImporter()->Update();
-
-		itkImage2 = filter->GetOutput();
-		// clear previous vtkImage
-		vtkImage = NULL;
-
-		// create new vtk image
-		vtkImage = vtkSmartPointer <vtkImageData>::New();
-		vtkImage->Initialize();
-		vtkImage->DeepCopy(vtkConnector->GetImporter()->GetOutput());
-		vtkImage->Update();
-
-        isFlipped = false;
-		this->displayImage(vtkImage);
-
-		filter = NULL;
-		vtkConnector = NULL;
-	}
+    printf("pos: %4d %4d\n",pos[0],pos[1]);
+    fflush(stdout);
 }
 
-void ImageWidget::gradientAnisotropicDiffusionFilter()
-{
-	// create and show the median filter dialog 	
-	GADFilterDialog filterDialog(this);
-	if (filterDialog.exec()) {
-
-		// if the image is in grayscale
-		if (imageType.compare("scalar") == 0) {
-			// set up gradient anisotropic diffusion filter
-			typedef itk::GradientAnisotropicDiffusionImageFilter< ImageType2, FloatImageType > FilterType;
-			FilterType::Pointer filter = FilterType::New();
-			filter->SetInput(itkImage2);
-
-			filter->SetNumberOfIterations(filterDialog.iterationsSpinBox->value());
-			filter->SetTimeStep(filterDialog.timeStepSpinBox->value());
-			filter->SetConductanceParameter(filterDialog.conductanceSpinBox->value());
-			filter->Update();			
-			
-			// cast the float image to scalar image in order to display
-			typedef itk::CastImageFilter< FloatImageType, ImageType2 > CastFilterType;
-			CastFilterType::Pointer castFilter = CastFilterType::New();
-			castFilter->SetInput(filter->GetOutput());
-			
-			itkImage2 = castFilter->GetOutput();
-
-			// setup and connect itk with vtk, to transform the itkImage to vtkImage
-			vtkConnectorType::Pointer vtkConnector = vtkConnectorType::New();
-			vtkConnector->GetExporter()->SetInput(castFilter->GetOutput());
-			vtkConnector->GetImporter()->Update();
-
-			// clear previous vtkImage
-			vtkImage = NULL;
-
-			// create new vtk image
-			vtkImage = vtkSmartPointer <vtkImageData>::New();
-			vtkImage->Initialize();
-			vtkImage->DeepCopy(vtkConnector->GetImporter()->GetOutput());
-			vtkImage->Update();
-
-            isFlipped = false;
-			this->displayImage(vtkImage);
-
-			filter = NULL;
-			vtkConnector = NULL;
-		} else {
-			// if the image is RGB
-			typedef itk::RGBPixel< float > FloatPixelType;
-			typedef itk::Image< FloatPixelType, 2 > FloatRGBImageType;
-			typedef itk::VectorGradientAnisotropicDiffusionImageFilter< RGBImageType, FloatRGBImageType > FilterType;
-
-
-			FilterType::Pointer filter = FilterType::New();
-			filter->SetInput(rgbItkImage);
-
-			filter->SetNumberOfIterations(filterDialog.iterationsSpinBox->value());
-			filter->SetTimeStep(filterDialog.timeStepSpinBox->value());
-			filter->SetConductanceParameter(filterDialog.conductanceSpinBox->value());
-			filter->Update();
-
-			typedef itk::CastImageFilter< FloatRGBImageType, RGBImageType > CastFilterType;
-			CastFilterType::Pointer castFilter = CastFilterType::New();
-			castFilter->SetInput(filter->GetOutput());
-
-			rgbItkImage = castFilter->GetOutput();
-
-			// setup and connect itk with vtk, to transform the itkImage to vtkImage
-			RGBVtkConnectorType::Pointer vtkConnector = RGBVtkConnectorType::New();
-			vtkConnector->GetExporter()->SetInput(castFilter->GetOutput());
-			vtkConnector->GetImporter()->Update();
-
-			// clear previous vtkImage
-			vtkImage = NULL;
-
-			// create new vtk image
-			vtkImage = vtkSmartPointer <vtkImageData>::New();
-			vtkImage->Initialize();
-			vtkImage->DeepCopy(vtkConnector->GetImporter()->GetOutput());
-			vtkImage->Update();
-
-            isFlipped = false;
-			this->displayImage(vtkImage);
-
-			filter = NULL;
-			vtkConnector = NULL;
-		}
-	}
-}
-*/
 
 // Define interaction style
 class MouseInteractorStyle4 : public vtkInteractorStyleImage
@@ -532,26 +410,61 @@ class MouseInteractorStyle4 : public vtkInteractorStyleImage
 
     virtual void OnLeftButtonDown() 
     {
-      //std::cout << "Pressed left mouse button." << std::endl;
+        std::cout << "Pressed left mouse button." << std::endl;
+        int shifted = this->Interactor->GetShiftKey();
       // Forward events
-	  int shifted = this->Interactor->GetShiftKey();
-	  if (shifted != 0) vtkInteractorStyleImage::OnLeftButtonDown();
+//	  if (shifted != 0) vtkInteractorStyleImage::OnLeftButtonDown();    // for ImageViewer, not ImageEditor
+    }
+    virtual void OnRightButtonDown()    // This prevents the interactor from responding to R-button events
+    {
+        std::cout << "Pressed right mouse button." << std::endl;
+    }
+    virtual void OnMiddleButtonDown()   // This prevents the interactor from responding to M-button events
+    {
+        std::cout << "Pressed middle mouse button." << std::endl;
     }
 };
 vtkStandardNewMacro(MouseInteractorStyle4);
 
+
+
+
 void ImageWidget::displayImage(vtkImageData *image)
 {
-
+    int *rect = renderWindow->GetSize();
+    printf("rect: %d %d\n",rect[0],rect[1]);
+    image->SetSpacing(1.0,1.0,1.0);
     int *dim = image->GetDimensions();
     double *spacing = image->GetSpacing(); 
     double *origin = image->GetOrigin();  
 
     float Cx = (dim[0] * spacing[0])/2. + origin[0];
     float Cy = (dim[1] * spacing[1])/2. + origin[1];
+
+    printf("dim: %4d %4d\n",dim[0],dim[1]);
+    printf("spacing: %12.4e %12.4e\n",spacing[0],spacing[1]);
+    printf("origin: %6.2f %6.2f\n",origin[0],origin[1]);
+    printf("Cx,Cy: %10.6f %10.6f\n",Cx,Cy);
+    fflush(stdout);
+
     camera->ParallelProjectionOn();
     camera->SetFocalPoint(Cx,Cy,0);    
-    camera->SetPosition(Cx,Cy,1);
+    camera->SetPosition(Cx,Cy,1);   // insensitive to the z-value
+
+    double scale;
+    if (dim[0]/rect[0] > dim[1]/rect[1]) {
+        scale = dim[0]/2;
+        // scaled to fit in the horizontal: dim[0] <-> rect[0]
+        horizontalFit = true;
+    } else {
+        scale = dim[1]/2;
+        // scaled to fit in the vertical: dim[1] <-> rect[1]
+        horizontalFit = false;
+    }
+    //scale = qMax(dim[0],dim[1])/2;
+    camera->SetParallelScale(scale);
+    // note that in each case the image centre coincides with the window centre
+
     //
     //    // to flip de image
     //    camera->SetViewUp (0, 1, 0);  
@@ -562,20 +475,66 @@ void ImageWidget::displayImage(vtkImageData *image)
 
     renderer->AddActor(actor);
     renderer->SetActiveCamera(camera);
-    renderer->ResetCamera();
-
-//	qvtkWidget->SetRenderWindow(renderWindow); // moved to constructor
-//    printf("returning from displayImage\n");    // apparently not necessary to set interactor style - default OK 
-//    return;
 
     // window interactor style for display images 
-//	vtkSmartPointer<vtkInteractorStyleImage> style = vtkSmartPointer<vtkInteractorStyleImage>::New();
     vtkSmartPointer<MouseInteractorStyle4> style = vtkSmartPointer<MouseInteractorStyle4>::New();
-	// set interactor style to the qvtkWidget Interactor
-	qvtkWidget->GetInteractor()->SetInteractorStyle(style);
+    // set interactor style to the qvtkWidget Interactor
+    qvtkWidget->GetInteractor()->SetInteractorStyle(style);
 
     qvtkWidget->GetInteractor()->Render();
     this->update();
+}
+
+void ImageWidget::tallyMark(QMouseEvent *event)
+{
+    QPoint p;
+    int pos[3];
+    if (event->button()== Qt::LeftButton) {
+        if (event->type() == event->MouseButtonPress) {
+            p = event->pos();
+            pos[0] = p.x();
+            pos[1] = 480 - p.y();
+            pos[2] = 0;
+            if (event->modifiers() & Qt::ShiftModifier){
+                printf("Detected a shift-L-button mouse press event at: %d %d\n",p.x(),p.y());
+            } else {
+                printf("Detected a L-button mouse press event at: %d %d\n",p.x(),p.y());
+                AddNumber(pos);
+            }
+        }
+        if (event->type() == event->MouseButtonRelease) {
+            if(event->modifiers() & Qt::ShiftModifier){
+                p = event->pos();
+                printf("Detected a shift-L-button mouse release event at: %d %d\n",p.x(),p.y());
+            }
+        }
+    }
+    fflush(stdout);
+}
+
+void ImageWidget::AddNumber(int p[3])
+{
+  std::cout << "AddNumber at " << p[0] << " " << p[1] ;//<< std::endl;
+
+  vtkSmartPointer<vtkDiskSource> diskSource = vtkSmartPointer<vtkDiskSource>::New();
+  vtkSmartPointer<vtkPolyDataMapper2D> mapper =  vtkSmartPointer<vtkPolyDataMapper2D>::New();
+  mapper->SetInputConnection(diskSource->GetOutputPort());
+  diskSource->SetOuterRadius(2);
+//  std::cout << "made mapper" << std::endl;
+
+  vtkSmartPointer<vtkActor2D> actor = vtkSmartPointer<vtkActor2D>::New();
+  actor->SetMapper( mapper );
+  actor->GetProperty()->SetColor( 1, 0, 0 ); // red
+  actor->SetPosition(p[0], p[1]);
+//  std::cout << "made actor" << std::endl;
+
+  if (renderer == NULL) {
+      std::cout << "renderer = NULL" << std::endl;
+  } else {
+      renderer->AddActor2D(actor);
+//      std::cout << "added actor" << std::endl;
+      qvtkWidget->GetInteractor()->Render();
+  }
 }
 
 void ImageWidget::setITKImageFromVTK()
@@ -624,3 +583,258 @@ void ImageWidget::setImageProperties(std::string fileName, bool verbose)
 		std::cout << "Num of Dimensions: " << numDimensions << std::endl;
 	}
 }
+
+
+
+// NOT USED
+class MyStyle : public vtkInteractorStyleImage
+{
+  public:
+    static MyStyle* New();
+    vtkTypeMacro(MyStyle, vtkInteractorStyleImage);
+
+//    std::vector<vtkActor2D*> Numbers;
+
+    void OnLeftButtonDown()
+    {
+
+      std::cout << "Picking pixel: " << this->Interactor->GetEventPosition()[0] << " " << this->Interactor->GetEventPosition()[1] << std::endl;
+//      this->Interactor->GetPicker()->Pick(this->Interactor->GetEventPosition()[0],
+//              this->Interactor->GetEventPosition()[1],
+//              0,  // always zero.
+//              //this->Interactor->GetRenderWindow()->GetRenderers()->GetFirstRenderer());
+//              this->CurrentRenderer );
+
+      std::cout << "Call it picked " << std::endl;
+      double picked[3];
+      picked[0] = this->Interactor->GetEventPosition()[0];
+      picked[1] = this->Interactor->GetEventPosition()[1];
+      picked[3] = 0;
+
+//GB      this->Interactor->GetPicker()->GetPickPosition(picked);
+//GB      std::cout << "Picked point with coordinate: " << picked[0] << " " << picked[1] << " " << picked[2] << std::endl;
+
+//      this->AddNumber(picked);
+
+      // Forward events
+      vtkInteractorStyleImage::OnLeftButtonDown();
+
+      //this->Interactor->GetRenderWindow()->Render();
+      this->Interactor->Render();
+    }
+
+    void AddNumber(double p[3])
+    {
+      std::cout << "Adding marker at " << p[0] << " " << p[1] ;//<< std::endl;
+
+      // normally, with an image you would do
+      // double* s = image->GetSpacing();
+      // double* o = image->GetOrigin();
+      // p[0] = static_cast<int>( (p[0] - o[0]) / s[0] + 0.5 );
+      p[0] = static_cast<int>( p[0] + 0.5 );
+      p[1] = static_cast<int>( p[1] + 0.5 );
+
+      std::cout << " -> " << p[0] << " " << p[1] << std::endl;
+/*
+      // Convert the current number to a string
+      std::stringstream ss;
+      ss << Numbers.size();
+      std::cout << "made ss" << std::endl;
+
+      // Create an actor for the text
+      vtkSmartPointer<vtkVectorText> textSource = vtkSmartPointer<vtkVectorText>::New();
+      textSource->SetText( ss.str().c_str() );
+      std::cout << "made textSource" << std::endl;
+
+      //get the bounds of the text
+      textSource->Update();
+      double* bounds = textSource->GetOutput()->GetBounds();
+      //transform the polydata to be centered over the pick position
+      double center[3] = {0.5*(bounds[1]+bounds[0]), 0.5*(bounds[3]+bounds[2]), 0.0 };
+      std::cout << "made center" << std::endl;
+
+      vtkSmartPointer<vtkTransform> trans = vtkSmartPointer<vtkTransform>::New();
+      trans->Translate( -center[0], -center[1], 0 );
+      trans->Translate( p[0], p[1], 0 );
+      std::cout << "made trans" << std::endl;
+
+      vtkSmartPointer<vtkTransformPolyDataFilter> tpd = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+      tpd->SetTransform( trans );
+      tpd->SetInputConnection(  textSource->GetOutputPort() );
+      std::cout << "made tpd" << std::endl;
+
+      // Create a mapper
+      vtkSmartPointer<vtkPolyDataMapper2D> mapper = vtkSmartPointer<vtkPolyDataMapper2D>::New();
+      vtkSmartPointer<vtkCoordinate> coordinate = vtkSmartPointer<vtkCoordinate>::New();
+      coordinate->SetCoordinateSystemToWorld();
+      mapper->SetTransformCoordinate( coordinate );
+      mapper->SetInputConnection( tpd->GetOutputPort() );
+
+      */
+
+      vtkSmartPointer<vtkDiskSource> diskSource = vtkSmartPointer<vtkDiskSource>::New();
+      vtkSmartPointer<vtkPolyDataMapper2D> mapper =  vtkSmartPointer<vtkPolyDataMapper2D>::New();
+      mapper->SetInputConnection(diskSource->GetOutputPort());
+      diskSource->SetOuterRadius(2);
+      std::cout << "made mapper" << std::endl;
+
+      vtkSmartPointer<vtkActor2D> actor = vtkSmartPointer<vtkActor2D>::New();
+      actor->SetMapper( mapper );
+      actor->GetProperty()->SetColor( 1, 0, 0 ); // red
+      actor->SetPosition(p[0], p[1]);
+      std::cout << "made actor" << std::endl;
+
+      if (this->CurrentRenderer == NULL) {
+          std::cout << "CurrentRenderer = NULL" << std::endl;
+      } else {
+//          this->CurrentRenderer->AddViewProp( actor );
+          this->CurrentRenderer->AddActor2D(actor);
+          std::cout << "added actor" << std::endl;
+          this->Interactor->Render();
+      }
+
+//GB      this->Numbers.push_back(actor);
+    }
+
+};
+
+vtkStandardNewMacro(MyStyle);
+/*
+void ImageWidget::medianFilter()
+{
+    // create and show the median filter dialog
+    MedianFilterDialog filterDialog(this);
+
+    // if the user don't cancel the action
+    if (filterDialog.exec()) {
+        // get selected value from dialog
+        int intensity = filterDialog.spinBox->value();
+
+        // if the itkImage is not loaded, then vtkImage is converted to itkImage
+        if (itkImage2.IsNull()) {
+            this->setITKImageFromVTK();
+        }
+
+        // setup the itk median filter
+        typedef itk::MedianImageFilter<ImageType2, ImageType2> FilterType;
+
+        FilterType::Pointer filter = FilterType::New();
+        FilterType::InputSizeType radius;
+        radius.Fill(intensity);
+
+        filter->SetRadius(radius);
+        filter->SetInput(itkImage2);
+        filter->Update();
+
+
+        // setup and connect itk with vtk, to transform the itkImage to vtkImage
+        vtkConnectorType::Pointer vtkConnector = vtkConnectorType::New();
+        vtkConnector->GetExporter()->SetInput(filter->GetOutput());
+        vtkConnector->GetImporter()->Update();
+
+        itkImage2 = filter->GetOutput();
+        // clear previous vtkImage
+        vtkImage = NULL;
+
+        // create new vtk image
+        vtkImage = vtkSmartPointer <vtkImageData>::New();
+        vtkImage->Initialize();
+        vtkImage->DeepCopy(vtkConnector->GetImporter()->GetOutput());
+        vtkImage->Update();
+
+        isFlipped = false;
+        this->displayImage(vtkImage);
+
+        filter = NULL;
+        vtkConnector = NULL;
+    }
+}
+
+void ImageWidget::gradientAnisotropicDiffusionFilter()
+{
+    // create and show the median filter dialog
+    GADFilterDialog filterDialog(this);
+    if (filterDialog.exec()) {
+
+        // if the image is in grayscale
+        if (imageType.compare("scalar") == 0) {
+            // set up gradient anisotropic diffusion filter
+            typedef itk::GradientAnisotropicDiffusionImageFilter< ImageType2, FloatImageType > FilterType;
+            FilterType::Pointer filter = FilterType::New();
+            filter->SetInput(itkImage2);
+
+            filter->SetNumberOfIterations(filterDialog.iterationsSpinBox->value());
+            filter->SetTimeStep(filterDialog.timeStepSpinBox->value());
+            filter->SetConductanceParameter(filterDialog.conductanceSpinBox->value());
+            filter->Update();
+
+            // cast the float image to scalar image in order to display
+            typedef itk::CastImageFilter< FloatImageType, ImageType2 > CastFilterType;
+            CastFilterType::Pointer castFilter = CastFilterType::New();
+            castFilter->SetInput(filter->GetOutput());
+
+            itkImage2 = castFilter->GetOutput();
+
+            // setup and connect itk with vtk, to transform the itkImage to vtkImage
+            vtkConnectorType::Pointer vtkConnector = vtkConnectorType::New();
+            vtkConnector->GetExporter()->SetInput(castFilter->GetOutput());
+            vtkConnector->GetImporter()->Update();
+
+            // clear previous vtkImage
+            vtkImage = NULL;
+
+            // create new vtk image
+            vtkImage = vtkSmartPointer <vtkImageData>::New();
+            vtkImage->Initialize();
+            vtkImage->DeepCopy(vtkConnector->GetImporter()->GetOutput());
+            vtkImage->Update();
+
+            isFlipped = false;
+            this->displayImage(vtkImage);
+
+            filter = NULL;
+            vtkConnector = NULL;
+        } else {
+            // if the image is RGB
+            typedef itk::RGBPixel< float > FloatPixelType;
+            typedef itk::Image< FloatPixelType, 2 > FloatRGBImageType;
+            typedef itk::VectorGradientAnisotropicDiffusionImageFilter< RGBImageType, FloatRGBImageType > FilterType;
+
+
+            FilterType::Pointer filter = FilterType::New();
+            filter->SetInput(rgbItkImage);
+
+            filter->SetNumberOfIterations(filterDialog.iterationsSpinBox->value());
+            filter->SetTimeStep(filterDialog.timeStepSpinBox->value());
+            filter->SetConductanceParameter(filterDialog.conductanceSpinBox->value());
+            filter->Update();
+
+            typedef itk::CastImageFilter< FloatRGBImageType, RGBImageType > CastFilterType;
+            CastFilterType::Pointer castFilter = CastFilterType::New();
+            castFilter->SetInput(filter->GetOutput());
+
+            rgbItkImage = castFilter->GetOutput();
+
+            // setup and connect itk with vtk, to transform the itkImage to vtkImage
+            RGBVtkConnectorType::Pointer vtkConnector = RGBVtkConnectorType::New();
+            vtkConnector->GetExporter()->SetInput(castFilter->GetOutput());
+            vtkConnector->GetImporter()->Update();
+
+            // clear previous vtkImage
+            vtkImage = NULL;
+
+            // create new vtk image
+            vtkImage = vtkSmartPointer <vtkImageData>::New();
+            vtkImage->Initialize();
+            vtkImage->DeepCopy(vtkConnector->GetImporter()->GetOutput());
+            vtkImage->Update();
+
+            isFlipped = false;
+            this->displayImage(vtkImage);
+
+            filter = NULL;
+            vtkConnector = NULL;
+        }
+    }
+}
+*/
