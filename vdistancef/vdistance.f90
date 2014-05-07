@@ -1,5 +1,5 @@
 ! To estimate the probability distribution of distance from tissue to the nearest blood vessel.
-! Uses points within the convex hull of a random set of points (?) 
+! Uses points within the convex hull of a random set of points (?)  
 !
 ! New method: use the close file from peel2 to determine if a point is inside or outside
 
