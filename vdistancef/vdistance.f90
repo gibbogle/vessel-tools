@@ -103,14 +103,14 @@ else
     write(nfout,*) 'Bad command line argument count'
 	res = 2
     write(*,*) 'Use either: ',trim(progname), &
-    ' amfile distfile grid_dx ncpu threshold datafile vx vy vz' ! 10
+    ' amfile distfile grid_dx ncpu threshold datafile vx vy vz' ! 9
     write(*,*) ' to analyze the whole network'
     write(*,*) 'or: ',trim(progname), &
     ' amfile distfile grid_dx ncpu threshold datafile vx vy vz shape x0 y0 z0 R'  ! 14
     write(*,*) ' to analyze a cubic/spherical subregion with centre (x0,y0,z0), radius R'
     write(*,*) ' shape = C for a cube, = S for a sphere'
     write(*,*) 'or: ',trim(progname), &
-    ' amfile distfile grid_dx ncpu threshold datafile vx vy vz close_file' ! 11
+    ' amfile distfile grid_dx ncpu threshold datafile vx vy vz close_file' ! 10
     write(*,*) ' to analyze the whole network using the close file to determine insideness'
     write(*,*) 'or: ',trim(progname), &
     ' amfile distfile grid_dx ncpu threshold datafile vx vy vz shape x0 y0 z0 R close_file'  ! 15
@@ -125,7 +125,7 @@ else
 endif
 
 pt_factor = 0
-do i = 1, 10
+do i = 1, 9
     call get_command_argument (i, c, nlen, status)
     if (status .ne. 0) then
         write (*,*) 'get_command_argument failed: status = ', status, ' arg = ', i
@@ -318,6 +318,7 @@ if (use_subregion) then
 	rmin = sphere_centre - sphere_radius
 	rmax = sphere_centre + sphere_radius
 elseif (use_close) then     ! get ranges from the close file
+	write(nfdist,'(a,a)') 'Close file: ',closefile
     call getcloseranges
 else
     rmin = 1.0e10
@@ -788,6 +789,7 @@ if (use_subregion) then
 		write(nfdist,'(a,3f8.1,a,f6.1)') 'Cube with centre: ',sphere_centre,'  radius: ',sphere_radius
 	endif
 endif
+write(nfdist,'(a,3f6.2)') 'voxel dimensions: ',voxelsize
 write(nfdist,'(a,f6.2)') 'grid_dx: ',grid_dx
 if (use_random) write(nfdist,'(a)') 'Random sampling points'
 if (use_constant_radius) then

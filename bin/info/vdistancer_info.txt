@@ -7,7 +7,7 @@ Input files:
 1. Network file (.am)
 2. Output file (.out)  This is a simple text file to hold the generated distribution.
 3. Close file (.bin)  The close (or hull) file is used to define the tissue region.
-   NOTE: This is not required if 
+   NOTE: This is not required if the analysis is for a subregion.
    NOTE: This is not a tiff file!  It is a special binary format that effectively compresses the tiff data (the data uses less memory than the image when loaded).  
    DO NOT USE THE CORRESPONDING .tif FILE
 
