@@ -47,22 +47,22 @@ private:
     Ui::MainWindow *ui;
 
 public:
-    int getArea(int axis, int islice, float *area);
-    int getVolume(float *volume, int *ntvoxels);
-    int histology(int axis, int islice, int *np, float *area);
-    int average_histology(int *np, float *area);
-    void fillEllipse(float z0, float S1[], float S2[], float diam, float vsize[], int nv[], int *npixels);
-    int setup(char *input_amfile, char *close_file, char *result_file, float vsize[]);
+    int getArea(int axis, int islice, int *npixels, double *area);
+    int getVolume(double *volume, int *ntvoxels);
+    int SliceHistology(int axis, int islice, int *nvessels, int *nvesselpixels, int *nslicepixels, double *slicearea);
+    int VolumeHistology(int *np, double *area);
+    void fillEllipse(double z0, double S1[], double S2[], double diam, double vsize[], int nv[], int *npixels);
+    int setup(char *input_amfile, char *close_file, char *result_file, double vsize[]);
     int getCloseSize(int nvoxels[]);
     bool isSetup();
     void reset();
     int ReadAmiraFile(char *, NETWORK *);
     int ReadCloseFile(char *);
-    int branching(int *nbranchpts, float *totlen, float *totvol);
-    float rangeVolume();
+    int branching(int *nbranchpts, double *totlen, double *totvol);
+    double rangeVolume();
 
     FILE *fpout;
-    float voxelsize[3];
+    double voxelsize[3];
     int nvoxels[3];
     QString amFileName;
     QString closeFileName;

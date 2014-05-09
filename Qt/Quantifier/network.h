@@ -7,8 +7,8 @@
 
 struct point_str
 {
-	float x,y,z;
-	float d;
+    double x,y,z;
+    double d;
 	bool used;
 };
 typedef point_str POINT;	
@@ -30,8 +30,8 @@ struct edge_str
 	int *pt;
 	int *pt_used;
 	int vert[2];
-	float segavediam;
-	float length_vox;	// voxel-voxel length
+    double segavediam;
+    double length_vox;	// voxel-voxel length
 //	double length_jun;	// junction-junction length
 	bool used;
 };

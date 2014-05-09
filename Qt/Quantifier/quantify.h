@@ -10,11 +10,14 @@
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
 #define PI 3.14159
+#define ALPHAMAX PI/12
+
+#define DEBUG false
 
 struct segment_str {
 	POINT end1, end2;
-    float diam;
-    float len;
+    double diam;
+    double len;
 };
 typedef segment_str SEGMENT_TYPE;
 
@@ -24,7 +27,7 @@ typedef segment_str SEGMENT_TYPE;
 FILE *fperr=NULL;
 
 int nxc, nyc, nzc, nx8, ny8, nz8, nbytes;
-float voxelsize[3];
+double voxelsize[3];
 unsigned char *closedata = NULL;
 int nsegments;
 SEGMENT_TYPE *segment = NULL;

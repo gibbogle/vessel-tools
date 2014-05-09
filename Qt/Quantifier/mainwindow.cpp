@@ -152,9 +152,9 @@ void MainWindow::checkBox_z()
 void MainWindow::checkReady()
 {
     bool voxelOK;
-    voxelsize[0] = ui->lineEdit_xvoxel->text().toFloat();
-    voxelsize[1] = ui->lineEdit_yvoxel->text().toFloat();
-    voxelsize[2] = ui->lineEdit_zvoxel->text().toFloat();
+    voxelsize[0] = ui->lineEdit_xvoxel->text().toDouble();
+    voxelsize[1] = ui->lineEdit_yvoxel->text().toDouble();
+    voxelsize[2] = ui->lineEdit_zvoxel->text().toDouble();
     if (voxelsize[0] > 0 && voxelsize[1] > 0 && voxelsize[2] > 0)
         voxelOK = true;
     else
@@ -188,7 +188,7 @@ void MainWindow::computeVolume()
 {
     int err;
     int ntvoxels;
-    float volume;
+    double volume;
     QString volumestr, countstr;
     bool voxelOK;
 
@@ -198,12 +198,9 @@ void MainWindow::computeVolume()
     if (!isSetup()) {
         return;
     }
-//    if (!isSetup()) {
-//        doSetup();
-//    }
-    voxelsize[0] = ui->lineEdit_xvoxel->text().toFloat();
-    voxelsize[1] = ui->lineEdit_yvoxel->text().toFloat();
-    voxelsize[2] = ui->lineEdit_zvoxel->text().toFloat();
+    voxelsize[0] = ui->lineEdit_xvoxel->text().toDouble();
+    voxelsize[1] = ui->lineEdit_yvoxel->text().toDouble();
+    voxelsize[2] = ui->lineEdit_zvoxel->text().toDouble();
     if (voxelsize[0] > 0 && voxelsize[1] > 0 && voxelsize[2] > 0)
         voxelOK = true;
     else
@@ -212,26 +209,23 @@ void MainWindow::computeVolume()
     err = getVolume(&volume,&ntvoxels);
     countstr = QString::number(ntvoxels);
     ui->lineEdit_ntvoxels->setText(countstr);
-    fprintf(fpout,"Voxel count: %d\n",ntvoxels);
+    fprintf(fpout,"Total voxel count: %d\n",ntvoxels);
     volume = 1.0e-9*volume;   // convert um3 -> mm3
     volumestr = QString::number(volume,'f',3);
     ui->lineEdit_volume->setText(volumestr);
-    fprintf(fpout,"Volume: %7.3f mm3\n",volume);
+    fprintf(fpout,"Total volume (mm3): %7.3f\n",volume);
 }
 
 void MainWindow::computeArea()
 {
     int err;
-    float area;
-    int axis, islice;
+    double area;
+    int axis, islice, npixels;
     QString areastr;
 
     if (!is_ready) {
         return;
     }
-//    if (!isSetup()) {
-//        doSetup();
-//    }
     if (ui->radioButton_xaxis->isChecked())
         axis = 0;
     else if (ui->radioButton_yaxis->isChecked())
@@ -243,7 +237,7 @@ void MainWindow::computeArea()
         islice = (int)(islice/voxelsize[axis]);
     err = checkSlice(axis,islice);
     if (err == 0)
-        err = getArea(axis,islice,&area);
+        err = getArea(axis,islice,&npixels,&area);
     else
         area = 0;
     area = 1.0e-6*area;   // convert um2 -> mm2
@@ -255,7 +249,7 @@ void MainWindow::computeArea()
 
 void MainWindow::getCentredRanges()
 {
-    float x0, y0, z0, xw, yw, zw, xr, yr, zr, xfac, yfac, zfac;
+    double x0, y0, z0, xw, yw, zw, xr, yr, zr, xfac, yfac, zfac;
     QString x0str, y0str, z0str, xsizestr, ysizestr, zsizestr;
 
     x0str = ui->lineEdit_xcentre->text();
@@ -264,12 +258,12 @@ void MainWindow::getCentredRanges()
     xsizestr = ui->lineEdit_xsize->text();
     ysizestr = ui->lineEdit_ysize->text();
     zsizestr = ui->lineEdit_zsize->text();
-    x0 = x0str.toFloat();
-    y0 = y0str.toFloat();
-    z0 = z0str.toFloat();
-    xw = xsizestr.toFloat();
-    yw = ysizestr.toFloat();
-    zw = zsizestr.toFloat();
+    x0 = x0str.toDouble();
+    y0 = y0str.toDouble();
+    z0 = z0str.toDouble();
+    xw = xsizestr.toDouble();
+    yw = ysizestr.toDouble();
+    zw = zsizestr.toDouble();
     xr = xw/2;
     yr = yw/2;
     zr = zw/2;
@@ -300,7 +294,7 @@ void MainWindow::getCentredRanges()
 // Note: range[][] is 1-based!
 //---------------------------------------------------------
 void MainWindow::getAveragingRanges() {
-    float x1, y1, z1, x2, y2, z2, xfac, yfac, zfac;
+    double x1, y1, z1, x2, y2, z2, xfac, yfac, zfac;
     QString x1str, y1str, z1str, x2str, y2str, z2str;
 
     if (ui->radioButton_rangevoxels->isChecked()) {
@@ -316,8 +310,8 @@ void MainWindow::getAveragingRanges() {
     if (!ui->checkBox_xfull->isChecked()) {
         x1str = ui->lineEdit_x1->text();
         x2str = ui->lineEdit_x2->text();
-        x1 = x1str.toFloat();
-        x2 = x2str.toFloat();
+        x1 = x1str.toDouble();
+        x2 = x2str.toDouble();
         range_x1 = (int)(xfac*x1);
         range_x2 = (int)(xfac*x2);
         range[0][0] = (int)(xfac*x1);
@@ -331,8 +325,8 @@ void MainWindow::getAveragingRanges() {
     if (!ui->checkBox_yfull->isChecked()) {
         y1str = ui->lineEdit_y1->text();
         y2str = ui->lineEdit_y2->text();
-        y1 = y1str.toFloat();
-        y2 = y2str.toFloat();
+        y1 = y1str.toDouble();
+        y2 = y2str.toDouble();
         range_y1 = (int)(yfac*y1);
         range_y2 = (int)(yfac*y2);
         range[1][0] = (int)(yfac*y1);
@@ -346,8 +340,8 @@ void MainWindow::getAveragingRanges() {
     if (!ui->checkBox_zfull->isChecked()) {
         z1str = ui->lineEdit_z1->text();
         z2str = ui->lineEdit_z2->text();
-        z1 = z1str.toFloat();
-        z2 = z2str.toFloat();
+        z1 = z1str.toDouble();
+        z2 = z2str.toDouble();
         range_z1 = (int)(zfac*z1);
         range_z2 = (int)(zfac*z2);
         range[2][0] = (int)(zfac*z1);
@@ -388,64 +382,83 @@ void MainWindow::checkRanges()
 void MainWindow::computeVessels()
 {
     int err;
-    float area, totlen, totvol;
-    int axis, islice, count, density, w, h, nbranchpts;
-    QString areastr, countstr, densitystr;
+    double slicearea, totlen, totvol, darea, areafraction;
+    int axis, islice, nvessels, nvesselpixels, nslicepixels, density, MVD, w, h, nbranchpts;
+    char *axisstr;
+    QString areastr, countstr, densitystr, MVDstr, fractionstr;
 
     if (!is_ready) {
         return;
     }
-//    if (!isSetup()) {
-//        doSetup();
-//    }
-    area = 0;
-    count = 0;
     if (is_slice) {
         if (ui->radioButton_xaxis->isChecked()) {
             axis = 0;
+            axisstr = "X";
             w = nvoxels[1];
             h = nvoxels[2];
+            darea = voxelsize[1]*voxelsize[2];
         } else if (ui->radioButton_yaxis->isChecked()) {
             axis = 1;
+            axisstr = "Y";
             w = nvoxels[2];
             h = nvoxels[0];
+            darea = voxelsize[0]*voxelsize[2];
         } else if (ui->radioButton_zaxis->isChecked()) {
             axis = 2;
+            axisstr = "Z";
             w = nvoxels[0];
             h = nvoxels[1];
+            darea = voxelsize[0]*voxelsize[1];
         }
         islice = ui->lineEdit_intercept->text().toInt();
-        fprintf(fpout,"Computing histology for a slice: axis: %d  islice: %d\n",axis,islice);
+        fprintf(fpout,"\nComputing histology for a slice: axis: %s  islice: %d\n",axisstr,islice);
         if (ui->radioButton_slicemicrons->isChecked())
             islice = (int)(islice/voxelsize[axis]);
         err = checkSlice(axis,islice);
         if (err == 0) {
             if (imageViewer) delete imageViewer;
             imageViewer = new ImageViewer(w,h);
-            err = histology(axis,islice,&count,&area);
+            err = SliceHistology(axis, islice, &nvessels, &nvesselpixels, &nslicepixels, &slicearea);
             imageViewer->paintLabel();
             imageViewer->show();
+//            areafraction = (count*darea)/area;
+            areafraction = (double)nvesselpixels/nslicepixels;
         } else {
-            area = 0;
-            count = 0;
+            slicearea = 0;
+            nvessels = 0;
+            areafraction = 0;
         }
     } else {
         fprintf(fpout,"Computing average histology\n");
         getRanges();
-        err = average_histology(&count,&area);
+        err = VolumeHistology(&nvessels,&slicearea);
         err = branching(&nbranchpts, &totlen, &totvol);
     }
-    area = 1.0e-6*area;   // convert um2 -> mm2
-    areastr = QString::number(area,'f',3);
+    slicearea = 1.0e-6*slicearea;   // convert um2 -> mm2
+    areastr = QString::number(slicearea,'f',3);
     ui->lineEdit_area->setText(areastr);
-    countstr = QString::number(count);
+    countstr = QString::number(nvessels);
     ui->lineEdit_count->setText(countstr);
-    if (area > 0)
-        density = (int)(count/area + 0.5);
-    else
+    if (slicearea > 0) {
+        density = (int)(nvessels/slicearea + 0.5);
+        MVD = (int)((nvessels*0.74/slicearea) + 0.5);
+    } else {
         density = 0;
+        MVD = 0;
+    }
     densitystr = QString::number(density);
     ui->lineEdit_density->setText(densitystr);
+    MVDstr = QString::number(MVD);
+    ui->lineEdit_MVD->setText(MVDstr);
+    fractionstr = QString::number(100*areafraction,'f',3);
+    ui->lineEdit_fraction->setText(fractionstr);
+    fprintf(fpout,"Slice pixels    : %8d\n",nslicepixels);
+    fprintf(fpout,"Slice area (mm2): %f\n",(float)slicearea);
+    fprintf(fpout,"Vessel count:     %6d\n",nvessels);
+    fprintf(fpout,"Vessel pixels:    %6d\n",nvesselpixels);
+    fprintf(fpout,"Count/area:       %6d\n",density);
+    fprintf(fpout,"MVD:              %6d\n",MVD);
+    fprintf(fpout,"Area percentage:  %8.3f\n",100*areafraction);
 }
 
 int MainWindow::checkSlice(int axis, int islice)
@@ -461,22 +474,26 @@ int MainWindow::checkSlice(int axis, int islice)
 void MainWindow::doSetup()
 {
     int err;
-    int um;
+    int um[3];
     QString numstr, resultstr;
     char input_amfile[1024], close_file[1024], result_file[1024];
 
+    this->setCursor( QCursor( Qt::WaitCursor ) );
+    ui->labelResult->setText("Doing setup()");
     strcpy(input_amfile, amFileName.toAscii().constData());
     strcpy(close_file, closeFileName.toAscii().constData());
     strcpy(result_file, resultFileName.toAscii().constData());
     if (fpout) fclose(fpout);
     fpout = fopen(result_file,"w");
     if (!isSetup()) {
-        ui->labelResult->setText("Doing setup()");
         err = setup(input_amfile,close_file,result_file,voxelsize);
         resultstr = QString::number(err);
 //        ui->labelResult->setText(resultstr);
-        if (err != 0) return;
-}
+        if (err != 0) {
+            this->setCursor( QCursor( Qt::ArrowCursor ) );
+            return;
+        }
+    }
     getCloseSize(nvoxels);
     numstr = QString::number(nvoxels[0]);
     ui->lineEdit_nx->setText(numstr);
@@ -484,16 +501,20 @@ void MainWindow::doSetup()
     ui->lineEdit_ny->setText(numstr);
     numstr = QString::number(nvoxels[2]);
     ui->lineEdit_nz->setText(numstr);
-    um = (int)(nvoxels[0]*voxelsize[0] + 0.5);
-    numstr = QString::number(um);
+    um[0] = (int)(nvoxels[0]*voxelsize[0] + 0.5);
+    numstr = QString::number(um[0]);
     ui->lineEdit_umx->setText(numstr);
-    um = (int)(nvoxels[1]*voxelsize[1] + 0.5);
-    numstr = QString::number(um);
+    um[1] = (int)(nvoxels[1]*voxelsize[1] + 0.5);
+    numstr = QString::number(um[1]);
     ui->lineEdit_umy->setText(numstr);
-    um = (int)(nvoxels[2]*voxelsize[2] + 0.5);
-    numstr = QString::number(um);
+    um[2] = (int)(nvoxels[2]*voxelsize[2] + 0.5);
+    numstr = QString::number(um[2]);
     ui->lineEdit_umz->setText(numstr);
+    fprintf(fpout,"\nVoxel size: %6.2f x %6.2f x %6.2f\n",voxelsize[0],voxelsize[1], voxelsize[2]);
+    fprintf(fpout,"Image size (voxels): %6d x %6d x %6d\n",nvoxels[0],nvoxels[1], nvoxels[2]);
+    fprintf(fpout,"Image size (um): %6d x %6d x %6d\n",um[0],um[1],um[2]);
     computeVolume();
+    this->setCursor( QCursor( Qt::ArrowCursor ) );
     //	res = system(cmdstr);
 //	if (res == 0)
 //		resultstr = "SUCCESS";

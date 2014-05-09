@@ -32,7 +32,7 @@ typedef segment_str SEGMENT_TYPE;
 FILE *fperr=NULL, *fpout=NULL;
 
 int nxc, nyc, nzc, nx8, ny8, nz8, nbytes;
-float voxelsize[3];
+double voxelsize[3];
 unsigned char *closedata = NULL;
 int nsegments;
 SEGMENT_TYPE *segment = NULL;
@@ -41,9 +41,9 @@ NETWORK *NP0 = NULL;
 bool is_setup = false;
 */
 
-float pointDist(POINT p1, POINT p2)
+double pointDist(POINT p1, POINT p2)
 {
-    float dx, dy, dz;
+    double dx, dy, dz;
 
     dx = p1.x - p2.x;
     dy = p1.y - p2.y;
@@ -61,8 +61,8 @@ int MainWindow::ReadAmiraFile(char *amFile, NETWORK *net)
 	EDGE edge;
 	char line[STR_LEN];
 
-	printf("ReadAmiraFile: %s\n",amFile);
-	fprintf(fpout,"ReadAmiraFile: %s\n",amFile);
+    printf("Amira file: %s\n",amFile);
+    fprintf(fpout,"Amira file: %s\n",amFile);
 	FILE *fpam = fopen(amFile,"r");
 
 	nsegments = 0;
@@ -114,12 +114,12 @@ int MainWindow::ReadAmiraFile(char *amFile, NETWORK *net)
 						printf("ERROR reading section @1\n");
 						return 1;
 					}
-					sscanf(line,"%f %f %f\n",&(net->vertex[i].point.x),&(net->vertex[i].point.y),&(net->vertex[i].point.z));
-					kp = i;
+                    sscanf(line,"%lf %lf %lf\n",&(net->vertex[i].point.x),&(net->vertex[i].point.y),&(net->vertex[i].point.z));
+//					kp = i;
 					net->vertex[i].point.d = 0;
-					net->point[kp] = net->vertex[i].point;
+//					net->point[kp] = net->vertex[i].point;
 				}
-				kp++;
+//				kp++;
 				printf("Got vertices\n");
 			} else if (k == 2) {
 				for (i=0;i<net->ne;i++) {
@@ -159,12 +159,12 @@ int MainWindow::ReadAmiraFile(char *amFile, NETWORK *net)
 							printf("ERROR reading section @4\n");
 							return 1;
 						}
-						if (k > 0 && k<edge.npts-1) {											// See note above
-							sscanf(line,"%f %f %f",&net->point[kp].x,&net->point[kp].y,&net->point[kp].z);
+//						if (k > 0 && k<edge.npts-1) {											// See note above
+                            sscanf(line,"%lf %lf %lf",&net->point[kp].x,&net->point[kp].y,&net->point[kp].z);
 							net->edgeList[i].pt[k] = kp;
 							net->edgeList[i].pt_used[k] = kp;
 							kp++;
-						}
+//						}
 //						if (k > 0) {
 //							len = len + dist(net,net->edgeList[i].pt[k-1],net->edgeList[i].pt[k]);
 //						}
@@ -174,17 +174,14 @@ int MainWindow::ReadAmiraFile(char *amFile, NETWORK *net)
 			} else if (k == 5) {
 				for (i=0;i<net->ne;i++) {
 					edge = net->edgeList[i];
-					float dave = 0;
+                    double dave = 0;
 					for (k=0;k<edge.npts;k++) {
 						if (fgets(line, STR_LEN, fpam) == NULL) {
 							printf("ERROR reading section @5\n");
 							return 1;
 						}
 						j = edge.pt[k];
-						sscanf(line,"%f",&net->point[j].d);
-						if (j == 13) {
-							printf("j=13: d: %f\n",net->point[j].d);
-						}
+                        sscanf(line,"%lf",&net->point[j].d);
 						if (net->point[j].d == 0) {
 							printf("Error: ReadAmiraFile: zero diameter: i: %d npts: %d k: %d j: %d\n",i,edge.npts,k,j);
 							return 1;
@@ -220,7 +217,8 @@ int MainWindow::ReadAmiraFile(char *amFile, NETWORK *net)
 	}
 	printf("Edges: ne: %d ne_used: %d\n",net->ne,ne_used);
 	
-	printf("nsegments: %d\n",nsegments);
+    printf("Total vessel segments: %d\n",nsegments);
+    fprintf(fpout,"Total vessel segments: %d\n",nsegments);
 
 	segment = (SEGMENT_TYPE *)malloc(nsegments*sizeof(SEGMENT_TYPE));
 
@@ -234,6 +232,11 @@ int MainWindow::ReadAmiraFile(char *amFile, NETWORK *net)
 			segment[iseg].end2 = net->point[ip+1];
             segment[iseg].diam = (net->point[ip].d + net->point[ip+1].d)/2;
             segment[iseg].len = pointDist(net->point[ip],net->point[ip+1]);
+            if (DEBUG) {
+                POINT p1 = segment[iseg].end1;
+                POINT p2 = segment[iseg].end2;
+//                fprintf(fpout,"seg: %6d  ip: %6d %6.1f %6.1f %6.1f --> %6.1f %6.1f %6.1f\n",iseg,ip,p1.x,p1.y,p1.z,p2.x,p2.y,p2.z);
+            }
             iseg++;
 		}
 	}
@@ -249,7 +252,7 @@ int MainWindow::ReadCloseFile(char *filename)
 {
 	FILE *fpdata;
 
-    fprintf(fpout,"Reading close data file: %s\n",filename);
+    fprintf(fpout,"Close data file: %s\n",filename);
 	fpdata = fopen(filename,"rb");
 	if (fpdata == NULL) {
 		printf("fopen failed\n");
@@ -317,21 +320,21 @@ bool in_close(int p[3])
 //--------------------------------------------------------------------
 // This uses 1-based indexing!
 //--------------------------------------------------------------------
-int MainWindow::getArea(int axis, int islice, float *area)
+int MainWindow::getArea(int axis, int islice, int *npixels, double *area)
 {
-	int ix, iy, iz, p[3];
-	double darea, total;
+    int ix, iy, iz, p[3], count;
+    double darea;
 
-	total = 0;
+    count = 0;
 	if (axis == 0) {
 		darea = voxelsize[1]*voxelsize[2];
 		for (iy=1; iy<=nyc; iy++) {	// this is taken care of in in_close() anyway
 			for (iz=1; iz<=nzc; iz++) {
-                p[0] = islice;
+                p[0] = islice+1;
 				p[1] = iy;
 				p[2] = iz;
 				if (in_close(p)) {
-					total += darea;
+                    count++;
 				}
 			}
 		}
@@ -341,11 +344,11 @@ int MainWindow::getArea(int axis, int islice, float *area)
 		for (ix=1; ix<=nxc; ix++) {	// this is taken care of in in_close() anyway
 			for (iz=1; iz<=nzc; iz++) {
 				p[0] = ix;
-                p[1] = islice;
+                p[1] = islice+1;
 				p[2] = iz;
 				if (in_close(p)) {
-					total += darea;
-				}
+                    count++;
+                }
 			}
 		}
 	}
@@ -355,21 +358,22 @@ int MainWindow::getArea(int axis, int islice, float *area)
 			for (iy=1; iy<=nyc; iy++) {
 				p[0] = ix;
 				p[1] = iy;
-                p[2] = islice;
+                p[2] = islice+1;
 				if (in_close(p)) {
-					total += darea;
-				}
+                    count++;
+                }
 			}
 		}
 	}
-	*area = (float)total;
+    *npixels = count;
+    *area = count*darea;
 	return 0;
 }
 
 //--------------------------------------------------------------------
 // This uses 1-based indexing!
 //--------------------------------------------------------------------
-int MainWindow::getVolume(float *volume, int *ntvoxels)
+int MainWindow::getVolume(double *volume, int *ntvoxels)
 {
     int ix, iy, iz, p[3], nt;
 	double total, dvol;
@@ -391,7 +395,7 @@ int MainWindow::getVolume(float *volume, int *ntvoxels)
 		}
 	}
     *ntvoxels = nt;
-	*volume = (float)total;
+    *volume = total;
 	return 0;
 }
 
@@ -400,13 +404,13 @@ int MainWindow::getVolume(float *volume, int *ntvoxels)
 // If the case is really a x-slice, x -> z, y -> x, z -> y
 // If the case is really a y-slice, y -> z, x -> y, z -> x
 //--------------------------------------------------------------------
-int MainWindow::histology(int axis, int islice, int *np, float *area)
+int MainWindow::SliceHistology(int axis, int islice, int *nvessels, int *nvesselpixels, int *nslicepixels, double *slicearea)
 {
     int iseg, cnt, nv[2], npixels, ntpixels;
-	float d;
-	float zmin, zmax;
+    double d;
+    double zmin, zmax;
 	POINT pos1, pos2;
-    float z0, diam, S1[3], S2[3], vsize[2];
+    double z0, diam, S1[3], S2[3], vsize[2];
     bool hit;
 
 	zmin = 1.0e10;
@@ -470,26 +474,31 @@ int MainWindow::histology(int axis, int islice, int *np, float *area)
             hit = true;
         }
         if (hit) {
-            fprintf(fpout,"\nsegment: %6d S1: %6.1f %6.1f %6.1f S2: %6.1f %6.1f %6.1f diam: %4.1f\n",
-                    iseg,S1[0],S1[1],S1[2],S2[0],S2[1],S2[2],diam);
+            if (DEBUG) {
+                fprintf(fpout,"\nsegment: %6d S1: %6.1f %6.1f %6.1f S2: %6.1f %6.1f %6.1f diam: %4.1f\n",
+                        iseg,S1[0],S1[1],S1[2],S2[0],S2[1],S2[2],diam);
+            }
             fillEllipse(z0,S1,S2,diam,vsize,nv,&npixels);
             ntpixels += npixels;
         }
 	}
-    fprintf(fpout,"nsegments, cnt: %6d %6d ntpixels: %6d\n",nsegments,cnt,ntpixels);
-    printf("nsegments, cnt: %6d %6d ntpixels: %6d\n",nsegments,cnt,ntpixels);
+    if (DEBUG) {
+        fprintf(fpout,"Vessel count: %6d\nTotal pixels: %8d\n",cnt,ntpixels);
+    }
+    printf("Vessel count: %6d\nTotal vessel pixels: %8d\n",cnt,ntpixels);
     printf("axis, d, zmin, zmax: %d %f %f %f\n",axis,d,zmin,zmax);
-	*np = cnt;
-	getArea(axis,islice,area);
+    *nvessels = cnt;
+    *nvesselpixels = ntpixels;
+    getArea(axis,islice,nslicepixels,slicearea);
 	return 0;
 }
 
 //--------------------------------------------------------------------
 //--------------------------------------------------------------------
-int MainWindow::average_histology(int *np, float *area)
+int MainWindow::VolumeHistology(int *np, double *area)
 {
-    int islice, iseg, cnt, axis;
-    float d, darea, totarea;
+    int islice, iseg, cnt, axis, nslicepixels;
+    double d, darea, totarea;
     POINT pos1, pos2;
 
     cnt = 0;
@@ -499,8 +508,6 @@ int MainWindow::average_histology(int *np, float *area)
         fflush(fpout);
         for (islice=range[axis][0]; islice <=range[axis][1]; islice++) {
             d = islice*voxelsize[axis];
-//            fprintf(fpout,"islice: %d  d: %f\n",islice,d);
-//            fflush(fpout);
             for (iseg=0; iseg<nsegments;iseg++) {
                 pos1 = segment[iseg].end1;
                 pos2 = segment[iseg].end2;
@@ -514,7 +521,8 @@ int MainWindow::average_histology(int *np, float *area)
                     cnt++;
                 }
             }
-            getArea(axis,islice,&darea);
+//            getArea(axis,islice,&darea);
+            getArea(axis,islice,&nslicepixels,&darea);
             totarea += darea;
 //            fprintf(fpout,"%d %d  %6.1f\n",axis,islice,darea);
 //            fflush(fpout);
@@ -559,11 +567,11 @@ void free_all()
 
 //--------------------------------------------------------------------
 //--------------------------------------------------------------------
-int MainWindow::setup(char *input_amfile, char *close_file, char *result_file, float vsize[])
+int MainWindow::setup(char *input_amfile, char *close_file, char *result_file, double vsize[])
 {
 	int err;
 
-    fprintf(fpout,"setup\n");
+    fprintf(fpout,"Quantifier\n----------\n");
 	free_all();
 	printf("did free_all\n");
 	if (fperr == NULL) fperr = fopen("quantify_error.out","w");
@@ -603,10 +611,10 @@ void MainWindow::reset()
 // Network topology is in NETWORK *NP0
 // Vertices (branch points) are NP0->vertex[]
 //--------------------------------------------------------------------
-int MainWindow::branching(int *nbranchpts, float *totlen, float *totvol)
+int MainWindow::branching(int *nbranchpts, double *totlen, double *totvol)
 {
     int k, nb;
-    float xmin, xmax, ymin, ymax, zmin, zmax, tlen;
+    double xmin, xmax, ymin, ymax, zmin, zmax, tlen;
     POINT p;
 
     xmin = range[0][0]*voxelsize[0];
@@ -639,7 +647,7 @@ int MainWindow::branching(int *nbranchpts, float *totlen, float *totvol)
 //--------------------------------------------------------------------
 // Volume of tissue region defined by range of slices
 //--------------------------------------------------------------------
-float MainWindow::rangeVolume()
+double MainWindow::rangeVolume()
 {
     int ix, iy, iz, p[3], nt;
 
@@ -716,11 +724,11 @@ float MainWindow::rangeVolume()
 // If the case is really a x-slice, x -> z, y -> x, z -> y
 // If the case is really a y-slice, y -> z, x -> y, z -> x
 //----------------------------------------------------------------------------
-void MainWindow::fillEllipse(float z0, float S1[], float S2[], float diam, float vsize[], int nv[], int *npixels)
+void MainWindow::fillEllipse(double z0, double S1[], double S2[], double diam, double vsize[], int nv[], int *npixels)
 {
-    float s0, P0[2], C[3], u[2], v[2], d, gamma, alpha;
-    float a, b, f, F1[2], F2[2], xmin, xmax, ymin, ymax;
-    float sum, x, y, d1, d2;
+    double s0, P0[2], C[3], u[2], v[2], d, gamma, alpha;
+    double a, b, f, F1[2], F2[2], xmin, xmax, ymin, ymax;
+    double sum, x, y, d1, d2;
     int i, ix, iy, ixmin, ixmax, iymin, iymax, npix;
     bool circle;
 
@@ -734,25 +742,31 @@ void MainWindow::fillEllipse(float z0, float S1[], float S2[], float diam, float
     d = sqrt(u[0]*u[0] + u[1]*u[1]);
     if (d == 0) {
         circle = true;
-        xmin = P0[0] - diam/2;
-        xmax = P0[0] + diam/2;
-        ymin = P0[1] - diam/2;
-        ymax = P0[1] + diam/2;
-        fprintf(fpout,"circle: centre: %6.1f %6.1f radius: %6.1f\n",P0[0],P0[1],diam/2);
+        xmin = P0[0] - diam/2 - 2;
+        xmax = P0[0] + diam/2 + 2;
+        ymin = P0[1] - diam/2 - 2;
+        ymax = P0[1] + diam/2 + 2;
+        if (DEBUG) {
+            fprintf(fpout,"circle: centre: %6.1f %6.1f radius: %6.1f\n",P0[0],P0[1],diam/2);
+        }
     } else {
         circle = false;
         u[0] /= d;
         u[1] /= d;
         v[0] = -u[1];
         v[1] = u[0];
-        fprintf(fpout,"s0: %8.3f u: %6.3f %6.3f v: %6.3f %6.3f\n",s0,u[0],u[1],v[0],v[1]);
+        if (DEBUG) {
+            fprintf(fpout,"s0: %8.3f u: %6.3f %6.3f v: %6.3f %6.3f\n",s0,u[0],u[1],v[0],v[1]);
+        }
         sum = 0;
         for (i=0; i<3; i++) {
             C[i] = S2[i] - S1[i];
             sum += C[i]*C[i];
         }
         d = sqrt(sum);
-        fprintf(fpout,"C: %6.1f %6.1f %6.1f  d: %6.1f\n",C[0],C[1],C[2],d);
+        if (DEBUG) {
+            fprintf(fpout,"C: %6.1f %6.1f %6.1f  d: %6.1f\n",C[0],C[1],C[2],d);
+        }
         for (i=0; i<3; i++) {
             C[i] /= d;
         }
@@ -761,11 +775,15 @@ void MainWindow::fillEllipse(float z0, float S1[], float S2[], float diam, float
             alpha = PI/2 - gamma;
         else
             alpha = gamma - PI/2;
+
+        alpha = MAX(alpha,ALPHAMAX);
+
         a = (diam/2)/sin(alpha);
         b = diam/2;
         f = sqrt(a*a - b*b);
-        fprintf(fpout,"gamma: %6.1f alpha: %6.1f a,b,f: %6.1f %6.1f %6.1f\n",
-                gamma*180/PI,alpha*180/PI,a,b,f);
+        if (DEBUG) {
+            fprintf(fpout,"gamma: %6.1f alpha: %6.1f a,b,f: %6.1f %6.1f %6.1f\n",gamma*180/PI,alpha*180/PI,a,b,f);
+        }
         F1[0] = P0[0] + f*u[0];
         F1[1] = P0[1] + f*u[1];
         F2[0] = P0[0] - f*u[0];
@@ -792,15 +810,17 @@ void MainWindow::fillEllipse(float z0, float S1[], float S2[], float diam, float
         ymax = MAX(ymax,P0[1] - a*u[1] - b*v[1]);
     }
     // These values (xmin, xmax, ymin, ymax) bound the region within which the ellipse E lies
-    ixmin = xmin/vsize[0];
-    ixmax = xmax/vsize[0];
-    iymin = ymin/vsize[1];
-    iymax = ymax/vsize[1];
-    ixmin = MAX(ixmin,0);
+    ixmin = xmin/vsize[0] - 1;
+    ixmax = xmax/vsize[0] + 1;
+    iymin = ymin/vsize[1] - 1;
+    iymax = ymax/vsize[1] + 1;
+    ixmin = MAX(ixmin,0) - 1;
     ixmax = MIN(ixmax,nv[0]);
     iymin = MAX(iymin,0);
     iymax = MIN(iymax,nv[1]);
-    fprintf(fpout,"ix range: %6d %6d iy range: %6d %6d\n",ixmin,ixmax,iymin,iymax);
+    if (DEBUG) {
+        fprintf(fpout,"ix range: %6d %6d iy range: %6d %6d\n",ixmin,ixmax,iymin,iymax);
+    }
     for (ix=ixmin; ix<ixmax; ix++) {
         for (iy=iymin; iy<iymax; iy++) {
             x = ix*vsize[0];
@@ -823,7 +843,9 @@ void MainWindow::fillEllipse(float z0, float S1[], float S2[], float diam, float
             }
         }
     }
-    fprintf(fpout,"npixels: %6d\n",npix);
+    if (DEBUG) {
+        fprintf(fpout,"npixels: %6d\n",npix);
+    }
     *npixels = npix;
 }
 
@@ -836,8 +858,8 @@ int main(int argc, char **argv)
 {
 	int err;
 	int islice, axis, np;
-	float area, volume;
-	float vsize[3];
+    double area, volume;
+    double vsize[3];
 	char *input_amfile, *close_file, *result_file;
 
 	if (argc != 7) {
@@ -886,12 +908,12 @@ int main(int argc, char **argv)
 	islice = nzc/2;
 
 	getArea(axis, islice,&area);
-	area *= (float)1.0e-6;	// convert um2 -> mm2
+    area *= (double)1.0e-6;	// convert um2 -> mm2
 	printf("Area: %8.4f\n",area);
 
 //	iz = z/voxelsize[2] + 1;	// sticking with Fortran indexing for now, for consistency with vdistance.f90
 	histology(axis,islice,&np,&area);
-	area *= (float)1.0e-6;	// convert um2 -> mm2
+    area *= (double)1.0e-6;	// convert um2 -> mm2
 	printf("Histology: axis, islice, np, area, np/area: %d %d %d %8.4f %8.1f\n",axis, islice, np, area, np/area);
 	return 0;
 }

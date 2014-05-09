@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>950</width>
-    <height>573</height>
+    <width>1299</width>
+    <height>692</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -32,7 +32,7 @@
      <rect>
       <x>100</x>
       <y>0</y>
-      <width>411</width>
+      <width>1191</width>
       <height>21</height>
      </rect>
     </property>
@@ -44,7 +44,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>500</y>
+      <y>610</y>
       <width>41</width>
       <height>16</height>
      </rect>
@@ -57,8 +57,8 @@
     <property name="geometry">
      <rect>
       <x>50</x>
-      <y>500</y>
-      <width>881</width>
+      <y>610</y>
+      <width>1241</width>
       <height>16</height>
      </rect>
     </property>
@@ -69,9 +69,9 @@
    <widget class="QTextEdit" name="textEdit">
     <property name="geometry">
      <rect>
-      <x>560</x>
-      <y>10</y>
-      <width>371</width>
+      <x>550</x>
+      <y>90</y>
+      <width>741</width>
       <height>481</height>
      </rect>
     </property>
@@ -94,7 +94,7 @@
      <rect>
       <x>100</x>
       <y>30</y>
-      <width>411</width>
+      <width>1191</width>
       <height>21</height>
      </rect>
     </property>
@@ -120,7 +120,7 @@
      <rect>
       <x>100</x>
       <y>60</y>
-      <width>411</width>
+      <width>1191</width>
       <height>21</height>
      </rect>
     </property>
@@ -1070,8 +1070,8 @@
    <widget class="QPushButton" name="pushButton_vessels">
     <property name="geometry">
      <rect>
-      <x>120</x>
-      <y>450</y>
+      <x>40</x>
+      <y>470</y>
       <width>91</width>
       <height>23</height>
      </rect>
@@ -1083,8 +1083,8 @@
    <widget class="QLineEdit" name="lineEdit_density">
     <property name="geometry">
      <rect>
-      <x>350</x>
-      <y>450</y>
+      <x>280</x>
+      <y>470</y>
       <width>41</width>
       <height>20</height>
      </rect>
@@ -1096,8 +1096,8 @@
    <widget class="QLineEdit" name="lineEdit_count">
     <property name="geometry">
      <rect>
-      <x>290</x>
-      <y>450</y>
+      <x>220</x>
+      <y>470</y>
       <width>41</width>
       <height>20</height>
      </rect>
@@ -1109,8 +1109,8 @@
    <widget class="QLineEdit" name="lineEdit_area">
     <property name="geometry">
      <rect>
-      <x>230</x>
-      <y>450</y>
+      <x>160</x>
+      <y>470</y>
       <width>41</width>
       <height>20</height>
      </rect>
@@ -1122,8 +1122,8 @@
    <widget class="QLabel" name="label_density">
     <property name="geometry">
      <rect>
-      <x>350</x>
-      <y>470</y>
+      <x>280</x>
+      <y>490</y>
       <width>41</width>
       <height>16</height>
      </rect>
@@ -1135,8 +1135,8 @@
    <widget class="QLabel" name="label_unitsarea">
     <property name="geometry">
      <rect>
-      <x>240</x>
-      <y>470</y>
+      <x>170</x>
+      <y>490</y>
       <width>31</width>
       <height>16</height>
      </rect>
@@ -1148,14 +1148,14 @@
    <widget class="QLabel" name="label_number">
     <property name="geometry">
      <rect>
-      <x>290</x>
-      <y>470</y>
-      <width>31</width>
+      <x>220</x>
+      <y>490</y>
+      <width>41</width>
       <height>16</height>
      </rect>
     </property>
     <property name="text">
-     <string>count</string>
+     <string>  count</string>
     </property>
    </widget>
    <widget class="QPushButton" name="pushButton_setup">
@@ -1174,14 +1174,60 @@
      <string>Setup</string>
     </property>
    </widget>
+   <widget class="QLineEdit" name="lineEdit_MVD">
+    <property name="geometry">
+     <rect>
+      <x>340</x>
+      <y>470</y>
+      <width>41</width>
+      <height>21</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_MVD">
+    <property name="geometry">
+     <rect>
+      <x>350</x>
+      <y>490</y>
+      <width>21</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>MVD</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="lineEdit_fraction">
+    <property name="geometry">
+     <rect>
+      <x>400</x>
+      <y>470</y>
+      <width>41</width>
+      <height>21</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_fraction">
+    <property name="geometry">
+     <rect>
+      <x>400</x>
+      <y>490</y>
+      <width>51</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>% of area</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>950</width>
-     <height>21</height>
+     <width>1299</width>
+     <height>18</height>
     </rect>
    </property>
   </widget>
