@@ -323,13 +323,28 @@ bool in_close(int p[3])
 int MainWindow::getArea(int axis, int islice, int *npixels, double *area)
 {
     int ix, iy, iz, p[3], count;
+    int ixmin, ixmax, iymin, iymax, izmin, izmax;
     double darea;
 
+    ixmin = 1;
+    ixmax = nxc;
+    iymin = 1;
+    iymax = nyc;
+    izmin = 1;
+    izmax = nzc;
+    if (is_block) {
+        ixmin = MAX(ixmin,range[0][0]);
+        ixmax = MIN(ixmax,range[0][1]);
+        iymin = MAX(iymin,range[1][0]);
+        iymax = MIN(iymax,range[1][1]);
+        izmin = MAX(izmin,range[2][0]);
+        izmax = MIN(izmax,range[2][1]);
+    }
     count = 0;
 	if (axis == 0) {
 		darea = voxelsize[1]*voxelsize[2];
-		for (iy=1; iy<=nyc; iy++) {	// this is taken care of in in_close() anyway
-			for (iz=1; iz<=nzc; iz++) {
+        for (iy=iymin; iy<=iymax; iy++) {	// this is taken care of in in_close() anyway
+            for (iz=izmin; iz<=izmax; iz++) {
                 p[0] = islice+1;
 				p[1] = iy;
 				p[2] = iz;
@@ -341,8 +356,8 @@ int MainWindow::getArea(int axis, int islice, int *npixels, double *area)
 	}
 	if (axis == 1) {
 		darea = voxelsize[0]*voxelsize[2];
-		for (ix=1; ix<=nxc; ix++) {	// this is taken care of in in_close() anyway
-			for (iz=1; iz<=nzc; iz++) {
+        for (ix=ixmin; ix<=ixmax; ix++) {	// this is taken care of in in_close() anyway
+            for (iz=izmin; iz<=izmax; iz++) {
 				p[0] = ix;
                 p[1] = islice+1;
 				p[2] = iz;
@@ -354,8 +369,8 @@ int MainWindow::getArea(int axis, int islice, int *npixels, double *area)
 	}
 	if (axis == 2) {
 		darea = voxelsize[0]*voxelsize[1];
-		for (ix=1; ix<=nxc; ix++) {	// this is taken care of in in_close() anyway
-			for (iy=1; iy<=nyc; iy++) {
+        for (ix=ixmin; ix<=ixmax; ix++) {	// this is taken care of in in_close() anyway
+            for (iy=iymin; iy<=iymax; iy++) {
 				p[0] = ix;
 				p[1] = iy;
                 p[2] = islice+1;
@@ -400,13 +415,13 @@ int MainWindow::getVolume(double *volume, int *ntvoxels)
 }
 
 //--------------------------------------------------------------------
-// For image creation, the axes are permuted such that the slize plane is always a z plane
+// For image creation, the axes are permuted such that the slice plane is always a z plane
 // If the case is really a x-slice, x -> z, y -> x, z -> y
 // If the case is really a y-slice, y -> z, x -> y, z -> x
 //--------------------------------------------------------------------
-int MainWindow::SliceHistology(int axis, int islice, int *nvessels, int *nvesselpixels, int *nslicepixels, double *slicearea)
+int MainWindow::SliceHistology(int axis, int islice, int *nvessels, int *nvesselpixels, int *ntissuepixels, double *tissuearea)
 {
-    int iseg, cnt, nv[2], npixels, ntpixels;
+    int iseg, cnt, nv[2], npixels, ntpixels, kx, ky, rng_x[2], rng_y[2];
     double d;
     double zmin, zmax;
 	POINT pos1, pos2;
@@ -427,8 +442,7 @@ int MainWindow::SliceHistology(int axis, int islice, int *nvessels, int *nvessel
 		zmax = MAX(pos1.z,zmax);
 		zmax = MAX(pos2.z,zmax);
         hit = false;
-        if (axis == 0 && ((pos1.x <= d  && d < pos2.x) || (pos2.x < d && d <= pos1.x))) {
-			cnt++;
+        if (axis == 0 && ((pos1.x <= d  && d < pos2.x) || (pos2.x < d && d <= pos1.x))) {   // (x,y,z) -> (z,x,y)
             S1[0] = pos1.y;
             S1[1] = pos1.z;
             S1[2] = pos1.x;
@@ -436,14 +450,11 @@ int MainWindow::SliceHistology(int axis, int islice, int *nvessels, int *nvessel
             S2[1] = pos2.z;
             S2[2] = pos2.x;
             z0 = d;
-            vsize[0] = voxelsize[1];
-            vsize[1] = voxelsize[2];
-            nv[0] = nvoxels[1];
-            nv[1] = nvoxels[2];
+            kx = 1;
+            ky = 2;
             hit = true;
         }
-        if (axis == 1 && ((pos1.y <= d  && d < pos2.y) || (pos2.y < d && d <= pos1.y))) {
-			cnt++;
+        if (axis == 1 && ((pos1.y <= d  && d < pos2.y) || (pos2.y < d && d <= pos1.y))) {   // (x,y,z) -> (y,z,x)
             S1[0] = pos1.z;
             S1[1] = pos1.x;
             S1[2] = pos1.y;
@@ -451,15 +462,12 @@ int MainWindow::SliceHistology(int axis, int islice, int *nvessels, int *nvessel
             S2[1] = pos2.x;
             S2[2] = pos2.y;
             z0 = d;
-            vsize[0] = voxelsize[2];
-            vsize[1] = voxelsize[0];
-            nv[0] = nvoxels[2];
-            nv[1] = nvoxels[0];
-            if (S1[0] < 0.5*nv[0]*vsize[0]) //Note: odd image for y axis, 36
-                hit = true;
+            kx = 2;
+            ky = 0;
+//            if (S1[0] < 0.5*nv[0]*vsize[0]) //Note: odd image for y axis, 36
+            hit = true;
         }
-        if (axis == 2 && ((pos1.z <= d  && d < pos2.z) || (pos2.z < d && d <= pos1.z))) {
-			cnt++;
+        if (axis == 2 && ((pos1.z <= d  && d < pos2.z) || (pos2.z < d && d <= pos1.z))) {   // (x,y,z) -> (x,y,z)
             S1[0] = pos1.x;
             S1[1] = pos1.y;
             S1[2] = pos1.z;
@@ -467,71 +475,84 @@ int MainWindow::SliceHistology(int axis, int islice, int *nvessels, int *nvessel
             S2[1] = pos2.y;
             S2[2] = pos2.z;
             z0 = d;
-            vsize[0] = voxelsize[0];
-            vsize[1] = voxelsize[1];
-            nv[0] = nvoxels[0];
-            nv[1] = nvoxels[1];
+            kx = 0;
+            ky = 1;
             hit = true;
         }
         if (hit) {
+            vsize[0] = voxelsize[kx];
+            vsize[1] = voxelsize[ky];
+            nv[0] = nvoxels[kx];
+            nv[1] = nvoxels[ky];
+            if (is_block) {
+                rng_x[0] = range[kx][0];
+                rng_x[1] = range[kx][1];
+                rng_y[0] = range[ky][0];
+                rng_y[1] = range[ky][1];
+            }
             if (DEBUG) {
+                fprintf(fpout,"rng_x: %d %d rng_y: %d %d\n",rng_x[0],rng_x[1],rng_y[0],rng_y[1]);
                 fprintf(fpout,"\nsegment: %6d S1: %6.1f %6.1f %6.1f S2: %6.1f %6.1f %6.1f diam: %4.1f\n",
                         iseg,S1[0],S1[1],S1[2],S2[0],S2[1],S2[2],diam);
+                fflush(fpout);
             }
-            fillEllipse(z0,S1,S2,diam,vsize,nv,&npixels);
+            fillEllipse(z0,S1,S2,diam,vsize,nv,rng_x,rng_y,&npixels);
+            cnt++;
             ntpixels += npixels;
         }
 	}
     if (DEBUG) {
         fprintf(fpout,"Vessel count: %6d\nTotal pixels: %8d\n",cnt,ntpixels);
+        fflush(fpout);
     }
-    printf("Vessel count: %6d\nTotal vessel pixels: %8d\n",cnt,ntpixels);
-    printf("axis, d, zmin, zmax: %d %f %f %f\n",axis,d,zmin,zmax);
+//    printf("Vessel count: %6d\nTotal vessel pixels: %8d\n",cnt,ntpixels);
+//    printf("axis, d, zmin, zmax: %d %f %f %f\n",axis,d,zmin,zmax);
     *nvessels = cnt;
     *nvesselpixels = ntpixels;
-    getArea(axis,islice,nslicepixels,slicearea);
+    getArea(axis,islice,ntissuepixels,tissuearea);
 	return 0;
 }
 
 //--------------------------------------------------------------------
 //--------------------------------------------------------------------
-int MainWindow::VolumeHistology(int *np, double *area)
+int MainWindow::VolumeHistology(bool *use_axis, int *nvessels, int *nvesselpixels, int *ntissuepixels, double *tissuearea)
 {
-    int islice, iseg, cnt, axis, nslicepixels;
-    double d, darea, totarea;
-    POINT pos1, pos2;
+    int islice, axis, nslices, err;
+    int nvess, nvesselpix, ntissuepix;
+    int nvess_tot, nvesselpix_tot, ntissuepix_tot;
+    double tissarea, tissarea_tot;
 
-    cnt = 0;
-    totarea = 0;
+//    fprintf(fpout,"VolumeHistology\n");
+    fflush(fpout);
     for (axis=0; axis<3; axis++) {
+        if (!use_axis[axis]) continue;
         fprintf(fpout,"axis: %d\n",axis);
         fflush(fpout);
+        nvess_tot = 0;
+        nvesselpix_tot = 0;
+        ntissuepix_tot = 0;
+        tissarea_tot = 0;
+        nslices = range[axis][1] - range[axis][0] + 1;
         for (islice=range[axis][0]; islice <=range[axis][1]; islice++) {
-            d = islice*voxelsize[axis];
-            for (iseg=0; iseg<nsegments;iseg++) {
-                pos1 = segment[iseg].end1;
-                pos2 = segment[iseg].end2;
-                if (axis == 0 && ((pos1.x <= d  && d <= pos2.x) || (pos2.x <= d && d <= pos1.x))) {
-                    cnt++;
-                }
-                if (axis == 1 && ((pos1.y <= d  && d <= pos2.y) || (pos2.y <= d && d <= pos1.y))) {
-                    cnt++;
-                }
-                if (axis == 2 && ((pos1.z <= d  && d <= pos2.z) || (pos2.z <= d && d <= pos1.z))) {
-                    cnt++;
-                }
+//            fprintf(fpout,"axis,slice: %d %d\n",axis,islice);
+            fflush(fpout);
+            err = SliceHistology(axis, islice, &nvess, &nvesselpix, &ntissuepix, &tissarea);
+            if (err != 0) {
+                fprintf(fpout,"error: %d",err);
+                fflush(fpout);
             }
-//            getArea(axis,islice,&darea);
-            getArea(axis,islice,&nslicepixels,&darea);
-            totarea += darea;
-//            fprintf(fpout,"%d %d  %6.1f\n",axis,islice,darea);
-//            fflush(fpout);
+            nvess_tot += nvess;
+            nvesselpix_tot += nvesselpix;
+            ntissuepix_tot += ntissuepix;
+            tissarea_tot += tissarea;
         }
+        nvessels[axis] = (double)nvess_tot/nslices + 0.5;
+        nvesselpixels[axis] = (double)nvesselpix_tot/nslices + 0.5;
+        ntissuepixels[axis] = (double)ntissuepix_tot/nslices + 0.5;
+        tissuearea[axis] = tissarea_tot/nslices;
+//        fprintf(fpout,"nslices: %d  %d %d %d %f\n",nslices,nvess_tot,nvesselpix_tot,ntissuepix_tot,tissarea);
+        fflush(fpout);
     }
-    fprintf(fpout,"cnt: %d  totarea: %f\n",cnt,totarea);
-    fflush(fpout);
-    *np = cnt;
-    *area = totarea;
     return 0;
 }
 
@@ -724,7 +745,7 @@ double MainWindow::rangeVolume()
 // If the case is really a x-slice, x -> z, y -> x, z -> y
 // If the case is really a y-slice, y -> z, x -> y, z -> x
 //----------------------------------------------------------------------------
-void MainWindow::fillEllipse(double z0, double S1[], double S2[], double diam, double vsize[], int nv[], int *npixels)
+void MainWindow::fillEllipse(double z0, double S1[], double S2[], double diam, double vsize[], int nv[], int rng_x[], int rng_y[], int *npixels)
 {
     double s0, P0[2], C[3], u[2], v[2], d, gamma, alpha;
     double a, b, f, F1[2], F2[2], xmin, xmax, ymin, ymax;
@@ -742,10 +763,10 @@ void MainWindow::fillEllipse(double z0, double S1[], double S2[], double diam, d
     d = sqrt(u[0]*u[0] + u[1]*u[1]);
     if (d == 0) {
         circle = true;
-        xmin = P0[0] - diam/2 - 2;
-        xmax = P0[0] + diam/2 + 2;
-        ymin = P0[1] - diam/2 - 2;
-        ymax = P0[1] + diam/2 + 2;
+        xmin = P0[0] - diam/2 - 1;
+        xmax = P0[0] + diam/2 + 1;
+        ymin = P0[1] - diam/2 - 1;
+        ymax = P0[1] + diam/2 + 1;
         if (DEBUG) {
             fprintf(fpout,"circle: centre: %6.1f %6.1f radius: %6.1f\n",P0[0],P0[1],diam/2);
         }
@@ -810,16 +831,26 @@ void MainWindow::fillEllipse(double z0, double S1[], double S2[], double diam, d
         ymax = MAX(ymax,P0[1] - a*u[1] - b*v[1]);
     }
     // These values (xmin, xmax, ymin, ymax) bound the region within which the ellipse E lies
-    ixmin = xmin/vsize[0] - 1;
-    ixmax = xmax/vsize[0] + 1;
-    iymin = ymin/vsize[1] - 1;
-    iymax = ymax/vsize[1] + 1;
-    ixmin = MAX(ixmin,0) - 1;
+    // The um values must be converted to voxels
+    ixmin = xmin/vsize[0];
+    ixmax = xmax/vsize[0];
+    iymin = ymin/vsize[1];
+    iymax = ymax/vsize[1];
+    ixmin = MAX(ixmin,0);
     ixmax = MIN(ixmax,nv[0]);
     iymin = MAX(iymin,0);
     iymax = MIN(iymax,nv[1]);
     if (DEBUG) {
         fprintf(fpout,"ix range: %6d %6d iy range: %6d %6d\n",ixmin,ixmax,iymin,iymax);
+    }
+    if (is_block) {
+        ixmin = MAX(ixmin,rng_x[0]);
+        iymin = MAX(iymin,rng_y[0]);
+        ixmax = MIN(ixmax,rng_x[1]);
+        iymax = MIN(iymax,rng_y[1]);
+        if (DEBUG) {
+            fprintf(fpout,"is_block -> ix range: %6d %6d iy range: %6d %6d\n",ixmin,ixmax,iymin,iymax);
+        }
     }
     for (ix=ixmin; ix<ixmax; ix++) {
         for (iy=iymin; iy<iymax; iy++) {
@@ -829,7 +860,10 @@ void MainWindow::fillEllipse(double z0, double S1[], double S2[], double diam, d
                 d1 = sqrt((x-P0[0])*(x-P0[0]) + (y-P0[1])*(y-P0[1]));
                 if (d1 <= diam/2) {
                     // inside circle, lit voxel
-                    imageViewer->myQtImage->setPixel(x,y,255);
+                    if (DEBUG) fprintf(fpout,"lit: %d %d\n",ix,iy);
+                    if (is_slice) {
+                        imageViewer->myQtImage->setPixel(ix,iy,255);
+                    }
                     npix++;
                 }
             } else {
@@ -837,7 +871,9 @@ void MainWindow::fillEllipse(double z0, double S1[], double S2[], double diam, d
                 d2 = sqrt((x-F2[0])*(x-F2[0]) + (y-F2[1])*(y-F2[1]));
                 if (d1+d2 <= 2*a) {
                     // inside ellipse, lit voxel
-                    imageViewer->myQtImage->setPixel(ix,iy,255);
+                    if (is_slice) {
+                        imageViewer->myQtImage->setPixel(ix,iy,255);
+                    }
                     npix++;
                 }
             }

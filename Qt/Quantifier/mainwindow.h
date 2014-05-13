@@ -28,8 +28,8 @@ public slots:
     void voxelChanged();
     void checkReady();
     void doSetup();
-    void sliceChanged();
-    void averageChanged();
+//    void sliceChanged();
+//    void averageChanged();
     void checkBox_x();
     void checkBox_y();
     void checkBox_z();
@@ -41,7 +41,12 @@ public slots:
 //    void viewImage();
 
 private slots:
+    void on_radioButton_slice_toggled(bool checked);
     void on_radioButton_centre_toggled(bool checked);
+    void on_checkBox_selectblock_toggled(bool checked);
+    void on_radioButton_xaxis_toggled(bool checked);
+    void on_radioButton_yaxis_toggled(bool checked);
+    void on_radioButton_zaxis_toggled(bool checked);
 
 private:
     Ui::MainWindow *ui;
@@ -50,9 +55,11 @@ public:
     int getArea(int axis, int islice, int *npixels, double *area);
     int getVolume(double *volume, int *ntvoxels);
     int SliceHistology(int axis, int islice, int *nvessels, int *nvesselpixels, int *nslicepixels, double *slicearea);
-    int VolumeHistology(int *np, double *area);
-    void fillEllipse(double z0, double S1[], double S2[], double diam, double vsize[], int nv[], int *npixels);
+    int VolumeHistology(bool *use_axis, int *nvessels, int *nvesselpixels, int *ntissuepixels, double *tissuearea);
+    void fillEllipse(double z0, double S1[], double S2[], double diam, double vsize[], int nv[], int rng_x[], int rng_y[], int *npixels);
     int setup(char *input_amfile, char *close_file, char *result_file, double vsize[]);
+    void setBlockAxes();
+    void enableRange(char, bool);
     int getCloseSize(int nvoxels[]);
     bool isSetup();
     void reset();
@@ -73,6 +80,7 @@ public:
     bool is_ready;
     bool is_slice;
     bool is_average;
+    bool is_block;
     int range_x1;
     int range_x2;
     int range_y1;

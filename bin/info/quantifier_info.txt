@@ -9,11 +9,11 @@ Input data:
 (4) Voxel dimensions.  
 No computations are possible until all input data are supplied.
 
-The user can select the histology slice by axis and cut location on the axis, which can be specified either by voxel number or by distance (um).  No results will be computed if the supplied slice location is outside the tissue range.
+The user can select the units that will be applied to all inputs, either voxels or distance (um).
+Histology calculations will be carried out for a slice selected by axis and cut location on the axis.  
+Optionally a rectangular block can be specified, either by the range in each direction or by specifying the centre location and the length of each of the two sides.
 
-There is the option of computing average histology results.  In this case the user specifies a range in each axis direction.  This is done either by specifying the start and end values, or by specifying the centre of a block and its dimensions.  The results are determined and aggregated for a collection of slices within the specified ranges.
-To be precise: for each axis, slices over the whole sample are made at each voxel within the range specified for that axis.
+There is the option of computing average histology results for a specified 3D block.  In this case the user specifies the range in each of the three axis directions.  Additionally 1, 2 or 3 axis checkboxes are ticked.  For each axis selected, calculations will be carried out on all the slices in the block perpendicular to that axis, and presented in average form for each axis.
 
-The results are shown as: tissue area of the slice, number of vessels intersecting the slice, density of vessels (count/area).
-If averaging is selected the counts and areas of all slices are summed, and the resulting density is (total count)/(total area).
+The results are shown as: tissue area of the slice, number of pixels in the slice, number of vessels intersecting the slice, density of vessels (count/area), number of vessel pixels, vessel fraction of tissue area.
 

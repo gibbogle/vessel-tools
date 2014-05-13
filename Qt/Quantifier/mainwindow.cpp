@@ -34,6 +34,8 @@ MainWindow::MainWindow(QWidget *parent) :
     is_resultfile = false;
     ui->pushButton_vessels->setEnabled(false);
     ui->groupBox_slice->setEnabled(false);
+    ui->checkBox_selectblock->setEnabled(false);
+    is_block = ui->checkBox_selectblock->isChecked();
     checkReady();
     reset();
 }
@@ -85,34 +87,114 @@ void MainWindow::voxelChanged()
     }
 }
 
-void MainWindow::sliceChanged()
+void MainWindow::on_radioButton_slice_toggled(bool checked)
 {
-    is_slice = ui->checkBoxSlice->isChecked();
-    ui->checkBoxAverage->setChecked(!is_slice);
-    is_average = ui->checkBoxAverage->isChecked();
+    is_slice = checked;
+    is_average = !checked;
     ui->lineEdit_intercept->setEnabled(is_slice);
-    ui->groupBox_centre->setEnabled(is_average&&ui->radioButton_centre->isChecked());
-    ui->groupBox_range->setEnabled(is_average&&ui->radioButton_range->isChecked());
-}
-
-void MainWindow::averageChanged()
-{
-    is_average = ui->checkBoxAverage->isChecked();
-    ui->checkBoxSlice->setChecked(!is_average);
-    is_slice = ui->checkBoxSlice->isChecked();
-    ui->lineEdit_intercept->setEnabled(is_slice);
-    ui->groupBox_centre->setEnabled(is_average&&ui->radioButton_centre->isChecked());
-    ui->groupBox_range->setEnabled(is_average&&ui->radioButton_range->isChecked());
+    ui->groupBox_centre->setEnabled(is_block && ui->radioButton_centre->isChecked());
+    ui->groupBox_range->setEnabled(is_block && ui->radioButton_range->isChecked());
+    ui->groupBox_slice->setEnabled(is_slice);
+    ui->groupBox_average->setEnabled(is_average);
+    ui->checkBox_selectblock->setChecked(false);
+    ui->groupBoxRanges->setEnabled(false);
+    if (is_block) {
+        setBlockAxes();
+    }
 }
 
 void MainWindow::on_radioButton_centre_toggled(bool checked)
 {
-    if (checked) {
-        ui->groupBox_centre->setEnabled(true);
-        ui->groupBox_range->setEnabled(false);
+    ui->groupBox_centre->setEnabled(checked);
+    ui->groupBox_range->setEnabled(!checked);
+    if (is_block) {
+        setBlockAxes();
+    }
+}
+
+void MainWindow::on_checkBox_selectblock_toggled(bool checked)
+{
+    is_block = checked;
+    ui->groupBox_centre->setEnabled(is_block && ui->radioButton_centre->isChecked());
+    ui->groupBox_range->setEnabled(is_block && ui->radioButton_range->isChecked());
+    if (is_block) {
+        setBlockAxes();
+        ui->groupBoxRanges->setEnabled(true);
+    }
+}
+
+void MainWindow::on_radioButton_xaxis_toggled(bool checked)
+{
+    if (is_block) {
+        setBlockAxes();
+    }
+}
+
+void MainWindow::on_radioButton_yaxis_toggled(bool checked)
+{
+    if (is_block) {
+        setBlockAxes();
+    }
+}
+
+void MainWindow::on_radioButton_zaxis_toggled(bool checked)
+{
+    if (is_block) {
+        setBlockAxes();
+    }
+}
+
+void MainWindow :: setBlockAxes(){
+    // Adjust status of axis range selection when there is a change to the slice or average axes
+    if (!is_block) return;
+    enableRange('X',true);
+    enableRange('Y',true);
+    enableRange('Z',true);
+    if (is_slice) {
+        if (ui->radioButton_xaxis->isChecked()) {
+            enableRange('X',false);
+        }
+        else if (ui->radioButton_yaxis->isChecked()) {
+            enableRange('Y',false);
+        }
+        else if (ui->radioButton_zaxis->isChecked()) {
+            enableRange('Z',false);
+        }
+    }
+}
+
+void MainWindow :: enableRange(char axischar, bool enable)
+{
+    if (ui->radioButton_range->isChecked()) {
+        if (axischar == 'X') {
+            ui->checkBox_xfull->setEnabled(enable);
+            ui->lineEdit_x1->setEnabled(enable && !ui->checkBox_xfull->isChecked());
+            ui->lineEdit_x2->setEnabled(enable && !ui->checkBox_xfull->isChecked());
+        }
+        else if (axischar == 'Y') {
+            ui->checkBox_yfull->setEnabled(enable);
+            ui->lineEdit_y1->setEnabled(enable && !ui->checkBox_yfull->isChecked());
+            ui->lineEdit_y2->setEnabled(enable && !ui->checkBox_yfull->isChecked());
+        }
+        if (axischar == 'Z') {
+            ui->checkBox_zfull->setEnabled(enable);
+            ui->lineEdit_z1->setEnabled(enable && !ui->checkBox_zfull->isChecked());
+            ui->lineEdit_z2->setEnabled(enable && !ui->checkBox_zfull->isChecked());
+        }
+
     } else {
-        ui->groupBox_centre->setEnabled(false);
-        ui->groupBox_range->setEnabled(true);
+        if (axischar == 'X') {
+            ui->lineEdit_xcentre->setEnabled(enable);
+            ui->lineEdit_xsize->setEnabled(enable);
+        }
+        else if (axischar == 'Y') {
+            ui->lineEdit_ycentre->setEnabled(enable);
+            ui->lineEdit_ysize->setEnabled(enable);
+        }
+        else if (axischar == 'Z') {
+            ui->lineEdit_zcentre->setEnabled(enable);
+            ui->lineEdit_zsize->setEnabled(enable);
+        }
     }
 }
 
@@ -167,6 +249,7 @@ void MainWindow::checkReady()
         ui->pushButton_setup->setEnabled(false);
         ui->groupBox_slice->setEnabled(false);
         ui->pushButton_vessels->setEnabled(false);
+        ui->checkBox_selectblock->setEnabled(false);
     }
 }
 
@@ -176,11 +259,13 @@ void MainWindow::reader()
     if (isSetup()) {
         ui->groupBox_slice->setEnabled(true);
         ui->pushButton_vessels->setEnabled(true);
+        ui->checkBox_selectblock->setEnabled(true);
     } else {
         is_ready = false;
         ui->pushButton_setup->setEnabled(false);
         ui->groupBox_slice->setEnabled(false);
         ui->pushButton_vessels->setEnabled(false);
+        ui->checkBox_selectblock->setEnabled(false);
     }
 }
 
@@ -213,7 +298,7 @@ void MainWindow::computeVolume()
     volume = 1.0e-9*volume;   // convert um3 -> mm3
     volumestr = QString::number(volume,'f',3);
     ui->lineEdit_volume->setText(volumestr);
-    fprintf(fpout,"Total volume (mm3): %7.3f\n",volume);
+    fprintf(fpout,"Total volume (mm3): %f\n",(float)volume);
 }
 
 void MainWindow::computeArea()
@@ -233,7 +318,7 @@ void MainWindow::computeArea()
     else if (ui->radioButton_zaxis->isChecked())
         axis = 2;
     islice = ui->lineEdit_intercept->text().toInt();
-    if (ui->radioButton_slicemicrons->isChecked())
+    if (ui->radioButton_unitsmicrons->isChecked())
         islice = (int)(islice/voxelsize[axis]);
     err = checkSlice(axis,islice);
     if (err == 0)
@@ -267,7 +352,7 @@ void MainWindow::getCentredRanges()
     xr = xw/2;
     yr = yw/2;
     zr = zw/2;
-    if (ui->radioButton_rangevoxels->isChecked()) {
+    if (ui->radioButton_unitsvoxels->isChecked()) {
         xfac = 1;
         yfac = 1;
         zfac = 1;
@@ -276,12 +361,6 @@ void MainWindow::getCentredRanges()
         yfac = 1/voxelsize[1];
         zfac = 1/voxelsize[2];
     }
-    range_x1 = (int)(xfac*(x0 - xr));
-    range_x2 = (int)(xfac*(x0 + xr));
-    range_y1 = (int)(yfac*(y0 - yr));
-    range_y2 = (int)(yfac*(y0 + yr));
-    range_z1 = (int)(zfac*(z0 - zr));
-    range_z2 = (int)(zfac*(z0 + zr));
     range[0][0] = (int)(xfac*(x0 - xr));
     range[0][1] = (int)(xfac*(x0 + xr));
     range[1][0] = (int)(yfac*(y0 - yr));
@@ -297,7 +376,7 @@ void MainWindow::getAveragingRanges() {
     double x1, y1, z1, x2, y2, z2, xfac, yfac, zfac;
     QString x1str, y1str, z1str, x2str, y2str, z2str;
 
-    if (ui->radioButton_rangevoxels->isChecked()) {
+    if (ui->radioButton_unitsvoxels->isChecked()) {
         xfac = 1;
         yfac = 1;
         zfac = 1;
@@ -312,13 +391,9 @@ void MainWindow::getAveragingRanges() {
         x2str = ui->lineEdit_x2->text();
         x1 = x1str.toDouble();
         x2 = x2str.toDouble();
-        range_x1 = (int)(xfac*x1);
-        range_x2 = (int)(xfac*x2);
         range[0][0] = (int)(xfac*x1);
         range[0][1] = (int)(xfac*x2);
     } else {
-        range_x1 = 1;
-        range_x2 = nvoxels[0];
         range[0][0] = 1;
         range[0][1] = nvoxels[0];
     }
@@ -327,13 +402,9 @@ void MainWindow::getAveragingRanges() {
         y2str = ui->lineEdit_y2->text();
         y1 = y1str.toDouble();
         y2 = y2str.toDouble();
-        range_y1 = (int)(yfac*y1);
-        range_y2 = (int)(yfac*y2);
         range[1][0] = (int)(yfac*y1);
         range[1][1] = (int)(yfac*y2);
     } else {
-        range_y1 = 1;
-        range_y2 = nvoxels[1];
         range[1][0] = 1;
         range[1][1] = nvoxels[1];
     }
@@ -342,13 +413,9 @@ void MainWindow::getAveragingRanges() {
         z2str = ui->lineEdit_z2->text();
         z1 = z1str.toDouble();
         z2 = z2str.toDouble();
-        range_z1 = (int)(zfac*z1);
-        range_z2 = (int)(zfac*z2);
         range[2][0] = (int)(zfac*z1);
         range[2][1] = (int)(zfac*z2);
     } else {
-        range_z1 = 1;
-        range_z2 = nvoxels[2];
         range[2][0] = 1;
         range[2][1] = nvoxels[2];
     }
@@ -382,83 +449,180 @@ void MainWindow::checkRanges()
 void MainWindow::computeVessels()
 {
     int err;
-    double slicearea, totlen, totvol, darea, areafraction;
-    int axis, islice, nvessels, nvesselpixels, nslicepixels, density, MVD, w, h, nbranchpts;
-    char *axisstr;
-    QString areastr, countstr, densitystr, MVDstr, fractionstr;
+    double tissuearea[3], totlen, totvol, darea, areafraction;
+    int axis, islice, nvessels[3], nvesselpixels[3], ntissuepixels[3], density, MVD, w, h, nbranchpts;
+    int iax, nsl;
+    char *axisstr[3];
+    bool use_axis[3];
+    QString areastr, vesselpixstr, tissuepixstr, countstr, densitystr, MVDstr, fractionstr;
+
+    fprintf(fpout,"computeVessels\n");
+    fflush(fpout);
+    this->setCursor( QCursor( Qt::WaitCursor ) );
+
+    axisstr[0] = "X";
+    axisstr[1] = "Y";
+    axisstr[2] = "Z";
 
     if (!is_ready) {
         return;
     }
+//    if (!is_slice) {
+//        nsl = 0;
+//        for (iax=0; iax<3; iax++) {
+//            if (range[iax][0] == range[iax][1]) {
+//                axis = iax;
+//                nsl++;
+//            }
+//        }
+//        // Is this a good idea????
+//    }
     if (is_slice) {
+        use_axis[0] = true;
+        use_axis[1] = false;
+        use_axis[2] = false;
+        if (is_block) {
+            getRanges();
+        }
         if (ui->radioButton_xaxis->isChecked()) {
             axis = 0;
-            axisstr = "X";
+//            axisstr = "X";
             w = nvoxels[1];
             h = nvoxels[2];
             darea = voxelsize[1]*voxelsize[2];
         } else if (ui->radioButton_yaxis->isChecked()) {
             axis = 1;
-            axisstr = "Y";
+//            axisstr = "Y";
             w = nvoxels[2];
             h = nvoxels[0];
             darea = voxelsize[0]*voxelsize[2];
         } else if (ui->radioButton_zaxis->isChecked()) {
             axis = 2;
-            axisstr = "Z";
+//            axisstr = "Z";
             w = nvoxels[0];
             h = nvoxels[1];
             darea = voxelsize[0]*voxelsize[1];
         }
         islice = ui->lineEdit_intercept->text().toInt();
-        fprintf(fpout,"\nComputing histology for a slice: axis: %s  islice: %d\n",axisstr,islice);
-        if (ui->radioButton_slicemicrons->isChecked())
+        fprintf(fpout,"\nComputing histology for a slice: axis: %s  islice: %d\n",axisstr[axis],islice);
+        if (ui->radioButton_unitsmicrons->isChecked())
             islice = (int)(islice/voxelsize[axis]);
         err = checkSlice(axis,islice);
         if (err == 0) {
             if (imageViewer) delete imageViewer;
             imageViewer = new ImageViewer(w,h);
-            err = SliceHistology(axis, islice, &nvessels, &nvesselpixels, &nslicepixels, &slicearea);
+            err = SliceHistology(axis, islice, nvessels, nvesselpixels, ntissuepixels, tissuearea);
             imageViewer->paintLabel();
             imageViewer->show();
-//            areafraction = (count*darea)/area;
-            areafraction = (double)nvesselpixels/nslicepixels;
         } else {
-            slicearea = 0;
-            nvessels = 0;
-            areafraction = 0;
+            nvessels[0] = 0;
+            nvesselpixels[0] = 0;
+            tissuearea[0] = 0;
+            nvessels[0] = 0;
         }
     } else {
-        fprintf(fpout,"Computing average histology\n");
+        fprintf(fpout,"\nComputing volume average histology\n");
+        fflush(fpout);
+        use_axis[0] = ui->checkBox_xaxis->isChecked();
+        use_axis[1] = ui->checkBox_yaxis->isChecked();
+        use_axis[2] = ui->checkBox_zaxis->isChecked();
+        ui->lineEdit_area_x->clear();
+        ui->lineEdit_areapixels_x->clear();
+        ui->lineEdit_count_x->clear();
+        ui->lineEdit_density_x->clear();
+        ui->lineEdit_MVD_x->clear();
+        ui->lineEdit_vesselpixels_x->clear();
+        ui->lineEdit_fraction_x->clear();
+        ui->lineEdit_area_y->clear();
+        ui->lineEdit_areapixels_y->clear();
+        ui->lineEdit_count_y->clear();
+        ui->lineEdit_density_y->clear();
+        ui->lineEdit_MVD_y->clear();
+        ui->lineEdit_vesselpixels_y->clear();
+        ui->lineEdit_fraction_y->clear();
+        ui->lineEdit_area_z->clear();
+        ui->lineEdit_areapixels_z->clear();
+        ui->lineEdit_count_z->clear();
+        ui->lineEdit_density_z->clear();
+        ui->lineEdit_MVD_z->clear();
+        ui->lineEdit_vesselpixels_z->clear();
+        ui->lineEdit_fraction_z->clear();
         getRanges();
-        err = VolumeHistology(&nvessels,&slicearea);
-        err = branching(&nbranchpts, &totlen, &totvol);
+        err = VolumeHistology(use_axis, nvessels, nvesselpixels, ntissuepixels, tissuearea);
+//        err = branching(&nbranchpts, &totlen, &totvol);
     }
-    slicearea = 1.0e-6*slicearea;   // convert um2 -> mm2
-    areastr = QString::number(slicearea,'f',3);
-    ui->lineEdit_area->setText(areastr);
-    countstr = QString::number(nvessels);
-    ui->lineEdit_count->setText(countstr);
-    if (slicearea > 0) {
-        density = (int)(nvessels/slicearea + 0.5);
-        MVD = (int)((nvessels*0.74/slicearea) + 0.5);
-    } else {
-        density = 0;
-        MVD = 0;
+    for (axis=0; axis<3; axis++) {
+        if (!use_axis[axis]) continue;
+        areafraction = (double)nvesselpixels[axis]/ntissuepixels[axis];
+        tissuearea[axis] = 1.0e-6*tissuearea[axis];   // convert um2 -> mm2
+        areastr = QString::number(tissuearea[axis],'f',3);
+        tissuepixstr = QString::number(ntissuepixels[axis]);
+        countstr = QString::number(nvessels[axis]);
+        if (tissuearea[axis] > 0) {
+            density = (int)(nvessels[axis]/tissuearea[axis] + 0.5);
+            MVD = (int)((nvessels[axis]*0.74/tissuearea[axis]) + 0.5);
+        } else {
+            density = 0;
+            MVD = 0;
+        }
+        densitystr = QString::number(density);
+        MVDstr = QString::number(MVD);
+        vesselpixstr = QString::number(nvesselpixels[axis]);
+        fractionstr = QString::number(100*areafraction,'f',2);
+        if (is_slice) {
+            ui->lineEdit_area->setText(areastr);
+            ui->lineEdit_areapixels->setText(tissuepixstr);
+            ui->lineEdit_count->setText(countstr);
+            ui->lineEdit_density->setText(densitystr);
+            ui->lineEdit_MVD->setText(MVDstr);
+            ui->lineEdit_vesselpixels->setText(vesselpixstr);
+            ui->lineEdit_fraction->setText(fractionstr);
+            fprintf(fpout,"Slice area (mm2): %f\n",(float)tissuearea[0]);
+            fprintf(fpout,"Slice pixels    : %8d\n",ntissuepixels[0]);
+            fprintf(fpout,"Vessel count:     %6d\n",nvessels[0]);
+            fprintf(fpout,"Count/area:       %6d\n",density);
+            fprintf(fpout,"MVD:              %6d\n",MVD);
+            fprintf(fpout,"Vessel pixels:    %6d\n",nvesselpixels[0]);
+            fprintf(fpout,"Area percentage:  %8.3f\n",100*areafraction);
+        } else {
+            fprintf(fpout,"\nAverages for slices normal to %s axis\n",axisstr[axis]);
+            if (axis == 0) {
+                ui->lineEdit_area_x->setText(areastr);
+                ui->lineEdit_areapixels_x->setText(tissuepixstr);
+                ui->lineEdit_count_x->setText(countstr);
+                ui->lineEdit_density_x->setText(densitystr);
+                ui->lineEdit_MVD_x->setText(MVDstr);
+                ui->lineEdit_vesselpixels_x->setText(vesselpixstr);
+                ui->lineEdit_fraction_x->setText(fractionstr);
+            }
+            if (axis == 1) {
+                ui->lineEdit_area_y->setText(areastr);
+                ui->lineEdit_areapixels_y->setText(tissuepixstr);
+                ui->lineEdit_count_y->setText(countstr);
+                ui->lineEdit_density_y->setText(densitystr);
+                ui->lineEdit_MVD_y->setText(MVDstr);
+                ui->lineEdit_vesselpixels_y->setText(vesselpixstr);
+                ui->lineEdit_fraction_y->setText(fractionstr);
+            }
+            if (axis == 2) {
+                ui->lineEdit_area_z->setText(areastr);
+                ui->lineEdit_areapixels_z->setText(tissuepixstr);
+                ui->lineEdit_count_z->setText(countstr);
+                ui->lineEdit_density_z->setText(densitystr);
+                ui->lineEdit_MVD_z->setText(MVDstr);
+                ui->lineEdit_vesselpixels_z->setText(vesselpixstr);
+                ui->lineEdit_fraction_z->setText(fractionstr);
+            }
+            fprintf(fpout,"Slice area (mm2): %f\n",(float)tissuearea[axis]);
+            fprintf(fpout,"Slice pixels:     %8d\n",ntissuepixels[axis]);
+            fprintf(fpout,"Vessel count:     %6d\n",nvessels[axis]);
+            fprintf(fpout,"Count/area:       %6d\n",density);
+            fprintf(fpout,"MVD:              %6d\n",MVD);
+            fprintf(fpout,"Vessel pixels:    %6d\n",nvesselpixels[axis]);
+            fprintf(fpout,"Area percentage:  %8.3f\n",100*areafraction);
+        }
     }
-    densitystr = QString::number(density);
-    ui->lineEdit_density->setText(densitystr);
-    MVDstr = QString::number(MVD);
-    ui->lineEdit_MVD->setText(MVDstr);
-    fractionstr = QString::number(100*areafraction,'f',3);
-    ui->lineEdit_fraction->setText(fractionstr);
-    fprintf(fpout,"Slice pixels    : %8d\n",nslicepixels);
-    fprintf(fpout,"Slice area (mm2): %f\n",(float)slicearea);
-    fprintf(fpout,"Vessel count:     %6d\n",nvessels);
-    fprintf(fpout,"Vessel pixels:    %6d\n",nvesselpixels);
-    fprintf(fpout,"Count/area:       %6d\n",density);
-    fprintf(fpout,"MVD:              %6d\n",MVD);
-    fprintf(fpout,"Area percentage:  %8.3f\n",100*areafraction);
+    this->setCursor( QCursor( Qt::ArrowCursor ) );
 }
 
 int MainWindow::checkSlice(int axis, int islice)
