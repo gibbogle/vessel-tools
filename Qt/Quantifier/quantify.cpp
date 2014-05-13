@@ -421,16 +421,43 @@ int MainWindow::getVolume(double *volume, int *ntvoxels)
 //--------------------------------------------------------------------
 int MainWindow::SliceHistology(int axis, int islice, int *nvessels, int *nvesselpixels, int *ntissuepixels, double *tissuearea)
 {
-    int iseg, cnt, nv[2], npixels, ntpixels, kx, ky, rng_x[2], rng_y[2];
+    int iseg, cnt, nv[2], npixels, ntpixels, kx, ky, rng_x[2], rng_y[2], ix0, iy0;
     double d;
     double zmin, zmax;
 	POINT pos1, pos2;
     double z0, diam, S1[3], S2[3], vsize[2];
+    double x1, y1, z1, x2, y2, z2, s0, x0, y0;
     bool hit;
 
-	zmin = 1.0e10;
+    if (DEBUG) {
+        fprintf(fpout,"SliceHistology: axis: %d slice: %d is_block: %d\n",axis,islice,is_block);
+        fflush(fpout);
+    }
+    zmin = 1.0e10;
 	zmax = -zmin;
-	d = islice*voxelsize[axis];
+    d = islice*voxelsize[axis];
+    if (axis == 0) {
+        kx = 1;
+        ky = 2;
+    } else if (axis == 1) {
+        kx = 2;
+        ky = 0;
+    } else if (axis == 2) {
+        kx = 0;
+        ky = 1;
+    }
+    if (is_block) {
+        rng_x[0] = range[kx][0];
+        rng_x[1] = range[kx][1];
+        rng_y[0] = range[ky][0];
+        rng_y[1] = range[ky][1];
+        if (DEBUG) {
+            fprintf(fpout,"rng_x: %d %d\n",rng_x[0],rng_x[1]);
+            fprintf(fpout,"rng_y: %d %d\n",rng_y[0],rng_y[1]);
+            fflush(fpout);
+        }
+    }
+    z0 = d;
     ntpixels = 0;
 	cnt = 0;
 	for (iseg=0; iseg<nsegments;iseg++) {
@@ -449,9 +476,6 @@ int MainWindow::SliceHistology(int axis, int islice, int *nvessels, int *nvessel
             S2[0] = pos2.y;
             S2[1] = pos2.z;
             S2[2] = pos2.x;
-            z0 = d;
-            kx = 1;
-            ky = 2;
             hit = true;
         }
         if (axis == 1 && ((pos1.y <= d  && d < pos2.y) || (pos2.y < d && d <= pos1.y))) {   // (x,y,z) -> (y,z,x)
@@ -461,9 +485,6 @@ int MainWindow::SliceHistology(int axis, int islice, int *nvessels, int *nvessel
             S2[0] = pos2.z;
             S2[1] = pos2.x;
             S2[2] = pos2.y;
-            z0 = d;
-            kx = 2;
-            ky = 0;
 //            if (S1[0] < 0.5*nv[0]*vsize[0]) //Note: odd image for y axis, 36
             hit = true;
         }
@@ -474,9 +495,6 @@ int MainWindow::SliceHistology(int axis, int islice, int *nvessels, int *nvessel
             S2[0] = pos2.x;
             S2[1] = pos2.y;
             S2[2] = pos2.z;
-            z0 = d;
-            kx = 0;
-            ky = 1;
             hit = true;
         }
         if (hit) {
@@ -485,10 +503,21 @@ int MainWindow::SliceHistology(int axis, int islice, int *nvessels, int *nvessel
             nv[0] = nvoxels[kx];
             nv[1] = nvoxels[ky];
             if (is_block) {
-                rng_x[0] = range[kx][0];
-                rng_x[1] = range[kx][1];
-                rng_y[0] = range[ky][0];
-                rng_y[1] = range[ky][1];
+                x1 = S1[0];
+                y1 = S1[1];
+                z1 = S1[2];
+                x2 = S2[0];
+                y2 = S2[1];
+                z2 = S2[2];
+                s0 = (z0-z1)/(z2-z1);
+                x0 = x1 + s0*(x2-x1);
+                y0 = y1 + s0*(y2-y1);
+                ix0 = x0/vsize[0];
+                iy0 = y0/vsize[1];
+                if (ix0 < rng_x[0] || ix0 > rng_x[1] || iy0 < rng_y[0] || iy0 > rng_y[1]) {
+                    hit = false;
+                    continue;
+                }
             }
             if (DEBUG) {
                 fprintf(fpout,"rng_x: %d %d rng_y: %d %d\n",rng_x[0],rng_x[1],rng_y[0],rng_y[1]);
@@ -522,23 +551,21 @@ int MainWindow::VolumeHistology(bool *use_axis, int *nvessels, int *nvesselpixel
     int nvess_tot, nvesselpix_tot, ntissuepix_tot;
     double tissarea, tissarea_tot;
 
-//    fprintf(fpout,"VolumeHistology\n");
+    if (DEBUG) fprintf(fpout,"VolumeHistology\n");
     fflush(fpout);
     for (axis=0; axis<3; axis++) {
         if (!use_axis[axis]) continue;
-        fprintf(fpout,"axis: %d\n",axis);
-        fflush(fpout);
         nvess_tot = 0;
         nvesselpix_tot = 0;
         ntissuepix_tot = 0;
         tissarea_tot = 0;
         nslices = range[axis][1] - range[axis][0] + 1;
         for (islice=range[axis][0]; islice <=range[axis][1]; islice++) {
-//            fprintf(fpout,"axis,slice: %d %d\n",axis,islice);
+            if (DEBUG) fprintf(fpout,"axis,slice: %d %d\n",axis,islice);
             fflush(fpout);
             err = SliceHistology(axis, islice, &nvess, &nvesselpix, &ntissuepix, &tissarea);
             if (err != 0) {
-                fprintf(fpout,"error: %d",err);
+                fprintf(fpout,"Error in VolumeHistology: %d",err);
                 fflush(fpout);
             }
             nvess_tot += nvess;
@@ -550,7 +577,7 @@ int MainWindow::VolumeHistology(bool *use_axis, int *nvessels, int *nvesselpixel
         nvesselpixels[axis] = (double)nvesselpix_tot/nslices + 0.5;
         ntissuepixels[axis] = (double)ntissuepix_tot/nslices + 0.5;
         tissuearea[axis] = tissarea_tot/nslices;
-//        fprintf(fpout,"nslices: %d  %d %d %d %f\n",nslices,nvess_tot,nvesselpix_tot,ntissuepix_tot,tissarea);
+        if (DEBUG) fprintf(fpout,"nslices: %d  %d %d %d %f\n",nslices,nvess_tot,nvesselpix_tot,ntissuepix_tot,tissarea);
         fflush(fpout);
     }
     return 0;
@@ -860,7 +887,6 @@ void MainWindow::fillEllipse(double z0, double S1[], double S2[], double diam, d
                 d1 = sqrt((x-P0[0])*(x-P0[0]) + (y-P0[1])*(y-P0[1]));
                 if (d1 <= diam/2) {
                     // inside circle, lit voxel
-                    if (DEBUG) fprintf(fpout,"lit: %d %d\n",ix,iy);
                     if (is_slice) {
                         imageViewer->myQtImage->setPixel(ix,iy,255);
                     }

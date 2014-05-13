@@ -12,8 +12,6 @@
 #define PI 3.14159
 #define ALPHAMAX PI/12
 
-#define DEBUG false
-
 struct segment_str {
 	POINT end1, end2;
     double diam;

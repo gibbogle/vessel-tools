@@ -26,6 +26,10 @@ MainWindow::MainWindow(QWidget *parent) :
         file.close();
         ui->textEdit->moveCursor(QTextCursor::Start);
     }
+    axisstr[0] = "X";
+    axisstr[1] = "Y";
+    axisstr[2] = "Z";
+
     imageViewer = NULL;
     fpout = NULL;
     is_ready = false;
@@ -385,7 +389,7 @@ void MainWindow::getAveragingRanges() {
         yfac = 1/voxelsize[1];
         zfac = 1/voxelsize[2];
     }
-    fprintf(fpout,"Voxel factors: %f %f %f\n",xfac,yfac,zfac);
+    if (DEBUG) fprintf(fpout,"Voxel factors: %f %f %f\n",xfac,yfac,zfac);
     if (!ui->checkBox_xfull->isChecked()) {
         x1str = ui->lineEdit_x1->text();
         x2str = ui->lineEdit_x2->text();
@@ -423,17 +427,33 @@ void MainWindow::getAveragingRanges() {
 
 void MainWindow::getRanges()
 {
+    int i;
     if (ui->radioButton_range->isChecked()) {
-        fprintf(fpout,"getAveragingRanges\n");
+        if (DEBUG) fprintf(fpout,"getAveragingRanges\n");
         getAveragingRanges();
     } else {
-        fprintf(fpout,"getCentredRanges\n");
+        if (DEBUG) fprintf(fpout,"getCentredRanges\n");
         getCentredRanges();
     }
     checkRanges();
-    fprintf(fpout,"Ranges:\n");
-    for (int i=0; i<3; i++)
-        fprintf(fpout,"axis: %d  %d %d\n",i,range[i][0],range[i][1]);
+    fprintf(fpout,"Block ranges:\n");
+    if (is_slice) {
+        if (!ui->radioButton_xaxis->isChecked()) {
+            i = 0;
+            fprintf(fpout,"axis: %s  %d %d\n",axisstr[i],range[i][0],range[i][1]);
+        }
+        if (!ui->radioButton_yaxis->isChecked()) {
+            i = 1;
+            fprintf(fpout,"axis: %s  %d %d\n",axisstr[i],range[i][0],range[i][1]);
+        }
+        if (!ui->radioButton_zaxis->isChecked()) {
+            i = 2;
+            fprintf(fpout,"axis: %s  %d %d\n",axisstr[i],range[i][0],range[i][1]);
+        }
+    } else {
+        for (i=0; i<3; i++)
+            fprintf(fpout,"axis: %s  %d %d\n",axisstr[i],range[i][0],range[i][1]);
+        }
 }
 
 void MainWindow::checkRanges()
@@ -446,65 +466,51 @@ void MainWindow::checkRanges()
     }
 }
 
-void MainWindow::computeVessels()
+void MainWindow::ComputeVessels()
 {
     int err;
     double tissuearea[3], totlen, totvol, darea, areafraction;
     int axis, islice, nvessels[3], nvesselpixels[3], ntissuepixels[3], density, MVD, w, h, nbranchpts;
-    int iax, nsl;
-    char *axisstr[3];
+    int nslices;
     bool use_axis[3];
     QString areastr, vesselpixstr, tissuepixstr, countstr, densitystr, MVDstr, fractionstr;
 
-    fprintf(fpout,"computeVessels\n");
+    if (DEBUG) fprintf(fpout,"ComputeVessels\n");
     fflush(fpout);
     this->setCursor( QCursor( Qt::WaitCursor ) );
-
-    axisstr[0] = "X";
-    axisstr[1] = "Y";
-    axisstr[2] = "Z";
 
     if (!is_ready) {
         return;
     }
-//    if (!is_slice) {
-//        nsl = 0;
-//        for (iax=0; iax<3; iax++) {
-//            if (range[iax][0] == range[iax][1]) {
-//                axis = iax;
-//                nsl++;
-//            }
-//        }
-//        // Is this a good idea????
-//    }
     if (is_slice) {
         use_axis[0] = true;
         use_axis[1] = false;
         use_axis[2] = false;
-        if (is_block) {
-            getRanges();
-        }
         if (ui->radioButton_xaxis->isChecked()) {
             axis = 0;
-//            axisstr = "X";
             w = nvoxels[1];
             h = nvoxels[2];
             darea = voxelsize[1]*voxelsize[2];
         } else if (ui->radioButton_yaxis->isChecked()) {
             axis = 1;
-//            axisstr = "Y";
             w = nvoxels[2];
             h = nvoxels[0];
             darea = voxelsize[0]*voxelsize[2];
         } else if (ui->radioButton_zaxis->isChecked()) {
             axis = 2;
-//            axisstr = "Z";
             w = nvoxels[0];
             h = nvoxels[1];
             darea = voxelsize[0]*voxelsize[1];
         }
         islice = ui->lineEdit_intercept->text().toInt();
-        fprintf(fpout,"\nComputing histology for a slice: axis: %s  islice: %d\n",axisstr[axis],islice);
+        fprintf(fpout,"\n------------------------------------------------------------------------------\n");
+        fprintf(fpout,"Computing histology for a slice: axis: %s  islice: %d\n",axisstr[axis],islice);
+        fflush(fpout);
+        if (is_block) {
+            getRanges();
+        }
+        fprintf(fpout,"------------------------------------------------------------------------------\n");
+        fflush(fpout);
         if (ui->radioButton_unitsmicrons->isChecked())
             islice = (int)(islice/voxelsize[axis]);
         err = checkSlice(axis,islice);
@@ -521,7 +527,8 @@ void MainWindow::computeVessels()
             nvessels[0] = 0;
         }
     } else {
-        fprintf(fpout,"\nComputing volume average histology\n");
+        fprintf(fpout,"\n------------------------------------------------------------------------------\n");
+        fprintf(fpout,"Computing volume average histology\n");
         fflush(fpout);
         use_axis[0] = ui->checkBox_xaxis->isChecked();
         use_axis[1] = ui->checkBox_yaxis->isChecked();
@@ -548,6 +555,8 @@ void MainWindow::computeVessels()
         ui->lineEdit_vesselpixels_z->clear();
         ui->lineEdit_fraction_z->clear();
         getRanges();
+        fprintf(fpout,"------------------------------------------------------------------------------\n");
+        fflush(fpout);
         err = VolumeHistology(use_axis, nvessels, nvesselpixels, ntissuepixels, tissuearea);
 //        err = branching(&nbranchpts, &totlen, &totvol);
     }
@@ -613,6 +622,8 @@ void MainWindow::computeVessels()
                 ui->lineEdit_vesselpixels_z->setText(vesselpixstr);
                 ui->lineEdit_fraction_z->setText(fractionstr);
             }
+            nslices = range[axis][1] - range[axis][0] + 1;
+            fprintf(fpout,"Number of slices: %d\n",nslices);
             fprintf(fpout,"Slice area (mm2): %f\n",(float)tissuearea[axis]);
             fprintf(fpout,"Slice pixels:     %8d\n",ntissuepixels[axis]);
             fprintf(fpout,"Vessel count:     %6d\n",nvessels[axis]);
@@ -622,6 +633,7 @@ void MainWindow::computeVessels()
             fprintf(fpout,"Area percentage:  %8.3f\n",100*areafraction);
         }
     }
+    fflush(fpout);
     this->setCursor( QCursor( Qt::ArrowCursor ) );
 }
 

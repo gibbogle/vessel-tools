@@ -1789,22 +1789,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>pushButton_vessels</sender>
-   <signal>clicked()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>computeVessels()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>62</x>
-     <y>604</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>295</x>
-     <y>305</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>pushButton_setup</sender>
    <signal>clicked()</signal>
    <receiver>MainWindow</receiver>
@@ -1884,6 +1868,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>pushButton_vessels</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>ComputeVessels()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>81</x>
+     <y>598</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>49</x>
+     <y>327</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>go()</slot>
@@ -1893,7 +1893,6 @@
   <slot>computeVolume()</slot>
   <slot>checkReady()</slot>
   <slot>computeArea()</slot>
-  <slot>computeVessels()</slot>
   <slot>voxelChanged()</slot>
   <slot>sliceChanged()</slot>
   <slot>averageChanged()</slot>
@@ -1902,5 +1901,6 @@
   <slot>checkBox_y()</slot>
   <slot>checkBox_z()</slot>
   <slot>viewImage()</slot>
+  <slot>ComputeVessels()</slot>
  </slots>
 </ui>

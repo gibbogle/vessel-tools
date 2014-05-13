@@ -23,7 +23,7 @@ public slots:
     void resultFileSelecter();
     void computeVolume();
     void computeArea();
-    void computeVessels();
+    void ComputeVessels();
     int checkSlice(int, int);
     void voxelChanged();
     void checkReady();
@@ -69,6 +69,7 @@ public:
     double rangeVolume();
 
     FILE *fpout;
+    char *axisstr[3];
     double voxelsize[3];
     int nvoxels[3];
     QString amFileName;
@@ -81,15 +82,11 @@ public:
     bool is_slice;
     bool is_average;
     bool is_block;
-    int range_x1;
-    int range_x2;
-    int range_y1;
-    int range_y2;
-    int range_z1;
-    int range_z2;
     int range[3][2];
 
     ImageViewer *imageViewer;
 };
+
+#define DEBUG false
 
 #endif // MAINWINDOW_H
