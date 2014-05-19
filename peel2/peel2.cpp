@@ -5,7 +5,7 @@
 // The idea is to create a tissue mask, erode it a bit and then mask
 // the original.
 //
-// Problem from Gib Bogle, via the ITK list.
+// Problem from Gib Bogle, via the ITK list. 
 
 #include <iostream>
 #include "tclap/CmdLine.h"
@@ -14,7 +14,7 @@
 #include "itkBinaryShapeOpeningImageFilter.h"
 #include "itkNeighborhoodAlgorithm.h"
 #include "itkSmoothingRecursiveGaussianImageFilter.h"
-#include <itkMorphologicalWatershedFromMarkersImageFilter.h>
+//#include <itkMorphologicalWatershedFromMarkersImageFilter.h>
 #include <itkBinaryCloseParaImageFilter.h>
 #include <itkBinaryErodeParaImageFilter.h>
 #include <itkBinaryDilateParaImageFilter.h>

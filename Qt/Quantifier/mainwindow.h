@@ -53,7 +53,7 @@ private:
 
 public:
     int getArea(int axis, int islice, int *npixels, double *area);
-    int getVolume(double *volume, int *ntvoxels);
+    int TotalVoxelCount();
     int SliceHistology(int axis, int islice, int *nvessels, int *nvesselpixels, int *nslicepixels, double *slicearea);
     int VolumeHistology(bool *use_axis, int *nvessels, int *nvesselpixels, int *ntissuepixels, double *tissuearea);
     void fillEllipse(double z0, double S1[], double S2[], double diam, double vsize[], int nv[], int rng_x[], int rng_y[], int *npixels);
@@ -66,7 +66,8 @@ public:
     int ReadAmiraFile(char *, NETWORK *);
     int ReadCloseFile(char *);
     int branching(int *nbranchpts, double *totlen, double *totvol);
-    double rangeVolume();
+    void VesselDensity(double dmin, double dmax, double *vessellength_mm, int *nbranchpts, double *tissuevolume_mm3);
+    int RangeVoxelCount();
 
     FILE *fpout;
     char *axisstr[3];

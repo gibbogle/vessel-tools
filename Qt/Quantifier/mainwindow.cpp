@@ -295,10 +295,11 @@ void MainWindow::computeVolume()
     else
         voxelOK = false;
     if (!voxelOK) return;
-    err = getVolume(&volume,&ntvoxels);
+    ntvoxels = TotalVoxelCount();
     countstr = QString::number(ntvoxels);
     ui->lineEdit_ntvoxels->setText(countstr);
     fprintf(fpout,"Total voxel count: %d\n",ntvoxels);
+    volume = ntvoxels*voxelsize[0]*voxelsize[1]*voxelsize[2];
     volume = 1.0e-9*volume;   // convert um3 -> mm3
     volumestr = QString::number(volume,'f',3);
     ui->lineEdit_volume->setText(volumestr);
@@ -469,11 +470,12 @@ void MainWindow::checkRanges()
 void MainWindow::ComputeVessels()
 {
     int err;
-    double tissuearea[3], totlen, totvol, darea, areafraction;
+    double tissuearea[3], darea, areafraction;
+    double dmin, dmax, vessellength_mm, tissuevolume_mm3, mm_mm3;
     int axis, islice, nvessels[3], nvesselpixels[3], ntissuepixels[3], density, MVD, w, h, nbranchpts;
     int nslices;
     bool use_axis[3];
-    QString areastr, vesselpixstr, tissuepixstr, countstr, densitystr, MVDstr, fractionstr;
+    QString areastr, vesselpixstr, tissuepixstr, countstr, densitystr, MVDstr, fractionstr, mm_mm3str;
 
     if (DEBUG) fprintf(fpout,"ComputeVessels\n");
     fflush(fpout);
@@ -483,6 +485,7 @@ void MainWindow::ComputeVessels()
         return;
     }
     if (is_slice) {
+        ui->lineEdit_mm_mm3->clear();
         use_axis[0] = true;
         use_axis[1] = false;
         use_axis[2] = false;
@@ -558,6 +561,15 @@ void MainWindow::ComputeVessels()
         fprintf(fpout,"------------------------------------------------------------------------------\n");
         fflush(fpout);
         err = VolumeHistology(use_axis, nvessels, nvesselpixels, ntissuepixels, tissuearea);
+        dmin = ui->lineEdit_diam_min->text().toDouble();
+        dmax = ui->lineEdit_diam_max->text().toDouble();
+        if (dmax == 0) {
+            dmax = 1.0e10;
+        }
+        VesselDensity(dmin, dmax, &vessellength_mm, &nbranchpts, &tissuevolume_mm3);
+        mm_mm3 = vessellength_mm/tissuevolume_mm3;
+        mm_mm3str = QString::number(mm_mm3,'f',1);
+        ui->lineEdit_mm_mm3->setText(mm_mm3str);
 //        err = branching(&nbranchpts, &totlen, &totvol);
     }
     for (axis=0; axis<3; axis++) {

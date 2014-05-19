@@ -113,7 +113,6 @@ void fastsmth(int R, int npar)
 		if (dbug) printf("z: %d\n",z);
 		for (y=R; y<=height-R-1; y++)
 		{
-//			dbug = (z >= 77 && y == 107);
 			if (dbug) printf("y: %d\n",y);
 			sumXYZ = 0;				//sumXYZ is the cube sum
 			for (xx=0; xx<N; xx++)
@@ -236,10 +235,6 @@ void fastsmth(int R, int npar)
 				{
 					xmin = MAX(x-R,0);
 					xmax = MIN(x+R,width-1);
-//					if (x >= 345 && x <= 355 && y == 800 && z == 215) 
-//						dbug = true;
-//					else
-//						dbug = false;
 					adder(xmin,xmax,ymin,ymax,zmin,zmax,&ave);
 					A(x,y,z) = (unsigned char)(ave + 0.5);
 				}

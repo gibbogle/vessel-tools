@@ -284,7 +284,8 @@ int MainWindow::ReadCloseFile(char *filename)
 //-----------------------------------------------------------------------------------------
 // Test if the point p[] corresponds to a lit voxel in closedata(:,:,:)
 // Now using compressed close data, with each bit corresponding to a voxel
-// Need to check indexing.  Note that p[] uses 1-based indexing.
+// Need to check indexing.
+// NOTE that p[] uses 1-based indexing.
 // Consider a test case with nxc = nyc = nzc = 64
 // In this case nx8 = ny8 = 64
 // p[] = (1,1,1) should give kbyte=0, kbit=0
@@ -388,13 +389,10 @@ int MainWindow::getArea(int axis, int islice, int *npixels, double *area)
 //--------------------------------------------------------------------
 // This uses 1-based indexing!
 //--------------------------------------------------------------------
-int MainWindow::getVolume(double *volume, int *ntvoxels)
+int MainWindow::TotalVoxelCount()
 {
     int ix, iy, iz, p[3], nt;
-	double total, dvol;
 
-	dvol = voxelsize[0]*voxelsize[1]*voxelsize[2];
-	total = 0;
     nt = 0;
 	for (ix=1; ix<=nxc; ix++) {
 		for (iy=1; iy<=nyc; iy++) {
@@ -404,15 +402,52 @@ int MainWindow::getVolume(double *volume, int *ntvoxels)
 				p[2] = iz;
 				if (in_close(p)) {
                     nt++;
-					total += dvol;
 				}
 			}
 		}
 	}
-    *ntvoxels = nt;
-    *volume = total;
-	return 0;
+    return nt;
 }
+
+//--------------------------------------------------------------------
+//--------------------------------------------------------------------
+void MainWindow::VesselDensity(double dmin, double dmax, double *vessellength_mm, int *nbranchpts, double *tissuevolume_mm3)
+{
+    int ntvoxels, nb, k;
+    double xmin, xmax, ymin, ymax, zmin, zmax, tlen;
+    POINT p;
+
+    ntvoxels = RangeVoxelCount();
+    *tissuevolume_mm3 = ntvoxels*voxelsize[0]*voxelsize[1]*voxelsize[2];
+
+    xmin = range[0][0]*voxelsize[0];
+    xmax = range[0][1]*voxelsize[0];
+    ymin = range[1][0]*voxelsize[1];
+    ymax = range[1][1]*voxelsize[1];
+    zmin = range[2][0]*voxelsize[2];
+    zmax = range[2][1]*voxelsize[2];
+    // Look at each vessel, each segment
+    nb = 0;
+    for (k=0; k<NP0->nv; k++) {
+        p = NP0->vertex[k].point;
+        if (p.x >= xmin && p.x < xmax && p.y >= ymin && p.y < ymax && p.z >= zmin && p.z < zmax) nb++;
+    }
+    *nbranchpts = nb;
+    tlen = 0;
+    for (k=0; k<nsegments; k++) {
+        p = segment[k].end1;
+        if (p.d < dmin || p.d > dmax) continue;
+        if (p.x >= xmin && p.x < xmax && p.y >= ymin && p.y < ymax && p.z >= zmin && p.z < zmax) {
+            p = segment[k].end2;
+            if (p.d < dmin || p.d > dmax) continue;
+            if (p.x >= xmin && p.x < xmax && p.y >= ymin && p.y < ymax && p.z >= zmin && p.z < zmax) {
+                tlen += segment[k].len;
+            }
+        }
+    }
+    *vessellength_mm = tlen/1000;
+}
+
 
 //--------------------------------------------------------------------
 // For image creation, the axes are permuted such that the slice plane is always a z plane
@@ -661,7 +696,7 @@ void MainWindow::reset()
 //--------------------------------------------------------------------
 int MainWindow::branching(int *nbranchpts, double *totlen, double *totvol)
 {
-    int k, nb;
+    int k, nb, nt;
     double xmin, xmax, ymin, ymax, zmin, zmax, tlen;
     POINT p;
 
@@ -688,14 +723,16 @@ int MainWindow::branching(int *nbranchpts, double *totlen, double *totvol)
         }
     }
     *totlen = tlen;
-    *totvol = rangeVolume();
+    nt = RangeVoxelCount();
+    *totvol = nt*voxelsize[0]*voxelsize[1]*voxelsize[2];
     return 0;
 }
 
 //--------------------------------------------------------------------
-// Volume of tissue region defined by range of slices
+// Count of tissue voxels in region defined by range of slices
+// This uses 1-based indexing!
 //--------------------------------------------------------------------
-double MainWindow::rangeVolume()
+int MainWindow::RangeVoxelCount()
 {
     int ix, iy, iz, p[3], nt;
 
@@ -710,7 +747,7 @@ double MainWindow::rangeVolume()
             }
         }
     }
-    return nt*voxelsize[0]*voxelsize[1]*voxelsize[2];
+    return nt;
 }
 
 
