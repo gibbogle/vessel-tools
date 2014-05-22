@@ -381,7 +381,7 @@ int MainWindow::summer(int w, double alpha, int *n)
 void MainWindow::determineScale()
 {
     int z, n;
-    double a0, a1, a2, a, E0, E1, E2, anew, da;
+    double a0, a1, a2, a, E0, E1, E2, da;
 
     printf("determineScale\n");
     fflush(stdout);

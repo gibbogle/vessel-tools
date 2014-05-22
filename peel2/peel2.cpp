@@ -7,6 +7,10 @@
 //
 // Problem from Gib Bogle, via the ITK list. 
 
+// NOTE: For the compiler to find itkMorphologicalWatershedFromMarkersImageFilter.h it was necessary 
+// to add this to the list of include directories:
+// E:/InsightToolkit-4.0.0/Modules/Nonunit/Review/include
+
 #include <iostream>
 #include "tclap/CmdLine.h"
 #include "ioutils.h"
@@ -14,7 +18,7 @@
 #include "itkBinaryShapeOpeningImageFilter.h"
 #include "itkNeighborhoodAlgorithm.h"
 #include "itkSmoothingRecursiveGaussianImageFilter.h"
-//#include <itkMorphologicalWatershedFromMarkersImageFilter.h>
+#include <itkMorphologicalWatershedFromMarkersImageFilter.h>
 #include <itkBinaryCloseParaImageFilter.h>
 #include <itkBinaryErodeParaImageFilter.h>
 #include <itkBinaryDilateParaImageFilter.h>
