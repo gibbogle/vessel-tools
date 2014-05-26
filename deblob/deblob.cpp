@@ -107,11 +107,12 @@ int main(int argc, char**argv)
 	int zparstart[8], zparend[8];
 	int kpar, npar = 8;
 
-	if (argc != 6) {
-		printf("Usage: deblob input_tiff output_tiff stencil_size threshold_fraction delta\n");
+	if (argc != 7) {
+		printf("Usage: deblob input_tiff output_tiff stencil_size threshold_fraction delta ncpu\n");
 		printf("       where stencil_size is the cube side length or sphere diameter in voxels\n");
 		printf("       threshold_fraction is fraction of voxels that are lit\n");
 		printf("       delta is the stepping distance in voxels\n");
+		printf("       ncpu is the number of processor threads to use (OpenMP)\n");
 		return 0;
 	}
 
@@ -120,6 +121,7 @@ int main(int argc, char**argv)
 	sscanf(argv[3],"%d",&stencil_size);
 	sscanf(argv[4],"%lf",&threshold_fraction);
 	sscanf(argv[5],"%d",&delta);
+	sscanf(argv[6],"%d",&npar);
 	use_compression = true;
 
 	typedef itk::ImageFileReader<ImageType> FileReaderType;
