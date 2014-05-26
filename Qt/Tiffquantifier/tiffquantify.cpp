@@ -3,28 +3,22 @@
 //#include <cstdio>
 //#include <vector>
 
-//#include <algorithm>
+#include <algorithm>
 #include <math.h>
 //#include <string.h>
 //#include <string>
 //#include <sstream>
 
 #include "MainWindow.h"
-#include "quantify.h"
+#include "tiffquantify.h"
 
 /*
 #include <bitset>
 #include <stdio.h>
 
-#include "network.h"
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
-
-struct segment_str {
-	POINT end1, end2;
-};
-typedef segment_str SEGMENT_TYPE;
 
 #define STR_LEN 128
 #define BIG 1.0e6
@@ -39,209 +33,40 @@ SEGMENT_TYPE *segment = NULL;
 NETWORK *NP0 = NULL;
 
 bool is_setup = false;
+
 */
 
-double pointDist(POINT p1, POINT p2)
-{
-    double dx, dy, dz;
-
-    dx = p1.x - p2.x;
-    dy = p1.y - p2.y;
-    dz = p1.z - p2.z;
-    return sqrt(dx*dx+dy*dy+dz*dz);
-}
-
 //-----------------------------------------------------------------------------------------------------
-// Read Amira SpatialGraph file
+// Read tiff image file
 //-----------------------------------------------------------------------------------------------------
-int MainWindow::ReadAmiraFile(char *amFile, NETWORK *net)
+int MainWindow::ReadTiffFile(char *tiffFile)
 {
-	int i, j, k, kp, npts;
-	int np_used, ne_used;
-	EDGE edge;
-	char line[STR_LEN];
+    typedef itk::ImageFileReader<ImageType> FileReaderType;
+    FileReaderType::Pointer reader = FileReaderType::New();
 
-    printf("Amira file: %s\n",amFile);
-    fprintf(fpout,"Amira file: %s\n",amFile);
-	FILE *fpam = fopen(amFile,"r");
+    reader->SetFileName(tiffFile);
+    try
+    {
+        reader->Update();
+    }
+    catch (itk::ExceptionObject &e)
+    {
+        std::cout << e << std::endl;
+        fprintf(fpout,"Read error on input file\n");
+        printf("Read error on input file\n");
+        return 2;	// Read error on input file
+    }
 
-	nsegments = 0;
-	npts = 0;
-	kp = 0;
-	k = 0;
-	while (k < 3) {
-		fgets(line, STR_LEN, fpam);		// reads until newline character
-		printf("%s\n",line);
-		if (strncmp(line,"define VERTEX",13) == 0) {
-			sscanf(line+13,"%d",&net->nv);
-			k++;
-		}
-		if (strncmp(line,"define EDGE",11) == 0) {
-			sscanf(line+11,"%d",&net->ne);
-			k++;
-		}
-		if (strncmp(line,"define POINT",12) == 0) {
-			sscanf(line+12,"%d",&net->np);
-			k++;
-		}
-	}
+    im = reader->GetOutput();
+    pbuffer = (unsigned char *)(im->GetBufferPointer());
 
-	net->vertex = (VERTEX *)malloc(net->nv*sizeof(VERTEX));
-	net->edgeList = (EDGE *)malloc(net->ne*sizeof(EDGE));
-	net->point = (POINT *)malloc(net->np*sizeof(POINT));
-	printf("Allocated arrays: %d %d %d\n",net->np,net->nv,net->ne);
+    imwidth = im->GetLargestPossibleRegion().GetSize()[0];
+    imheight = im->GetLargestPossibleRegion().GetSize()[1];
+    imdepth = im->GetLargestPossibleRegion().GetSize()[2];
+    imsize = imwidth*imheight;
 
-	// Initialize
-	for (i=0; i<net->ne; i++) {
-		net->edgeList[i].used = false;
-	}
-	for (i=0; i<net->np; i++) {
-		net->point[i].used = false;
-	}
-	printf("Initialised\n");
-
-	while (1) {
-		if (fgets(line, STR_LEN, fpam) == NULL) {
-			printf("Finished reading SpatialGraph file\n\n");
-			fclose(fpam);
-			break;
-		}
-		if (line[0] == '@') {
-			sscanf(line+1,"%d",&k);
-			if (k == 1) {
-				for (i=0;i<net->nv;i++) {
-					if (fgets(line, STR_LEN, fpam) == NULL) {
-						printf("ERROR reading section @1\n");
-						return 1;
-					}
-                    sscanf(line,"%lf %lf %lf\n",&(net->vertex[i].point.x),&(net->vertex[i].point.y),&(net->vertex[i].point.z));
-//					kp = i;
-					net->vertex[i].point.d = 0;
-//					net->point[kp] = net->vertex[i].point;
-				}
-//				kp++;
-				printf("Got vertices\n");
-			} else if (k == 2) {
-				for (i=0;i<net->ne;i++) {
-					if (fgets(line, STR_LEN, fpam) == NULL) {
-						printf("ERROR reading section @2\n");
-						return 1;
-					}
-					sscanf(line,"%d %d",&net->edgeList[i].vert[0],&net->edgeList[i].vert[1]);
-					net->edgeList[i].used = true;
-				}
-				printf("Got edge vertex indices\n");
-			} else if (k == 3) {
-				for (i=0;i<net->ne;i++) {
-					if (fgets(line, STR_LEN, fpam) == NULL) {
-						printf("ERROR reading section @3\n");
-						return 1;
-					}
-					sscanf(line,"%d",&net->edgeList[i].npts);
-					if (net->edgeList[i].npts < 1) {
-						printf("ReadAmiraFile: i: %d npts: %d\n",i,net->edgeList[i].npts);
-						return 1;
-					}
-					net->edgeList[i].npts_used = net->edgeList[i].npts;
-					net->edgeList[i].pt = (int *)malloc(net->edgeList[i].npts*sizeof(int));
-					net->edgeList[i].pt_used = (int *)malloc(net->edgeList[i].npts*sizeof(int));
-					npts += net->edgeList[i].npts;
-					net->edgeList[i].pt[0] = net->edgeList[i].vert[0];							// This was not really necessary -
-					net->edgeList[i].pt[net->edgeList[i].npts-1] = net->edgeList[i].vert[1];	// the point coordinates are repeated in @4
-					nsegments += net->edgeList[i].npts - 1;
-				}
-				printf("Got edge npts, total: %d\n",npts);
-			} else if (k == 4) {
-				for (i=0;i<net->ne;i++) {
-					edge = net->edgeList[i];
-					for (k=0;k<edge.npts;k++) {
-						if (fgets(line, STR_LEN, fpam) == NULL) {
-							printf("ERROR reading section @4\n");
-							return 1;
-						}
-//						if (k > 0 && k<edge.npts-1) {											// See note above
-                            sscanf(line,"%lf %lf %lf",&net->point[kp].x,&net->point[kp].y,&net->point[kp].z);
-							net->edgeList[i].pt[k] = kp;
-							net->edgeList[i].pt_used[k] = kp;
-							kp++;
-//						}
-//						if (k > 0) {
-//							len = len + dist(net,net->edgeList[i].pt[k-1],net->edgeList[i].pt[k]);
-//						}
-					}
-//					net->edgeList[i].length_vox = len;
-				}
-			} else if (k == 5) {
-				for (i=0;i<net->ne;i++) {
-					edge = net->edgeList[i];
-                    double dave = 0;
-					for (k=0;k<edge.npts;k++) {
-						if (fgets(line, STR_LEN, fpam) == NULL) {
-							printf("ERROR reading section @5\n");
-							return 1;
-						}
-						j = edge.pt[k];
-                        sscanf(line,"%lf",&net->point[j].d);
-						if (net->point[j].d == 0) {
-							printf("Error: ReadAmiraFile: zero diameter: i: %d npts: %d k: %d j: %d\n",i,edge.npts,k,j);
-							return 1;
-						}
-						if (j < net->nv) {		// because the first nv points are vertices
-							net->vertex[j].point.d = net->point[j].d;
-						}
-						dave += net->point[j].d;
-						net->edgeList[i].segavediam = dave/edge.npts;
-					}
-				}
-				printf("Got point thicknesses\n");
-			}
-		}
-	}
-	// Flag used points
-	for (i=0; i<net->ne; i++) {
-		edge = net->edgeList[i];
-		for (k=0; k<edge.npts; k++) {
-			j = edge.pt[k];
-			net->point[j].used = true;
-		}
-	}
-	fclose(fpam);
-	np_used = 0;
-	for (j=0; j<net->np; j++) {
-		if (net->point[j].used) np_used++;
-	}
-	printf("Points: np: %d np_used: %d\n",net->np,np_used);
-	ne_used = 0;
-	for (j=0; j<net->ne; j++) {
-		if (net->edgeList[j].used) ne_used++;
-	}
-	printf("Edges: ne: %d ne_used: %d\n",net->ne,ne_used);
-	
-    printf("Total vessel segments: %d\n",nsegments);
-    fprintf(fpout,"Total vessel segments: %d\n",nsegments);
-
-	segment = (SEGMENT_TYPE *)malloc(nsegments*sizeof(SEGMENT_TYPE));
-
-	int ip;
-	int iseg = 0;
-	for  (int ie=0; ie<net->ne; ie++) {
-		edge = net->edgeList[ie];
-		for (i=0; i<edge.npts-1; i++) {
-			ip = edge.pt[i];
-			segment[iseg].end1 = net->point[ip];
-			segment[iseg].end2 = net->point[ip+1];
-            segment[iseg].diam = (net->point[ip].d + net->point[ip+1].d)/2;
-            segment[iseg].len = pointDist(net->point[ip],net->point[ip+1]);
-            if (DEBUG) {
-                POINT p1 = segment[iseg].end1;
-                POINT p2 = segment[iseg].end2;
-//                fprintf(fpout,"seg: %6d  ip: %6d %6.1f %6.1f %6.1f --> %6.1f %6.1f %6.1f\n",iseg,ip,p1.x,p1.y,p1.z,p2.x,p2.y,p2.z);
-            }
-            iseg++;
-		}
-	}
-	nsegments = iseg;
-	printf("nsegments: %d\n",nsegments);
+    fprintf(fpout,"Image dimensions: width, height, depth: %d %d %d\n",imwidth,imheight,imdepth);
+    printf("Image dimensions: width, height, depth: %d %d %d\n",imwidth,imheight,imdepth);
 
 	return 0;
 }
@@ -320,6 +145,7 @@ bool in_close(int p[3])
 
 //--------------------------------------------------------------------
 // This uses 1-based indexing!
+// I.e. it is assumed that the first slice is islice=1
 //--------------------------------------------------------------------
 int MainWindow::getArea(int axis, int islice, int *npixels, double *area)
 {
@@ -409,6 +235,8 @@ int MainWindow::TotalVoxelCount()
     return nt;
 }
 
+/*
+
 //--------------------------------------------------------------------
 //--------------------------------------------------------------------
 void MainWindow::VesselDensity(double dmin, double dmax, double *vessellength_mm, int *nbranchpts, double *tissuevolume_mm3)
@@ -448,6 +276,7 @@ void MainWindow::VesselDensity(double dmin, double dmax, double *vessellength_mm
     *vessellength_mm = tlen/1000;
 }
 
+*/
 
 //--------------------------------------------------------------------
 // For image creation, the axes are permuted such that the slice plane is always a z plane
@@ -456,10 +285,13 @@ void MainWindow::VesselDensity(double dmin, double dmax, double *vessellength_mm
 //--------------------------------------------------------------------
 int MainWindow::SliceHistology(int axis, int islice, int *nvessels, int *nvesselpixels, int *ntissuepixels, double *tissuearea)
 {
-    int iseg, cnt, nv[2], npixels, ntpixels, kx, ky, rng_x[2], rng_y[2], ix0, iy0;
+    int x, y, p[3], val, xmin, xmax, ymin, ymax;
+    int cnt, ntpixels, kx, ky, rng_x[2], rng_y[2];
+
+    int iseg, nv[2], npixels, ix0, iy0;
     double d;
     double zmin, zmax;
-	POINT pos1, pos2;
+    POINT pos1, pos2;
     double z0, diam, S1[3], S2[3], vsize[2];
     double x1, y1, z1, x2, y2, z2, s0, x0, y0;
     bool hit;
@@ -468,6 +300,14 @@ int MainWindow::SliceHistology(int axis, int islice, int *nvessels, int *nvessel
         fprintf(fpout,"SliceHistology: axis: %d slice: %d is_block: %d\n",axis,islice,is_block);
         fflush(fpout);
     }
+    if (axis != 2) {
+        printf("SliceHistology: currently for Z axis only\n");
+        return 1;
+    }
+    rng_x[0] = 1;
+    rng_x[1] = nvoxels[0];
+    rng_y[0] = 1;
+    rng_y[1] = nvoxels[1];
     zmin = 1.0e10;
 	zmax = -zmin;
     d = islice*voxelsize[axis];
@@ -492,10 +332,49 @@ int MainWindow::SliceHistology(int axis, int islice, int *nvessels, int *nvessel
             fflush(fpout);
         }
     }
-    z0 = d;
+
+    xmin = 99999;
+    xmax = 0;
+    ymin = 99999;
+    ymax = 0;
+    for (x=rng_x[0]; x<=rng_x[1]; x++) {
+        for (y=rng_y[0]; y<=rng_y[1]; y++) {
+            p[0] = x;
+            p[1] = y;
+            p[2] = islice;
+            val = V(x-1,y-1,islice-1);  // this must use 0-based indexing
+//            fprintf(fpout,"%4d %4d %4d: %d\n",x,y,islice-1,val);
+            if (in_close(p)) {
+                imageViewer->myQtImage->setPixel(x,y,val);
+                xmin = MIN(x,xmin);
+                xmax = MAX(x,xmax);
+                ymin = MIN(y,ymin);
+                ymax = MAX(y,ymax);
+            }
+        }
+    }
+    fprintf(fpout,"Tissue range of x: %4d %4d\n",xmin,xmax);
+    fprintf(fpout,"Tissue range of y: %4d %4d\n",ymin,ymax);
+    for (y=ymin; y<=ymax; y++) {
+        for (x=xmin; x<=xmax; x++) {
+            p[0] = x;
+            p[1] = y;
+            p[2] = islice;
+            if (in_close(p)) {
+                val = V(x-1,y-1,islice-1);
+            } else {
+                val = -1;
+            }
+            fprintf(fpout,"%3d ",val);
+        }
+        fprintf(fpout,"\n");
+    }
+    fprintf(fpout,"\n");
     ntpixels = 0;
-	cnt = 0;
-	for (iseg=0; iseg<nsegments;iseg++) {
+    cnt = 0;
+    /*
+    z0 = d;
+    for (iseg=0; iseg<nsegments;iseg++) {
 		pos1 = segment[iseg].end1;
 		pos2 = segment[iseg].end2;
         diam = segment[iseg].diam;
@@ -560,11 +439,12 @@ int MainWindow::SliceHistology(int axis, int islice, int *nvessels, int *nvessel
                         iseg,S1[0],S1[1],S1[2],S2[0],S2[1],S2[2],diam);
                 fflush(fpout);
             }
-            fillEllipse(z0,S1,S2,diam,vsize,nv,rng_x,rng_y,&npixels);
+//            fillEllipse(z0,S1,S2,diam,vsize,nv,rng_x,rng_y,&npixels);
             cnt++;
             ntpixels += npixels;
         }
 	}
+    */
     if (DEBUG) {
         fprintf(fpout,"Vessel count: %6d\nTotal pixels: %8d\n",cnt,ntpixels);
         fflush(fpout);
@@ -633,8 +513,8 @@ int MainWindow::getCloseSize(int nvoxels[])
 void free_all()
 {
 	int ie;
-	NETWORK *net = NP0;
-
+    /*
+    NETWORK *net = NP0;
 	if (net != NULL) {
 		for (ie=0; ie < net->ne; ie++) {
 			free(net->edgeList[ie].pt);
@@ -644,13 +524,14 @@ void free_all()
 		free(net->edgeList);
 		free(net->point);
 	}
+    */
     if (closedata != NULL) free(closedata);
-	if (segment != NULL) free(segment);
+//	if (segment != NULL) free(segment);
 }
 
 //--------------------------------------------------------------------
 //--------------------------------------------------------------------
-int MainWindow::setup(char *input_amfile, char *close_file, char *result_file, double vsize[])
+int MainWindow::setup(char *input_tifffile, char *close_file, char *result_file, double vsize[])
 {
 	int err;
 
@@ -664,11 +545,11 @@ int MainWindow::setup(char *input_amfile, char *close_file, char *result_file, d
 		voxelsize[i] = vsize[i];
 	}
 	printf("set voxelsize\n");
-	NP0 = (NETWORK *)malloc(sizeof(NETWORK));
-	printf("allocated network\n");
-	err = ReadAmiraFile(input_amfile,NP0);
+//	NP0 = (NETWORK *)malloc(sizeof(NETWORK));
+//	printf("allocated network\n");
+    err = ReadTiffFile(input_tifffile);
 	if (err != 0) return 2;
-	printf("read Amira file\n");
+    printf("read tiff file\n");
 	err = ReadCloseFile(close_file);
 	if (err != 0) return 3;
 	is_setup = true;
@@ -689,6 +570,8 @@ void MainWindow::reset()
 {
 	is_setup = false;
 }
+
+/*
 
 //--------------------------------------------------------------------
 // Network topology is in NETWORK *NP0
@@ -728,6 +611,8 @@ int MainWindow::branching(int *nbranchpts, double *totlen, double *totvol)
     return 0;
 }
 
+*/
+
 //--------------------------------------------------------------------
 // Count of tissue voxels in region defined by range of slices
 // This uses 1-based indexing!
@@ -750,6 +635,7 @@ int MainWindow::RangeVoxelCount()
     return nt;
 }
 
+/*
 
 // Consider a cylinder intersecting a plane.
 // The cylinder has radius R, the centreline C intersects the plane at P0 (x0,y0)
@@ -948,7 +834,6 @@ void MainWindow::fillEllipse(double z0, double S1[], double S2[], double diam, d
     *npixels = npix;
 }
 
-/*
 
 //--------------------------------------------------------------------
 // For testing

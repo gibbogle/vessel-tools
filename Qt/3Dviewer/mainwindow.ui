@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>ImageTrimmer</class>
- <widget class="QMainWindow" name="ImageTrimmer">
+ <class>ImageViewer</class>
+ <widget class="QMainWindow" name="ImageViewer">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1106</width>
-    <height>951</height>
+    <width>1146</width>
+    <height>939</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>ImageTrimmer</string>
+   <string>ImageViewer</string>
   </property>
   <widget class="QWidget" name="centralWidget">
    <widget class="QMdiArea" name="mdiArea1">
@@ -30,7 +30,7 @@
     </property>
     <property name="geometry">
      <rect>
-      <x>920</x>
+      <x>970</x>
       <y>10</y>
       <width>171</width>
       <height>71</height>
@@ -112,116 +112,13 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>0</y>
-      <width>581</width>
-      <height>31</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string/>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_frame1">
-    <property name="geometry">
-     <rect>
-      <x>980</x>
-      <y>90</y>
-      <width>16</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>#</string>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="lineEditFrame1">
-    <property name="geometry">
-     <rect>
-      <x>990</x>
-      <y>90</y>
-      <width>31</width>
+      <y>10</y>
+      <width>901</width>
       <height>20</height>
      </rect>
     </property>
     <property name="text">
      <string/>
-    </property>
-    <property name="readOnly">
-     <bool>true</bool>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="pushButtonSaveLine">
-    <property name="enabled">
-     <bool>false</bool>
-    </property>
-    <property name="geometry">
-     <rect>
-      <x>970</x>
-      <y>140</y>
-      <width>75</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Save line</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="pushButtonWriteLineFile">
-    <property name="enabled">
-     <bool>true</bool>
-    </property>
-    <property name="geometry">
-     <rect>
-      <x>970</x>
-      <y>230</y>
-      <width>75</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Save to file</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="pushButtonLoadLineFile">
-    <property name="enabled">
-     <bool>false</bool>
-    </property>
-    <property name="geometry">
-     <rect>
-      <x>970</x>
-      <y>190</y>
-      <width>75</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Load from file</string>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="lineEditThreshold">
-    <property name="geometry">
-     <rect>
-      <x>1050</x>
-      <y>300</y>
-      <width>31</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>4</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="labelThreshold">
-    <property name="geometry">
-     <rect>
-      <x>950</x>
-      <y>300</y>
-      <width>101</width>
-      <height>21</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Nearness threshold</string>
     </property>
    </widget>
   </widget>
@@ -230,7 +127,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1106</width>
+     <width>1146</width>
      <height>18</height>
     </rect>
    </property>
@@ -251,12 +148,12 @@
   <connection>
    <sender>pushButtonPrevFrame</sender>
    <signal>clicked()</signal>
-   <receiver>ImageTrimmer</receiver>
+   <receiver>ImageViewer</receiver>
    <slot>prevFrame()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1050</x>
-     <y>104</y>
+     <x>530</x>
+     <y>94</y>
     </hint>
     <hint type="destinationlabel">
      <x>760</x>
@@ -267,12 +164,12 @@
   <connection>
    <sender>pushButtonNextFrame</sender>
    <signal>clicked()</signal>
-   <receiver>ImageTrimmer</receiver>
+   <receiver>ImageViewer</receiver>
    <slot>nextFrame()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1057</x>
-     <y>74</y>
+     <x>537</x>
+     <y>50</y>
     </hint>
     <hint type="destinationlabel">
      <x>829</x>
@@ -283,12 +180,12 @@
   <connection>
    <sender>pushButtonUpdate</sender>
    <signal>clicked()</signal>
-   <receiver>ImageTrimmer</receiver>
+   <receiver>ImageViewer</receiver>
    <slot>updateImages()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>980</x>
-     <y>94</y>
+     <x>460</x>
+     <y>84</y>
     </hint>
     <hint type="destinationlabel">
      <x>362</x>
@@ -299,64 +196,16 @@
   <connection>
    <sender>spinBoxFrame</sender>
    <signal>editingFinished()</signal>
-   <receiver>ImageTrimmer</receiver>
+   <receiver>ImageViewer</receiver>
    <slot>updateImages()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1014</x>
-     <y>93</y>
+     <x>494</x>
+     <y>70</y>
     </hint>
     <hint type="destinationlabel">
      <x>385</x>
      <y>49</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>pushButtonSaveLine</sender>
-   <signal>clicked()</signal>
-   <receiver>ImageTrimmer</receiver>
-   <slot>saveLine()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>1033</x>
-     <y>194</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>1073</x>
-     <y>221</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>pushButtonWriteLineFile</sender>
-   <signal>clicked()</signal>
-   <receiver>ImageTrimmer</receiver>
-   <slot>saveLineMatrix()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>999</x>
-     <y>284</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>967</x>
-     <y>314</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>pushButtonLoadLineFile</sender>
-   <signal>clicked()</signal>
-   <receiver>ImageTrimmer</receiver>
-   <slot>loadLineMatrix()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>1034</x>
-     <y>244</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>1004</x>
-     <y>276</y>
     </hint>
    </hints>
   </connection>
@@ -367,9 +216,9 @@
   <slot>nextFrame()</slot>
   <slot>prevFrame()</slot>
   <slot>updateImages()</slot>
+  <slot>subtracter()</slot>
+  <slot>subtractImage()</slot>
   <slot>imageSelecter()</slot>
-  <slot>saveLine()</slot>
-  <slot>saveLineMatrix()</slot>
-  <slot>loadLineMatrix()</slot>
+  <slot>saveImageFile()</slot>
  </slots>
 </ui>

@@ -11,9 +11,6 @@
 #include <QtGui>
 #include <QWidget>
 #include <QVTKWidget.h>
-#include <QFile>
-#include <QCoreApplication>
-#include <QTextStream>
 
 #include <vtkRenderer.h>
 #include <vtkImageActor.h>
@@ -21,9 +18,6 @@
 #include <vtkSmartPointer.h>
 #include <vtkImageData.h>
 #include <vtkCamera.h>
-#include <vtkPolyDataMapper2D.h>
-#include <vtkTextActor.h>
-#include <vtkTextProperty.h>
 
 #include <itkImage.h>
 #include <itkRGBPixel.h>
@@ -55,7 +49,7 @@ public:
      * Constructor for this ImageWidget 
      */
 //    ImageWidget(QWidget *parent = 0);
-    ImageWidget(QWidget * parent, QWidget *page);
+    ImageWidget(QWidget *);
 
     /** 
      * Destructor for this ImageWidget 
@@ -72,57 +66,54 @@ public:
      */
     void openWithITK();
 
+    /**
+     * Apply a median fiter to the itkImage
+     */
+//    void medianFilter();
+
+    /**
+     * Apply a gradient anisotropic diffusion filter to an itkImage
+     */
+//    void gradientAnisotropicDiffusionFilter();
+
+    void clearImages();
+
     bool frameOK(int);
+
     void showFrame(int);
 
     QString getShortFileName();
     QString getFileName();
     int getDepth();
+//    void subtract(int);
+//    void saveImage(QString);
     void getInfo(int *, int *, int *, int *);
     unsigned char *getBuffer();
-    void clearAll();
-    void clearActors();
-    void clearImages();
-    void addMark(int *);
-    void moveMark(int, int *);
-    bool selectMark(int pos[3], int *iactor);
-    void deleteMark(int);
-    void setNumber(int iactor);
-    void saveLine();
-    void showActors();
-    void showLines();
-    vtkSmartPointer<vtkActor2D> makeMarkActor(double *pos);
-    void convertPosToPixel(double *pos, int *pixel);
-    void convertPixelToPos(int *pixel,double *pos);
-    void writeLineFile(QString);
-    void readLineFile(QString);
-    void setThreshold(double);
+//    void subtractImage(unsigned char *);
+//    void addImage(unsigned char *);
+    void AddNumber(int *);
 
 public slots:
     void tallyMark(QMouseEvent* event);
 
-signals:
-    void SaveStatus(bool);
-
 private:
 
-    QWidget *m_parent;
     QVTKWidget *qvtkWidget;
 
     /** The image displayed for this window */
     ImageType2::Pointer itkImage2;
     ImageType3::Pointer itkImage3;
     RGBImageType::Pointer rgbItkImage;
-
+    
+    
     /** The VTK image to display in this window */
     vtkSmartPointer <vtkImageData> vtkImage;
 
-    vtkSmartPointer<vtkImageActor> imageActor;
+    vtkSmartPointer<vtkImageActor> actor;
     vtkSmartPointer<vtkRenderer> renderer;
     vtkSmartPointer<vtkRenderWindow> renderWindow;
     vtkSmartPointer<vtkRenderWindowInteractor> interactor; 
     vtkSmartPointer<vtkCamera> camera;
-    vtkSmartPointer<vtkPolyDataMapper2D> mapper;
 
     /** The type of the image components RGB, scalar, etc */
     std::string pixelType;
@@ -163,22 +154,11 @@ private:
 
     void getImageXY(int pos[], int xy[]);
 
-    long long imageWidth;
-    long long imageHeight;
-    long long imageDepth;
-    int iframe;
-    QString imageFileName;
+    int imageWidth;
+    int imageHeight;
+    int imageDepth;
+    QString fileName;
 
-    int rect[2];
-    bool LButtonDown;
-    std::vector<vtkSmartPointer<vtkActor2D>> Actors;
-    std::vector<vtkSmartPointer<vtkTextActor>> NumActors;
-    double threshold;
-    bool selected;
-    int iselect;
-    bool lineSaved;
-    typedef std::vector<vtkSmartPointer<vtkActor2D>> vect_actor_t;
-    std::vector<vect_actor_t> vect_actor_mat;
 };
 
 #endif	/* IMAGEWIDGET_H */

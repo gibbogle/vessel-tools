@@ -38,6 +38,7 @@ private slots:
     void saveLine();
     void saveLineMatrix();
     void loadLineMatrix();
+    void on_lineEditThreshold_textChanged();
 
 public slots:
     void setLineSaveStatus(bool);

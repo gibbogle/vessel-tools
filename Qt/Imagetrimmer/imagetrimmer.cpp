@@ -62,6 +62,7 @@ void ImageTrimmer::opener(int imageNum)
     } else {
         ui->groupBoxFrame->setEnabled(false);
     }
+    on_lineEditThreshold_textChanged();
 }
 
 void ImageTrimmer::prevFrame()
@@ -137,6 +138,13 @@ void ImageTrimmer::loadLineMatrix()
     iframe = -1;
     updateImages();
 }
+
+void ImageTrimmer::on_lineEditThreshold_textChanged()
+{
+    double threshold = ui->lineEditThreshold->text().toDouble();
+    imageWidget1->setThreshold(threshold);
+}
+
 
 void ImageTrimmer::about()
 {

@@ -655,6 +655,8 @@ void ImageWidget:: convertPosToPixel(double *pos, int *pixel)
 //    pixel[1] = qMin(pixel[1],imageHeight-1);
 }
 
+//---------------------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------
 void ImageWidget:: convertPixelToPos(int *pixel, double *pos)
 {
     double scale;
@@ -845,7 +847,6 @@ bool ImageWidget::selectMark(int pos[3], int *iactor)
 {
     double *apos;
     double delta, dist;
-    double threshold = 4;
     vtkSmartPointer<vtkActor2D> actor;
 
     printf("selectMark: Actors.size: %d\n",Actors.size());
@@ -868,6 +869,13 @@ bool ImageWidget::selectMark(int pos[3], int *iactor)
     }
     *iactor = -1;
     return false;
+}
+
+//---------------------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------
+void ImageWidget::setThreshold(double t)
+{
+    threshold = t;
 }
 
 //---------------------------------------------------------------------------------------------------
