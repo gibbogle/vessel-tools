@@ -692,11 +692,13 @@ int createObjectImage(int lab, int cmap[], bool taken[])
 {
 	int x, y, z, n, k, total;
 	int nlist;
-	int list[MAXLABELS];
+//	int list[MAXLABELS];
+	int *list;
 	unsigned char *labelmap;
 
 	fprintf(fpout,"createObjectImage: %d\n",lab);
 	fflush(fpout);
+	list = (int *)malloc(MAXLABELS*sizeof(int));
 	combine(lab, list, &nlist, cmap, taken);
 	total = 0;
 	for (k=0; k<nlist; k++)
@@ -732,6 +734,7 @@ int createObjectImage(int lab, int cmap[], bool taken[])
 		}
 	}
 	free(labelmap);
+	free(list);
 	return n;
 }
 

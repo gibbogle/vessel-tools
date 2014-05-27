@@ -10,7 +10,7 @@
 #include <vector>
 
 #define V3D(a,b,c)  p[(c)*imsize_xy+(b)*width+(a)]
-int width, height, depth, imsize_xy;
+long long int width, height, depth, imsize_xy;
 unsigned char *p;
 #define MAXSIMPLE 10000000
 short simpleList[3][MAXSIMPLE];
@@ -18,7 +18,8 @@ int nsimple;
 
 int GetNumberOfNeighbors(int x0, int y0, int z0)
 {
-	int dx, dy, dz, x, y, z;
+	int dx, dy, dz;
+	long long int x, y, z;
 
 	int n = -1;	// to exclude (x0,y0,z0)
 	for (dx=-1; dx<=1; dx++) {
@@ -39,7 +40,8 @@ int GetNumberOfNeighbors(int x0, int y0, int z0)
 
 int GetNeighbors(int x0, int y0, int z0, int *nbrs)
 {
-	int dx, dy, dz, x, y, z, n;
+	int dx, dy, dz;
+	long long x, y, z, n;
 	bool out_x, out_y, out_z;
 
 	n = 0;
@@ -135,8 +137,8 @@ BinaryThinningImageFilter3D<TInputImage,TOutputImage>
 
 	unsigned char *pin = (unsigned char *)(inputImage->GetBufferPointer());
 	p = (unsigned char *)(thinImage->GetBufferPointer());
-	int cnt = 0;
-	for (int i=0; i<width*height*depth; i++) {
+	long long int cnt = 0;
+	for (long long int i=0; i<width*height*depth; i++) {
 		unsigned char v = pin[i];
 		if (v > 0) {
 			v = 1;
@@ -144,7 +146,7 @@ BinaryThinningImageFilter3D<TInputImage,TOutputImage>
 		}
 		p[i] = v;
 	}
-	printf("Non-zero voxels: %d\n",cnt);
+	printf("Non-zero voxels: %lld\n",cnt);
 
 	/*
   ImageRegionConstIterator< TInputImage >  it( inputImage,  region );
@@ -210,7 +212,7 @@ BinaryThinningImageFilter3D<TInputImage,TOutputImage>
   OffsetType B   = {{ 0, 0,-1}};  // bottom		5
   */
 	int nbrs[27];
-	int x, y, z;
+	long long int x, y, z;
   int eulerLUT[256]; 
 
   // prepare Euler LUT [Lee94]
@@ -355,7 +357,7 @@ BinaryThinningImageFilter3D<TInputImage,TOutputImage>
 	printf("\n");
   } // end unchangedBorders while loop
 
-	for (int i=0; i<width*height*depth; i++) {
+	for (long long int i=0; i<width*height*depth; i++) {
 		p[i] *= 255;
 	}
 
