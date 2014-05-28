@@ -32,22 +32,36 @@ unsigned char *p, *p2;
 #define V2(a,b,c)  p2[(c)*xysize+(b)*width+(a)]
 
 long long width, height, depth, xysize;
+int nchopped;
 int stencil_size;
 int delta;
 double threshold_fraction;
+int threshold;
+char image_type;
 char stencil_shape = 'C';	// C = cube, S = sphere
 
 int check(int x1, int x2, int y1, int y2, int z1, int z2)
 {
-	int x, y, z;
-	int nlimit = threshold_fraction*(x2-x1+1)*(y2-y1+1)*(z2-z1+1);
+	long long int x, y, z;
+	unsigned char val;
+	long long int nlimit, count;
+	
+	nlimit = threshold_fraction*(x2-x1+1)*(y2-y1+1)*(z2-z1+1);
+	if (image_type == 'G') {
+		nlimit = 255*nlimit;
+	}
 	bool over = false;
-	int count = 0;
+	count = 0;
 	for (x=x1; x<=x2; x++) {
 		for (y=y1; y<=y2; y++) {
 			for (z=z1; z<=z2; z++) {
-				if (V(x,y,z) > 0) {
-					count++;
+				val = V(x,y,z);
+				if (val > 0) {
+					if (image_type == 'B') {
+						count++;
+					} else {
+						count += val;
+					}
 					if (count > nlimit) {
 						over = true;
 						goto DONE;
@@ -80,11 +94,15 @@ void process(int zstart, int zend)
 		x1 = x0 - radius;
 		y1 = y0 - radius;
 		z1 = z0 - radius;
-		x2 = x1 + stencil_size + 1;
-		y2 = y1 + stencil_size + 1;
-		z2 = z1 + stencil_size + 1;
+		x2 = x1 + stencil_size - 1;
+		y2 = y1 + stencil_size - 1;
+		z2 = z1 + stencil_size - 1;
+//		printf("x: %4d %4d y: %4d %4d z: %4d %4d\n",x1,x2,y1,y2,z1,z2);
 		int res = check(x1,x2,y1,y2,z1,z2);
-		if (res != 0) printf("Chopped: x: %4d %4d y: %4d %4d z: %4d %4d\n",x1,x2,y1,y2,z1,z2);
+		if (res != 0) {
+			printf("Chopped: x: %4d %4d y: %4d %4d z: %4d %4d\n",x1,x2,y1,y2,z1,z2);
+			nchopped++;
+		}
 		x0 += delta;
 		if (x0-radius+stencil_size+1 > width-1) {
 			x0 = radius;
@@ -100,6 +118,18 @@ void process(int zstart, int zend)
 
 }
 
+void apply_threshold()
+{
+	long long int k;
+
+	for (k=0; k<width*height*depth; k++) {
+		if (p[k] < threshold)
+			p[k] = 0;
+		else
+			p[k] = 255;
+	}
+}
+
 int main(int argc, char**argv)
 {
 	int zstart, zend;
@@ -107,11 +137,13 @@ int main(int argc, char**argv)
 	int zparstart[8], zparend[8];
 	int kpar, npar = 8;
 
-	if (argc != 7) {
-		printf("Usage: deblob input_tiff output_tiff stencil_size threshold_fraction delta ncpu\n");
+	if (argc != 9) {
+		printf("Usage: deblob input_tiff output_tiff stencil_size threshold_fraction delta image_type threshold ncpu\n");
 		printf("       where stencil_size is the cube side length or sphere diameter in voxels\n");
 		printf("       threshold_fraction is fraction of voxels that are lit\n");
 		printf("       delta is the stepping distance in voxels\n");
+		printf("       image_type is B (binary), G (grey scale), or T (thresholded binary)\n");
+		printf("       threshold is the initial threshold to be applied\n");
 		printf("       ncpu is the number of processor threads to use (OpenMP)\n");
 		return 0;
 	}
@@ -121,7 +153,9 @@ int main(int argc, char**argv)
 	sscanf(argv[3],"%d",&stencil_size);
 	sscanf(argv[4],"%lf",&threshold_fraction);
 	sscanf(argv[5],"%d",&delta);
-	sscanf(argv[6],"%d",&npar);
+	sscanf(argv[6],"%c",&image_type);
+	sscanf(argv[7],"%d",&threshold);
+	sscanf(argv[8],"%d",&npar);
 	use_compression = true;
 
 	typedef itk::ImageFileReader<ImageType> FileReaderType;
@@ -179,12 +213,19 @@ int main(int argc, char**argv)
 	}
 	zparend[npar-1] = depth-1;
 
+	if (image_type == 'T') {
+		apply_threshold();
+		image_type = 'B';
+	}
+
+	nchopped = 0;
 	#pragma omp parallel for num_threads(npar) private(zstart, zend)
 	for (kpar=0; kpar<npar; kpar++) {
 		zstart = zparstart[kpar];
 		zend = zparend[kpar];
 		process(zstart, zend);
 	}
+	printf("nchopped: %d\n",nchopped);
 
 	typedef itk::ImageFileWriter<ImageType> FileWriterType;
 	FileWriterType::Pointer writer = FileWriterType::New();

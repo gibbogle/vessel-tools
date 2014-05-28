@@ -37,11 +37,11 @@ void _splitpath(const char* Path, char* Drive, char* Directory, char* Filename, 
 //----------------------------------------------------------------------------
 int main(int argc, char**argv)
 {
-	long int x, y, z, xx, yy, zz, pos;
-	long int width, height, depth, xysize;
-	long int width1, height1, depth1, xysize1;
-	long int width2, height2, depth2, xysize2;
-	long int xstart2, ystart2, zstart2;
+	long long int x, y, z, xx, yy, zz, pos;
+	long long int width, height, depth, xysize;
+	long long int width1, height1, depth1, xysize1;
+	long long int width2, height2, depth2, xysize2;
+	long long int xstart2, ystart2, zstart2;
 	char axis, comp;
 	char LEfile[256], GTfile[256], tag[13];
 	char drive[32], dir[256],filename[256], ext[32];
