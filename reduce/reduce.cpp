@@ -984,12 +984,12 @@ int main(int argc, char **argv)
 	origin_shift[2] = 0;
 
 	err = WriteAmiraFile(output_amfile,input_amfile,NP1,origin_shift);
-	if (err != 0) return 5;
+	if (err != 0) return 4;
 	if (cmgui_flag == 1) {
 		err = WriteCmguiData(output_basename,NP1,origin_shift);
-		if (err != 0) return 6;
+		if (err != 0) return 5;
 	}
 	err = CreateDistributions(NP1);
-	if (err != 0) return 7;
+	if (err != 0) return 6;
 	return 0;
 }

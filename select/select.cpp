@@ -1148,21 +1148,22 @@ int main(int argc, char **argv)
 	if (err != 0) return 2;
 
 	CheckNetwork(NP0);
-	return 1;
+	return 3;
 
 	NP1 = (NETWORK *)malloc(sizeof(NETWORK));
-	if (use_diameter) 
+	if (use_diameter) {
 		err = CreateDiamSelectNet(NP0,NP1,diam_min,diam_max,diam_flag);
-	else
+		if (err != 0) return 4;
+	} else {
 		err = CreateLenSelectNet(NP0,NP1,len_min,len_max);
-	if (err != 0) return 3;
-
+		if (err != 0) return 5;
+	}
 	printf("NP1: ne, nv, np: %d %d %d\n",NP1->ne,NP1->nv,NP1->np);
 
 	if (connect) {
 		NP2 = (NETWORK *)malloc(sizeof(NETWORK));
 		err = CreateLargestConnectedNet(NP1,NP2);
-		if (err != 0) return 4;
+		if (err != 0) return 6;
 	}
 
 	origin_shift[0] = 0;
@@ -1171,22 +1172,22 @@ int main(int argc, char **argv)
 
 	if (connect) {
 		err = WriteAmiraFile(output_amfile,input_amfile,NP2,origin_shift);
-		if (err != 0) return 5;
+		if (err != 0) return 7;
 		if (cmgui_flag == 1) {
 			err = WriteCmguiData(output_basename,NP2,origin_shift);
-			if (err != 0) return 6;
+			if (err != 0) return 8;
 		}
 		err = CreateDistributions(NP2);
-		if (err != 0) return 7;
+		if (err != 0) return 9;
 	} else {
 		err = WriteAmiraFile(output_amfile,input_amfile,NP1,origin_shift);
-		if (err != 0) return 5;
+		if (err != 0) return 7;
 		if (cmgui_flag == 1) {
 			err = WriteCmguiData(output_basename,NP1,origin_shift);
-			if (err != 0) return 6;
+			if (err != 0) return 8;
 		}
 		err = CreateDistributions(NP1);
-		if (err != 0) return 7;
+		if (err != 0) return 9;
 	}
 	return 0;
 }

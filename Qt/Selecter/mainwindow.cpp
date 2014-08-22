@@ -54,11 +54,14 @@ void MainWindow::outFileSelecter()
 
 void MainWindow::on_radioButton_diameter_changed()
 {
-    printf("radiobutton changed\n");
     bool is_diam = ui->radioButton_diameter->isChecked();
     ui->groupBox_diameter->setEnabled(is_diam);
     ui->groupBox_criterion->setEnabled(is_diam);
     ui->groupBox_length->setEnabled(!is_diam);
+    ui->checkBoxConnect->setEnabled(is_diam);
+    if (!is_diam) {
+        ui->checkBoxConnect->setChecked(false);
+    }
 }
 
 void MainWindow::selecter()
@@ -116,11 +119,19 @@ void MainWindow::selecter()
 	else if (res == 2)
         resultstr = "FAILED: Read error on input AM file";
     else if (res == 3)
-        resultstr = "FAILED: CreateSelectNet error";
+        resultstr = "FAILED: CheckNetwork error";
     else if (res == 4)
-        resultstr = "FAILED: Write error on output AM file";
+        resultstr = "FAILED: CreateDiamSelectNet error";
     else if (res == 5)
+        resultstr = "FAILED: CreateLenSelectNet error";
+    else if (res == 6)
+        resultstr = "FAILED: CreateLargestConnectedNet error";
+    else if (res == 7)
+        resultstr = "FAILED: Write error on output AM file";
+    else if (res == 8)
         resultstr = "FAILED: Write error on output CMGUI files";
+    else if (res == 9)
+        resultstr = "FAILED: Error in computing network statistics";
     else
         resultstr = "WTF?";
 
