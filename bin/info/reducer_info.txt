@@ -1,4 +1,4 @@
-Reducer information
+Reducer information 
 
 This program creates modified version of the network, in which some very short vessels are eliminated by merging two junctions into one.
 The criterion for vessel elimination is: length/diameter < specified threshold value.
