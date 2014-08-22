@@ -1,11 +1,17 @@
 Selecter information
 
-This program enables creation of a subset of the network.  
-The user specifies a range of vessel diameters: (Dmin,Dmax), and the selection criterion:
+This program enables creation of a subset of the network, on the basis of
+either vessel diameter or vessel length.  
+
+If diameter is chosen, the user specifies a range of vessel diameters: (Dmin,Dmax), 
+and the selection criterion:
 
 Average diameter: Vessels which have average diameter in this range are selected
 Majority of points: Vessels for which more than half the points have diameter in this range are selected
 All points: Vessels for which all points have diameter in this range are selected
+
+If length is chosen, the user specifies a range of vessel lengths: (Lmin,Lmax)
+
 The user can choose to restrict the network to the largest connected subnetwork.
 
 The resulting network is saved to the specified output .am file, and optionally to CMGUI files.

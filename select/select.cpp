@@ -26,6 +26,8 @@ FILE *fperr, *fpout;
 int nconnected;
 int ne_net[NEMAX];
 float diam_min, diam_max, origin_shift[3];
+float len_min, len_max;
+bool use_diameter;
 
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
@@ -250,6 +252,7 @@ int ReadAmiraFile(char *amFile, NETWORK *net)
 						return 1;
 					}
 					sscanf(line,"%d",&net->edgeList[i].npts);
+					fprintf(fpout,"i: %6d npts: %4d\n",i,net->edgeList[i].npts);
 					if (net->edgeList[i].npts < 1) {
 						printf("ReadAmiraFile: i: %d npts: %d\n",i,net->edgeList[i].npts);
 						return 1;
@@ -550,7 +553,7 @@ int CreateLargestConnectedNet(NETWORK *net1, NETWORK *net2)
 //             2  all
 // Note the inefficiency in keeping all points, used or not.
 //-----------------------------------------------------------------------------------------------------
-int CreateSelectNet(NETWORK *net0, NETWORK *net1, float diam_min, float diam_max, int diam_flag)
+int CreateDiamSelectNet(NETWORK *net0, NETWORK *net1, float diam_min, float diam_max, int diam_flag)
 {
 	int i, j, ie, iv, kp, kv, ne, nv, nin, kin;
 	float d, dave;
@@ -710,6 +713,126 @@ int CreateSelectNet(NETWORK *net0, NETWORK *net1, float diam_min, float diam_max
 	return 0;
 }
 
+//-----------------------------------------------------------------------------------------------------
+// Locate all edges with length in a specified range.
+//-----------------------------------------------------------------------------------------------------
+int CreateLenSelectNet(NETWORK *net0, NETWORK *net1, float len_min, float len_max)
+{
+	int i, j, ie, iv, kp, kp1, kp2, kv, ne, nv, kin;
+	float len, dx, dy, dz;
+	bool in;
+	EDGE *elist;
+	int *ivlist;
+
+	fprintf(fpout,"Number of edges: %d\n",net0->ne);
+	ne = 0;
+	for (i=0; i<net0->ne; i++) {
+		len = 0;
+		kin = 0;
+		for (j=1; j<net0->edgeList[i].npts; j++) {
+			kp2 = net0->edgeList[i].pt[j];
+			kp1 = net0->edgeList[i].pt[j-1];
+			//dx = net0->point[kp2].x - net0->point[kp1].x;
+			//dy = net0->point[kp2].y - net0->point[kp1].y;
+			//dz = net0->point[kp2].z - net0->point[kp1].z;
+			//len += sqrt(dx*dx + dy*dy + dz*dz);
+			len += dist(net0,kp1,kp2);
+		}
+		if (len < len_min || len > len_max) {
+			in = false;
+//			fprintf(fpout,"edge: %6d npts: %3d len: %6.1f\n",i,net0->edgeList[i].npts,len);
+		} else {
+			in = true;
+		}
+		if (in) ne++;
+	}
+	printf("number in the length range: %d  number outside: %d\n",ne,net0->ne-ne);
+	fprintf(fpout,"number in the length range: %d  number outside: %d\n",ne,net0->ne-ne);
+	fprintf(fpout,"Number of edges: %d\n",net0->ne);
+	// Create a list of edges, and a list of vertices
+	// The index number of a vertex in the list replaces vert[] in the elist entry.
+	elist = (EDGE *)malloc(ne*sizeof(EDGE));
+	ivlist = (int *)malloc(2*ne*sizeof(int));
+	nv = 0;
+	ne = 0;
+	for (i=0; i<net0->ne; i++) {
+		len = 0;
+		kin = 0;
+		for (j=1; j<net0->edgeList[i].npts; j++) {
+			kp2 = net0->edgeList[i].pt[j];
+			kp1 = net0->edgeList[i].pt[j-1];
+			//dx = net0->point[kp2].x - net0->point[kp1].x;
+			//dy = net0->point[kp2].y - net0->point[kp1].y;
+			//dz = net0->point[kp2].z - net0->point[kp1].z;
+			//len += sqrt(dx*dx + dy*dy + dz*dz);
+			len += dist(net0,kp1,kp2);
+		}
+		if (len < len_min || len > len_max) {
+			in = false;
+		} else {
+			in = true;
+		}
+		if (in) {
+			elist[ne] = net0->edgeList[i];
+			for (j=0; j<2; j++) {
+				iv = net0->edgeList[i].vert[j];
+				kv = ivlistAdd(iv,ivlist,&nv);
+				elist[ne].vert[j] = kv;
+			}
+			ne++;
+		}
+	}
+	printf("ne: %d  nv: %d\n",ne,nv);
+	// Now from this list of edges we need to create the network net1.
+	// Note that the vertex indices in ivlist[] are for the net0 vertex list.
+	net1->vertex = (VERTEX *)malloc(nv*sizeof(VERTEX));
+	net1->edgeList = (EDGE *)malloc(ne*sizeof(EDGE));
+	net1->point = (POINT *)malloc(net0->np*sizeof(POINT));	// keeping full original list of points
+	// Set up net1 vertices
+	for (iv=0; iv<nv; iv++) {
+		net1->vertex[iv] = net0->vertex[ivlist[iv]];
+		net1->vertex[iv].nlinks = 0;
+	}
+	// Set up net1 edges and count vertex edges
+	for (i=0; i<ne; i++) {
+		net1->edgeList[i] = elist[i];
+		net1->edgeList[i].netID = 0;	// initially edges are not connected to a connected subnetwork
+		for (int k=0; k<2;k++) {
+			iv = net1->edgeList[i].vert[k];
+			net1->vertex[iv].nlinks++;
+		}
+	}
+	// Set up vertex edge lists
+	for (iv=0; iv<nv; iv++) {
+		net1->vertex[iv].edge = (int *)malloc(net1->vertex[iv].nlinks*sizeof(int));
+		net1->vertex[iv].nlinks = 0;
+	}
+	for (i=0; i<ne; i++) {
+		for (int k=0; k<2;k++) {
+			iv = net1->edgeList[i].vert[k];
+			net1->vertex[iv].edge[net1->vertex[iv].nlinks] = i;
+			net1->vertex[iv].nlinks++;
+		}
+	}
+
+	// Copy net0 points to net1, initially set all points unused
+	for (i=0; i<net0->np; i++) {
+		net1->point[i] = net0->point[i];
+		net1->point[i].used = false;
+	}
+	// Now flag those points that are used.
+	for (ie=0; ie<ne; ie++) {
+		for (kp=0; kp<elist[ie].npts; kp++) {
+			i = elist[ie].pt[kp];
+			net1->point[i].used = true;
+		}
+	}
+
+	net1->ne = ne;
+	net1->np = net0->np;
+	net1->nv = nv;
+	return 0;
+}
 int myFactorial( int integer)
 {
 	if ( integer == 1)
@@ -718,6 +841,50 @@ int myFactorial( int integer)
 		return (integer * (myFactorial(integer-1)));
 	}
 } 
+
+//-----------------------------------------------------------------------------------------------------
+// Find vertex nodes with only two edges connected
+//-----------------------------------------------------------------------------------------------------
+void CheckNetwork(NETWORK *net)
+{
+	int iv, i, k, ne, nv, n2;
+
+	fprintf(fpout,"CheckNetwork\n");
+	nv = net->nv;
+	ne = net->ne;
+	for (iv=0; iv<nv; iv++) {
+		net->vertex[iv].nlinks = 0;
+	}
+	// Set up net1 edges and count vertex edges
+	for (i=0; i<ne; i++) {
+		for (int k=0; k<2;k++) {
+			iv = net->edgeList[i].vert[k];
+			net->vertex[iv].nlinks++;
+		}
+	}
+	n2 = 0;
+	for (iv=0; iv<nv; iv++) {
+		if (net->vertex[iv].nlinks == 2) {
+			n2++;
+			fprintf(fpout,"vertex: %6d nlinks: %2d\n",iv,net->vertex[iv].nlinks);
+		}
+	}
+	fprintf(fpout,"Number of 2-link vertices: %d\n",n2);
+	/*
+	// Set up vertex edge lists
+	for (iv=0; iv<nv; iv++) {
+		net->vertex[iv].edge = (int *)malloc(net->vertex[iv].nlinks*sizeof(int));
+		net->vertex[iv].nlinks = 0;
+	}
+	for (i=0; i<ne; i++) {
+		for (int k=0; k<2;k++) {
+			iv = net->edgeList[i].vert[k];
+			net->vertex[iv].edge[net->vertex[iv].nlinks] = i;
+			net->vertex[iv].nlinks++;
+		}
+	}
+	*/
+}
 
 //-----------------------------------------------------------------------------------------------------
 // The average diameter of a vessel (edge) is now estimated by dividing the volume by the length.
@@ -909,15 +1076,15 @@ int main(int argc, char **argv)
 	char drive[32], dir[2048],filename[256], ext[32];
 	char errfilename[2048], output_amfile[2048], result_file[2048];
 	char output_basename[2048];
-	int diam_flag, cmgui_flag, connect_flag;
-//	float diam_min, diam_max, origin_shift[3];
+	int diam_flag, cmgui_flag, connect_flag, mode_flag;
+	float val_min, val_max;
 	bool connect;
 	NETWORK *NP0, *NP1, *NP2;
 
-	if (argc != 8) {
-		printf("Usage: select input_amfile output_amfile diam_min diam_max connect_flag diam_flag cmgui_flag\n");
+	if (argc != 9) {
+		printf("Usage: select input_amfile output_amfile mode val_min val_max connect_flag diam_flag cmgui_flag\n");
 		fperr = fopen("select_error.log","w");
-		fprintf(fperr,"Usage: select input_amfile output_amfile diam_min diam_max connect_flag diam_flag cmgui_flag\n");
+		fprintf(fperr,"Usage: select input_amfile output_amfile mode val_min val_max connect_flag diam_flag cmgui_flag\n");
 		fprintf(fperr,"Submitted command line: argc: %d\n",argc);
 		for (int i=0; i<argc; i++) {
 			fprintf(fperr,"argv: %d: %s\n",i,argv[i]);
@@ -928,13 +1095,21 @@ int main(int argc, char **argv)
 
 	input_amfile = argv[1];
 	strcpy(output_amfile,argv[2]);
-	sscanf(argv[3],"%f",&diam_min);
-	sscanf(argv[4],"%f",&diam_max);
-	sscanf(argv[5],"%d",&connect_flag);
-	sscanf(argv[6],"%d",&diam_flag);
-	sscanf(argv[7],"%d",&cmgui_flag);
-//	use_average = (ave_flag != 0);
+	sscanf(argv[3],"%d",&mode_flag);
+	sscanf(argv[4],"%f",&val_min);
+	sscanf(argv[5],"%f",&val_max);
+	sscanf(argv[6],"%d",&connect_flag);
+	sscanf(argv[7],"%d",&diam_flag);
+	sscanf(argv[8],"%d",&cmgui_flag);
 	connect = (connect_flag != 0);
+	use_diameter = (mode_flag == 1);
+	if (use_diameter) {
+		diam_min = val_min;
+		diam_max = val_max;
+	} else {
+		len_min = val_min;
+		len_max = val_max;
+	}
 
 	_splitpath(output_amfile,drive,dir,filename,ext);
 	strcpy(output_basename,drive);
@@ -949,21 +1124,37 @@ int main(int argc, char **argv)
 
 	fpout = fopen(result_file,"w");	
 	printf("Input .am file: %s\n",input_amfile);
+	printf("mode_flag: %d\n",mode_flag);
 	printf("connect_flag: %d\n",connect_flag);
 	printf("diam_flag: %d\n",diam_flag);
 	printf("cmgui_flag: %d\n",cmgui_flag);
-	printf("diam_min, diam_max: %6.2f %6.2f\n",diam_min,diam_max);
+	if (use_diameter) 
+		printf("diam_min, diam_max: %6.2f %6.2f\n",diam_min,diam_max);
+	else
+		printf("len_min, len_max: %6.1f %6.1f\n",len_min,len_max);
 	fprintf(fpout,"Input .am file: %s\n",input_amfile);
 	fprintf(fpout,"connect_flag: %d\n",connect_flag);
 	fprintf(fpout,"diam_flag: %d\n",diam_flag);
 	fprintf(fpout,"cmgui_flag: %d\n",cmgui_flag);
-	fprintf(fpout,"diam_min, diam_max: %6.2f %6.2f\n",diam_min,diam_max);
-
+	if (use_diameter) {
+		fprintf(fpout,"Using diameter range:\n");
+		fprintf(fpout,"diam_min, diam_max: %6.2f %6.2f\n",diam_min,diam_max);
+	} else {
+		fprintf(fpout,"Using length range:\n");
+		fprintf(fpout,"len_min, len_max: %6.1f %6.1f\n",len_min,len_max);
+	}
 	NP0 = (NETWORK *)malloc(sizeof(NETWORK));
 	err = ReadAmiraFile(input_amfile,NP0);
 	if (err != 0) return 2;
+
+	CheckNetwork(NP0);
+	return 1;
+
 	NP1 = (NETWORK *)malloc(sizeof(NETWORK));
-	err = CreateSelectNet(NP0,NP1,diam_min,diam_max,diam_flag);
+	if (use_diameter) 
+		err = CreateDiamSelectNet(NP0,NP1,diam_min,diam_max,diam_flag);
+	else
+		err = CreateLenSelectNet(NP0,NP1,len_min,len_max);
 	if (err != 0) return 3;
 
 	printf("NP1: ne, nv, np: %d %d %d\n",NP1->ne,NP1->nv,NP1->np);

@@ -1,0 +1,14 @@
+Reducer information
+
+This program creates modified version of the network, in which some very short vessels are eliminated by merging two junctions into one.
+The criterion for vessel elimination is: length/diameter < specified threshold value.
+
+For the computation of network statistics (averages and distributions of diameter and length) there are two options for limiting the influence of short vessels.
+
+Option 1. If the specified length limit is negative, the same length/diameter criterion used to remove short vessels will be used in the statistics calculation.  This has the effect of ignoring short vessels that could not be eliminated.
+
+Option 2. If it is positive, the specified length limit will be used to ignore short vessels.
+
+The resulting network is saved to the specified output .am file, and optionally to CMGUI files.
+
+

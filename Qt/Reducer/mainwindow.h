@@ -18,8 +18,7 @@ public:
 public slots:
 	void inFileSelecter();
 	void outFileSelecter();
-    void selecter();
-    void on_radioButton_diameter_changed();
+    void reducer();
 
 private:
     Ui::MainWindow *ui;

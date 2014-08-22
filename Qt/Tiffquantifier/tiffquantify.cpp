@@ -535,7 +535,7 @@ int MainWindow::setup(char *input_tifffile, char *close_file, char *result_file,
 {
 	int err;
 
-    fprintf(fpout,"Quantifier\n----------\n");
+    fprintf(fpout,"TiffQuantifier\n--------------\n");
 	free_all();
 	printf("did free_all\n");
 	if (fperr == NULL) fperr = fopen("quantify_error.out","w");
