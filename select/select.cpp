@@ -1082,6 +1082,10 @@ int main(int argc, char **argv)
 
 	if (argc != 9) {
 		printf("Usage: select input_amfile output_amfile mode val_min val_max connect_flag diam_flag cmgui_flag\n");
+		printf("       mode = 0 for length selection, = 1 for diameter selection\n");
+		printf("       diam_flag = 0  average of points on the edge\n");
+        printf("                 = 1  majority ....................\n");
+        printf("                 = 2  all .........................\n");
 		fperr = fopen("select_error.log","w");
 		fprintf(fperr,"Usage: select input_amfile output_amfile mode val_min val_max connect_flag diam_flag cmgui_flag\n");
 		fprintf(fperr,"Submitted command line: argc: %d\n",argc);
@@ -1111,6 +1115,8 @@ int main(int argc, char **argv)
 	}
 	use_len_diam_limit = false;
 	use_len_limit = false;
+	ddiam = 0.5;
+	dlen = 1.0;
 
 	_splitpath(output_amfile,drive,dir,filename,ext);
 	strcpy(output_basename,drive);

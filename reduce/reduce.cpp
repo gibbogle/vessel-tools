@@ -1286,6 +1286,9 @@ int main(int argc, char **argv)
 		use_len_diam_limit = false;
 		use_len_limit = true;
 	}
+	ddiam = 0.5;
+	dlen = 1.0;
+
 	NP0 = (NETWORK *)malloc(sizeof(NETWORK));
 	err = ReadAmiraFile(input_amfile,NP0);
 	if (err != 0) return 2;
