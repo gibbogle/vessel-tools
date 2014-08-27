@@ -7,11 +7,11 @@ struct point_str
 	float d;
 	bool used;
 };
-typedef point_str APOINT;
+typedef point_str POINT;
 
 struct vertex_str
 {
-	APOINT point;
+	POINT point;
 	int nlinks;
 	int pt[10];
 	bool used;
@@ -31,4 +31,8 @@ struct edge_str
 };
 typedef edge_str EDGE;
 
+#define NBOX 400
+#define STR_LEN 128
+//#define RATIO_LIMIT 4	// should be an input parameter
+#define PI 3.14159
 

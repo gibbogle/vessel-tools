@@ -15,19 +15,16 @@
 
 #include "network.h"
 
-int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[]);
-
-#define PI 3.14159
-#define STR_LEN 128
-#define NEMAX 1000
-#define NBOX 500
-
 FILE *fperr, *fpout;
 int nconnected;
 int ne_net[NEMAX];
 float diam_min, diam_max, origin_shift[3];
 float len_min, len_max;
 bool use_diameter;
+
+float ddiam, dlen;
+bool use_len_limit, use_len_diam_limit;
+float len_limit, len_diam_limit;
 
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
@@ -845,7 +842,7 @@ int myFactorial( int integer)
 //-----------------------------------------------------------------------------------------------------
 // Find vertex nodes with only two edges connected
 //-----------------------------------------------------------------------------------------------------
-void CheckNetwork(NETWORK *net)
+int CheckNetwork(NETWORK *net)
 {
 	int iv, i, k, ne, nv, n2;
 
@@ -870,6 +867,7 @@ void CheckNetwork(NETWORK *net)
 		}
 	}
 	fprintf(fpout,"Number of 2-link vertices: %d\n",n2);
+	return 0;
 	/*
 	// Set up vertex edge lists
 	for (iv=0; iv<nv; iv++) {
@@ -886,11 +884,12 @@ void CheckNetwork(NETWORK *net)
 	*/
 }
 
+/*
 //-----------------------------------------------------------------------------------------------------
 // The average diameter of a vessel (edge) is now estimated by dividing the volume by the length.
 // All distances in the .am file are in um.
 //-----------------------------------------------------------------------------------------------------
-int CreateDistributions(NETWORK *net)
+int CreateDistributions1(NETWORK *net)
 {
 	int adbox[NBOX], lvbox[NBOX];
 	int segadbox[NBOX];
@@ -934,6 +933,7 @@ int CreateDistributions(NETWORK *net)
 			kp = edge.pt[ip];
 			ad = net->point[kp].d;
 //			ad = avediameter[kp];
+			r2 = ad*ad/4;
 			ave_pt_diam += ad;
 			if (dbug) {
 				printf("%d  %d  %f  %f\n",ip,kp,ad,ddiam);
@@ -956,7 +956,6 @@ int CreateDistributions(NETWORK *net)
 			ndtot++;
 			if (ip > 0) {
 				dlen = dist(net,kp,kpprev);
-				r2 = ad*ad/4;
 				dvol += PI*dlen*(r2 + r2prev)/2;
 				lsum += dlen;
 			}
@@ -1064,7 +1063,7 @@ int CreateDistributions(NETWORK *net)
 	}
 	return 0;
 }
-
+*/
 
 //-----------------------------------------------------------------------------------------------------
 // If connect_flag==1, the largest connected network is found, other edges are dropped.
@@ -1110,6 +1109,8 @@ int main(int argc, char **argv)
 		len_min = val_min;
 		len_max = val_max;
 	}
+	use_len_diam_limit = false;
+	use_len_limit = false;
 
 	_splitpath(output_amfile,drive,dir,filename,ext);
 	strcpy(output_basename,drive);
@@ -1147,8 +1148,8 @@ int main(int argc, char **argv)
 	err = ReadAmiraFile(input_amfile,NP0);
 	if (err != 0) return 2;
 
-	CheckNetwork(NP0);
-	return 3;
+	err = CheckNetwork(NP0);
+	if (err != 0) return 3;
 
 	NP1 = (NETWORK *)malloc(sizeof(NETWORK));
 	if (use_diameter) {
@@ -1177,8 +1178,10 @@ int main(int argc, char **argv)
 			err = WriteCmguiData(output_basename,NP2,origin_shift);
 			if (err != 0) return 8;
 		}
-		err = CreateDistributions(NP2);
+		err = EdgeDimensions(NP2->edgeList,NP2->point,NP2->ne);
 		if (err != 0) return 9;
+		err = CreateDistributions(NP2);
+		if (err != 0) return 10;
 	} else {
 		err = WriteAmiraFile(output_amfile,input_amfile,NP1,origin_shift);
 		if (err != 0) return 7;
@@ -1186,8 +1189,10 @@ int main(int argc, char **argv)
 			err = WriteCmguiData(output_basename,NP1,origin_shift);
 			if (err != 0) return 8;
 		}
-		err = CreateDistributions(NP1);
+		err = EdgeDimensions(NP1->edgeList,NP1->point,NP1->ne);
 		if (err != 0) return 9;
+		err = CreateDistributions(NP1);
+		if (err != 0) return 10;
 	}
 	return 0;
 }

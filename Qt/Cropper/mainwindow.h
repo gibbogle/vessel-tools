@@ -35,6 +35,7 @@ public:
 
 private slots:
     void on_radioButton_centre_toggled(bool checked);
+    void on_radioButton_block_toggled(bool checked);
 };
 
 #endif // MAINWINDOW_H

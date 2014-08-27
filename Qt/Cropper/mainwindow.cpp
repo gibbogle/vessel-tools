@@ -49,6 +49,15 @@ void MainWindow::outputFileSelecter()
 	ui->labelOutputFile->setText(outputFileName);
 }
 
+void MainWindow::on_radioButton_block_toggled(bool checked)
+{
+    ui->groupBox_blockchoice->setEnabled(checked);
+    bool use_range = ui->radioButton_range->isChecked();
+    ui->groupBox_range->setEnabled(checked&&use_range);
+    ui->groupBox_centre->setEnabled(checked&&!use_range);
+    ui->groupBox_sphere->setEnabled(!checked);
+}
+
 void MainWindow::checkBox_x()
 {
 	if (ui->checkBox_x->isChecked()) {
@@ -119,22 +128,27 @@ void MainWindow::cropper()
 	qstr += " ";
 	qstr += outputFileName;
 	qstr += " ";
-    qstr += x1str;
-	qstr += " ";
-    qstr += x2str;
-	qstr += " ";
-    qstr += y1str;
-	qstr += " ";
-    qstr += y2str;
-	qstr += " ";
-    qstr += z1str;
-	qstr += " ";
-    qstr += z2str;
-	qstr += " ";
-	if (ui->checkBoxCompress->isChecked())
-		qstr += "C";
-	else
-		qstr += "U";
+    if (ui->radioButton_block->isChecked()) {
+        qstr += x1str;
+        qstr += " ";
+        qstr += x2str;
+        qstr += " ";
+        qstr += y1str;
+        qstr += " ";
+        qstr += y2str;
+        qstr += " ";
+        qstr += z1str;
+        qstr += " ";
+        qstr += z2str;
+    } else {
+        qstr += ui->lineEdit_x0->text();
+        qstr += " ";
+        qstr += ui->lineEdit_y0->text();
+        qstr += " ";
+        qstr += ui->lineEdit_z0->text();
+        qstr += " ";
+        qstr += ui->lineEdit_R->text();
+    }
 
 	if (qstr.size()>(int)sizeof(cmdstr)-1) {
 		printf("Failed to convert qstr->cmdstr since qstr didn't fit\n");
@@ -149,13 +163,13 @@ void MainWindow::cropper()
 	if (res == 0)
 		resultstr = "SUCCESS";
 	else if (res == 1)
-		resultstr = "FAILED: wrong number of arguments";
+        resultstr = "FAILED: Wrong number of arguments";
 	else if (res == 2)
 		resultstr = "FAILED: Read error on input file";
-	else if (res == 3)
+    else if (res == 3)
+        resultstr = "FAILED: Sphere too close to image boundary";
+    else if (res == 4)
 		resultstr = "FAILED: Write error on output file";
-	else if (res == 4)
-		resultstr = "FAILED: out of memory";
 	ui->labelResult->setText(resultstr);
 }
 

@@ -1,10 +1,13 @@
 Cropper information
 
-This program enables selection and saving of a rectangular piece of a 3D TIFF image.  
-The user specifies a subregion either by:
-  the X, Y and Z ranges
-or by
-  the centre and size for each axis (size is the voxel range)
+This program enables selection and saving of a subregion of a 3D TIFF image, either a block or a sphere. 
+If a rectangular block:
+  The user specifies a subregion either by:
+    the X, Y and Z ranges
+  or by
+    the centre and size for each axis (size is the voxel range)
+If a sphere, the user specifies centre and radius.
+
 (all values are in voxel units)
 
 For comparison with a sub-network generated with zoomer, the piece should be a cube, i.e. all sizes should be the same.  

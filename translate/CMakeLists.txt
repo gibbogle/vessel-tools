@@ -35,7 +35,7 @@ MESSAGE(FATAL_ERROR
 ENDIF(ITK_FOUND)
 
 set(PROJECTNAME "translate")
-ADD_EXECUTABLE(${PROJECTNAME} translate.cpp cmgui.cpp)
+ADD_EXECUTABLE(${PROJECTNAME} translate.cpp cmgui.cpp statistics.cpp network.h)
 TARGET_LINK_LIBRARIES(${PROJECTNAME} ${ITK_LIBRARIES} )
 ADD_CUSTOM_COMMAND(TARGET ${PROJECTNAME} POST_BUILD COMMAND copy \"$(TargetPath)\" \"../bin/exec\")
 

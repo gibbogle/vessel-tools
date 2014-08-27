@@ -1,7 +1,13 @@
 Translater information
 
 This program translates an Amira spatialgraph file (.am) to a pair of CMGUI files, 
-and computes the distributions of vessel diameter and vessel length.
+and computes the statistics of vessel diameter and vessel length.
+
+In computing statistics, there are three options concerning treatment of very short vessels:
+Option 1: all vessels are included
+Option 2: vessels less than the specified length limit are excluded
+Option 3: vessels with length/diameter less than the specified limit are excluded
+
 The widths of the boxes used for counting vessels to compute the probability distributions must be specified.
 
 The CMGUI files are generated if the box is ticked.

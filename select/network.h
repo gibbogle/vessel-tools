@@ -1,3 +1,6 @@
+#ifndef NETWORK_H
+#define NETWORK_H
+
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
@@ -18,6 +21,7 @@ struct vertex_str
 	int pt[10];
 	bool used;
 	int netID;	// needs to be initialised to 0
+	int point_index;
 };
 typedef vertex_str VERTEX;	
 // A VERTEX has a POINT (point), number of linked segments (nlinks)
@@ -30,7 +34,6 @@ struct edge_str
 	int vert[2];
 	float segavediam;
 	float length_vox;	// voxel-voxel length
-//	double length_jun;	// junction-junction length
 	bool used;
 	int netID;	// connected network ID, initially 0
 	float length_um;
@@ -50,3 +53,14 @@ struct network_str
 };
 typedef network_str NETWORK;
 
+#define PI 3.14159
+#define STR_LEN 128
+#define NEMAX 1000
+#define NBOX 500
+
+float dist(NETWORK *net, int k1, int k2);
+int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[]);
+int EdgeDimensions(EDGE *edges, POINT *points, int ne);
+int CreateDistributions(NETWORK *net);
+
+#endif // NETWORK_H

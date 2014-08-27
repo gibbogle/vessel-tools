@@ -1,25 +1,8 @@
-// translate
 #include <cstdio>
-#include <math.h>
 
-#include "translate.h"
+#include "network.h"
 
-extern int nv, ne, np;
-extern int nv_used, ne_used, np_used;
-extern EDGE *edgeList;
-extern VERTEX *vertex;
-extern APOINT *point;
 extern FILE *fperr, *fpout;
-
-//-----------------------------------------------------------------------------------------------------
-//-----------------------------------------------------------------------------------------------------
-float dist(int k1, int k2)
-{
-	float dx = point[k2].x - point[k1].x;
-	float dy = point[k2].y - point[k1].y;
-	float dz = point[k2].z - point[k1].z;
-	return sqrt(dx*dx+dy*dy+dz*dz);
-}
 
 //-----------------------------------------------------------------------------------------------------
 // Create CMGUI .com file
@@ -39,8 +22,6 @@ void write_com(FILE *dotcom, char *fileName)
     fprintf(dotcom, "# The radius of the vessel is stored in component 1 of field\n");
     fprintf(dotcom, "# 'vessel_radius', defined over the elements in the vessels group.\n");
     fprintf(dotcom, "# Now draw spheres using these radii with the following command.\n");
-//    fprintf(dotcom, "gfx mod g_e vessels element_points glyph sphere_hires general size \"0*0*0\" ");
-//    fprintf(dotcom, "orientation vessel_radius scale_factors \"2*2*2\" discretization \"3*3*3\" material gold");
     fprintf(dotcom, "gfx destroy node all\n");
     fprintf(dotcom, "gfx modify g_element vessels general clear\n");
     fprintf(dotcom, "gfx modify g_element vessels cylinders coordinate coordinates tessellation default local circle_discretization 12 radius_scalar vessel_radius scale_factor 1.0 native_discretization NONE select_on material gold selected_material default_selected render_shaded\n");
@@ -48,7 +29,6 @@ void write_com(FILE *dotcom, char *fileName)
     fprintf(dotcom, "gfx cre win 1\n");
     fprintf(dotcom, "gfx mod win 1 view perspective\n");
 }
-
 
 //-----------------------------------------------------------------------------------------------------
 // Write initial section of .exnode file
@@ -108,59 +88,72 @@ void WriteExelemHeader(FILE *exelem)
 // Does the node file need all nodes from 1 to np?
 // A quick test seems to show that neither element nor node numbers need to be consecutive.
 //-----------------------------------------------------------------------------------------------------
-int WriteCmguiData(char *basename)
+int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[])
 {
 	int k, ie, ip, npts;
 	EDGE edge;
-	char exelemname[256], exnodename[256], dotcomname[256];
+	char exelemname[1024], exnodename[1024];
+	char dotcomname[1024];
 	FILE *exelem, *exnode, *dotcom;
 
-	printf("WriteCmguiData: %s %d %d\n",basename,ne,np);
+	printf("WriteCmguiData: %s %d %d\n",basename,net->ne,net->np);
 	fprintf(fperr,"WriteCmguiData: %s\n",basename);
 	fflush(fperr);
 	sprintf(dotcomname,"%s.com.txt",basename);
-	sprintf(exnodename,"%s.exnode",basename);
 	sprintf(exelemname,"%s.exelem",basename);
-	printf("exelem file: %s exnode file: %s\n",exelemname,exnodename);
-	fprintf(fperr,"exelem file: %s exnode file: %s\n",exelemname,exnodename);
+	sprintf(exnodename,"%s.exnode",basename);
+	printf("exelem file: %s\n",exelemname);
+	printf("exnode file: %s\n",exnodename);
+	fprintf(fperr,"exelem file: %s\n",exelemname);
+	fprintf(fperr,"exnode file: %s\n",exnodename);
 	fflush(fperr);
 	dotcom = fopen(dotcomname,"w");
 	exelem = fopen(exelemname,"w");
 	exnode = fopen(exnodename,"w");
-	write_com(dotcom, basename);
+	write_com(dotcom,basename);
 	WriteExelemHeader(exelem);
 	WriteExnodeHeader(exnode);
-	printf("wrote headers: ne: %d np: %d\n",ne,np);
+	printf("wrote headers: ne: %d np: %d\n",net->ne,net->np);
 	int kelem = 0;
-	for (ie=0; ie<ne; ie++) {
-		edge = edgeList[ie];
+	for (ie=0; ie<net->ne; ie++) {
+		edge = net->edgeList[ie];
+//		printf("ie: %d used: %d npts: %d\n",ie,edge.used,edge.npts);
 		if (edge.used) {
 			npts = edge.npts;
+	//		npts = edge.npts_used;
 			int kfrom = edge.pt[0];
+	//		int kfrom = edge.pt_used[0];
+	//		point_used[kfrom] = true;
 			for (ip=1; ip<npts; ip++) {
 				int k2 = edge.pt[ip];
-				kelem++;
-				fprintf(exelem, "Element: %d 0 0\n", kelem);
-				fprintf(exelem, "  Nodes: %d %d\n", kfrom+1, k2+1);
-				fprintf(exelem, "  Scale factors: 1 1\n");
-				kfrom = k2;
+				double d = dist(net,kfrom,k2);
+				if (d > 0.5*(net->point[kfrom].d/2+net->point[k2].d/2) || ip == npts-1) {
+					kelem++;
+					fprintf(exelem, "Element: %d 0 0\n", kelem);
+					fprintf(exelem, "  Nodes: %d %d\n", kfrom+1, k2+1);
+					fprintf(exelem, "  Scale factors: 1 1\n");
+					kfrom = k2;
+				}
 			}
 		}
 	}
 	printf("wrote elem data\n");
-	for (k=0; k<np; k++) {
-		if (point[k].used) {
+	for (k=0; k<net->np; k++) {
+		if (net->point[k].used) {
 			fprintf(exnode, "Node: %d\n", k+1);
-			fprintf(exnode, "%6.1f %6.1f %6.1f\n", point[k].x,point[k].y,point[k].z);
-			fprintf(exnode, "%6.2f\n", point[k].d/2);
-			if (point[k].d == 0) {
+			fprintf(exnode, "%6.1f %6.1f %6.1f\n",
+				net->point[k].x - origin_shift[0],
+				net->point[k].y - origin_shift[1],
+				net->point[k].z - origin_shift[2]);
+			fprintf(exnode, "%6.2f\n", net->point[k].d/2);
+			if (net->point[k].d == 0) {
 				printf("Error: zero diameter: %d\n",k);
 				return 1;
 			}
 		}
 	}
 	printf("wrote node data\n");
-	fclose(dotcom);
+//	fclose(dotcom);
 	fclose(exelem);
 	fclose(exnode);
 	return 0;

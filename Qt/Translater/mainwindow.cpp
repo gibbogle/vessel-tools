@@ -49,24 +49,49 @@ void MainWindow::outputFileSelecter()
 	ui->labelOutputFile->setText(outputFileName);
 }
 
+void MainWindow::on_radioButton_len_limit_toggled(bool checked)
+{
+    ui->lineEdit_len_limit->setEnabled(checked);
+}
+
+void MainWindow::on_radioButton_len_diam_limit_toggled(bool checked)
+{
+    ui->lineEdit_len_diam_limit->setEnabled(checked);
+}
+
 void MainWindow::translater()
 {
 	int res;
-	QString qstr, resultstr;
-        char cmdstr[512];
+    QString limitmodestr, limitvaluestr, qstr, resultstr;
+    char cmdstr[512];
 
-        qstr = QCoreApplication::applicationDirPath() + "/exec/translate ";
+    if (ui->radioButton_no_limit->isChecked()) {
+        limitmodestr = "0";
+        limitvaluestr = "0";
+    } else if (ui->radioButton_len_limit->isChecked()) {
+        limitmodestr = "1";
+        limitvaluestr = ui->lineEdit_len_limit->text();
+    } else {
+        limitmodestr = "2";
+        limitvaluestr = ui->lineEdit_len_diam_limit->text();
+    }
+    qstr = QCoreApplication::applicationDirPath() + "/exec/translate ";
 	qstr += inputFileName;
 	qstr += " ";
 	qstr += outputFileName;
 	qstr += " ";
-	if (ui->checkBoxCreateCmgui->isChecked())
-        qstr += "1 ";
-	else
-        qstr += "0 ";
+    qstr += limitmodestr;
+    qstr += " ";
+    qstr += limitvaluestr;
+    qstr += " ";
     qstr += ui->lineEdit_ddiam->text();
     qstr += " ";
     qstr += ui->lineEdit_dlen->text();
+    qstr += " ";
+    if (ui->checkBoxCreateCmgui->isChecked())
+        qstr += "1";
+    else
+        qstr += "0";
     if (qstr.size()>(int)sizeof(cmdstr)-1) {
 		printf("Failed to convert qstr->cmdstr since qstr didn't fit\n");
 		resultstr = "FAILED: cmdstr not big enough for the command";

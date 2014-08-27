@@ -1,21 +1,8 @@
-// test
 #include <cstdio>
 
 #include "network.h"
 
-extern int nv, ne, np;
-extern int nv_used, ne_used, np_used;
-extern EDGE *edgeList;
-extern VERTEX *vertex;
-extern POINT *point;
 extern FILE *fperr, *fpout;
-extern float dist(NETWORK *net, int k1, int k2);
-
-int testfunction(void)
-{
-	printf("testfunction\n");
-	return 0;
-}
 
 //-----------------------------------------------------------------------------------------------------
 // Create CMGUI .com file

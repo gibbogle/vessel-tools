@@ -1,21 +1,8 @@
-// test
 #include <cstdio>
 
 #include "network.h"
 
-extern int nv, ne, np;
-extern int nv_used, ne_used, np_used;
-extern EDGE *edgeList;
-extern VERTEX *vertex;
-extern POINT *point;
 extern FILE *fperr, *fpout;
-extern float dist(NETWORK *net, int k1, int k2);
-
-int testfunction(void)
-{
-	printf("testfunction\n");
-	return 0;
-}
 
 //-----------------------------------------------------------------------------------------------------
 // Create CMGUI .com file
@@ -159,7 +146,6 @@ int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[])
 				net->point[k].y - origin_shift[1],
 				net->point[k].z - origin_shift[2]);
 			fprintf(exnode, "%6.2f\n", net->point[k].d/2);
-//			if (net->point[k].d > 75) printf("point: %d diameter: %6.1f\n",k,net->point[k].d);
 			if (net->point[k].d == 0) {
 				printf("Error: zero diameter: %d\n",k);
 				return 1;

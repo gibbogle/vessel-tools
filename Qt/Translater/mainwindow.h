@@ -18,7 +18,9 @@ public:
 public slots:
 	void inputFileSelecter();
 	void outputFileSelecter();
-        void translater();
+    void translater();
+    void on_radioButton_len_limit_toggled(bool checked);
+    void on_radioButton_len_diam_limit_toggled(bool checked);
 
 private:
     Ui::MainWindow *ui;
