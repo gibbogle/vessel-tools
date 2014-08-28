@@ -16,7 +16,6 @@
 
 FILE *fperr, *fpout;
 FILE *exelem, *exnode;
-char output_basename[128];
 
 float ddiam, dlen;
 bool use_len_limit, use_len_diam_limit;
@@ -84,7 +83,7 @@ void get_vertex_ptindex(NETWORK *net, float x, float y, float z, int kp, int *kp
 //-----------------------------------------------------------------------------------------------------
 // Write Amira SpatialGraph file
 //-----------------------------------------------------------------------------------------------------
-int WriteAmiraFile(char *amFileOut, char *amFileIn, NETWORK *net, float origin_shift[])
+int WriteAmiraFile1(char *amFileOut, char *amFileIn, NETWORK *net, float origin_shift[])
 {
 	int i, k, j, npts;
 	EDGE edge;
@@ -160,7 +159,7 @@ int WriteAmiraFile(char *amFileOut, char *amFileIn, NETWORK *net, float origin_s
 //-----------------------------------------------------------------------------------------------------
 // Read Amira SpatialGraph file
 //-----------------------------------------------------------------------------------------------------
-int ReadAmiraFile(char *amFile, NETWORK *net)
+int ReadAmiraFile1(char *amFile, NETWORK *net)
 {
 	int i, j, k, kp, kpv, npts, nee, npp;
 	float x, y, z;
@@ -374,7 +373,7 @@ int main(int argc, char **argv)
 	int err;
 	char *input_amfile;
 	char drive[32], dir[128],filename[256], ext[32];
-	char errfilename[256], output_amfile[256], outfilename[256];
+	char errfilename[256], output_amfile[256], outfilename[256],output_basename[256];
 	int limit_mode, cmgui_flag;
 	float limit_value, origin_shift[3];
 	NETWORK *net;
@@ -393,7 +392,6 @@ int main(int argc, char **argv)
 
 	input_amfile = argv[1];
 	strcpy(outfilename,argv[2]);
-//	strcpy(output_amfile,"zzz.am");
 	sscanf(argv[3],"%d",&limit_mode);
 	sscanf(argv[4],"%f",&limit_value);
 	sscanf(argv[5],"%f",&ddiam);
@@ -439,16 +437,14 @@ int main(int argc, char **argv)
 	origin_shift[2] = 0;
 
 	err = WriteAmiraFile(output_amfile,input_amfile,net,origin_shift);
-	if (err != 0) return 7;
-//	err = CreateDistributions(ddiam,dlen);
-//	if (err != 0) return 8;
+	if (err != 0) return 3;
 	if (cmgui_flag == 1) {
 		err = WriteCmguiData(output_basename,net,origin_shift);
-		if (err != 0) return 9;
+		if (err != 0) return 4;
 	}
 	err = EdgeDimensions(net->edgeList,net->point,net->ne);
-	if (err != 0) return 8;
+	if (err != 0) return 5;
 	err = CreateDistributions(net);
-	if (err != 0) return 9;
+	if (err != 0) return 6;
 	return 0;
 }

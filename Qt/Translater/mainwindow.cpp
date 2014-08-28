@@ -108,10 +108,16 @@ void MainWindow::translater()
 	else if (res == 2)
 		resultstr = "FAILED: Read error on input file";
 	else if (res == 3)
-		resultstr = "FAILED: Write error on output file";
-	else if (res == 4)
-		resultstr = "FAILED: out of memory";
-	ui->labelResult->setText(resultstr);
+        resultstr = "FAILED: Write error on Amira file";
+    else if (res == 4)
+        resultstr = "FAILED: Write error on CMGUI files";
+    else if (res == 5)
+        resultstr = "FAILED: EdgeDimensions error";
+    else if (res == 6)
+        resultstr = "FAILED: CreateDistributions error";
+    else
+        resultstr = "WTF?";
+    ui->labelResult->setText(resultstr);
 }
 
 

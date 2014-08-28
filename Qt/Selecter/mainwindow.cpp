@@ -119,18 +119,16 @@ void MainWindow::selecter()
 	else if (res == 2)
         resultstr = "FAILED: Read error on input AM file";
     else if (res == 3)
-        resultstr = "FAILED: CheckNetwork error";
-    else if (res == 4)
         resultstr = "FAILED: CreateDiamSelectNet error";
-    else if (res == 5)
+    else if (res == 4)
         resultstr = "FAILED: CreateLenSelectNet error";
-    else if (res == 6)
+    else if (res == 5)
         resultstr = "FAILED: CreateLargestConnectedNet error";
-    else if (res == 7)
+    else if (res == 6)
         resultstr = "FAILED: Write error on output AM file";
-    else if (res == 8)
+    else if (res == 7)
         resultstr = "FAILED: Write error on output CMGUI files";
-    else if (res == 9)
+    else if (res == 8)
         resultstr = "FAILED: Error in computing network statistics";
     else
         resultstr = "WTF?";

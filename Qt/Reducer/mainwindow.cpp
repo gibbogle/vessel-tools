@@ -85,18 +85,14 @@ void MainWindow::reducer()
 	else if (res == 2)
         resultstr = "FAILED: Read error on input AM file";
     else if (res == 3)
-        resultstr = "FAILED: Error in original network";
-    else if (res == 4)
         resultstr = "FAILED: ReduceNetwork error";
-    else if (res == 5)
-        resultstr = "FAILED: Error in reduced network";
-    else if (res == 6)
+    else if (res == 4)
         resultstr = "FAILED: Write error on output AM file";
-    else if (res == 7)
+    else if (res == 5)
         resultstr = "FAILED: Write error on output CMGUI files";
-    else if (res == 8)
+    else if (res == 6)
         resultstr = "FAILED: EdgeDimensions error";
-    else if (res == 9)
+    else if (res == 7)
         resultstr = "FAILED: Error generating distributions";
     else
         resultstr = "WTF?";

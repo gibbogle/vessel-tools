@@ -85,252 +85,6 @@ int ShiftOrigin(NETWORK *net, float origin_shift[])
 }
 
 //-----------------------------------------------------------------------------------------------------
-// Write Amira SpatialGraph file
-//-----------------------------------------------------------------------------------------------------
-int WriteAmiraFile(char *amFileOut, char *amFileIn, NETWORK *net, float origin_shift[])
-{
-	int i, k, j, npts;
-	EDGE edge;
-
-	fprintf(fpout,"\nWriteAmiraFile: %s\n",amFileOut);
-	npts = 0;
-	for (i=0;i<net->ne;i++) {
-		npts += net->edgeList[i].npts;
-	}
-
-	FILE *fpam = fopen(amFileOut,"w");
-	fprintf(fpam,"# AmiraMesh 3D ASCII 2.0\n");
-	fprintf(fpam,"# Created by zoom.exe from: %s\n",amFileIn);
-	fprintf(fpam,"\n");
-	fprintf(fpam,"define VERTEX %d\n",net->nv);
-	fprintf(fpam,"define EDGE %d\n",net->ne);
-	fprintf(fpam,"define POINT %d\n",npts);
-	fprintf(fpam,"\n");
-	fprintf(fpam,"Parameters {\n");
-	fprintf(fpam,"    ContentType \"HxSpatialGraph\"\n");
-	fprintf(fpam,"}\n");
-	fprintf(fpam,"\n");
-	fprintf(fpam,"VERTEX { float[3] VertexCoordinates } @1\n");
-	fprintf(fpam,"EDGE { int[2] EdgeConnectivity } @2\n");
-	fprintf(fpam,"EDGE { int NumEdgePoints } @3\n");
-	fprintf(fpam,"POINT { float[3] EdgePointCoordinates } @4\n");
-	fprintf(fpam,"POINT { float thickness } @5\n");
-	fprintf(fpam,"\n");
-	fprintf(fpam,"\n@1\n");
-
-	for (i=0;i<net->nv;i++) {
-//		fprintf(fpam,"%6.1f %6.1f %6.1f\n",net->vertex[i].point.x,net->vertex[i].point.y,net->vertex[i].point.z);
-		fprintf(fpam,"%6.1f %6.1f %6.1f\n",
-			net->vertex[i].point.x - origin_shift[0],
-			net->vertex[i].point.y - origin_shift[1],
-			net->vertex[i].point.z - origin_shift[2]);
-	}
-	fprintf(fpam,"\n@2\n");
-	for (i=0;i<net->ne;i++) {
-		edge = net->edgeList[i];
-		fprintf(fpam,"%d %d\n",edge.vert[0],edge.vert[1]);
-	}
-	fprintf(fpam,"\n@3\n");
-	for (i=0;i<net->ne;i++) {
-		edge = net->edgeList[i];
-		fprintf(fpam,"%d\n",edge.npts);
-	}
-	fprintf(fpam,"\n@4\n");
-	for (i=0;i<net->ne;i++) {
-		edge = net->edgeList[i];
-		for (k=0;k<edge.npts;k++) {
-			j = edge.pt[k];
-//			fprintf(fpam,"%6.1f %6.1f %6.1f\n",net->point[j].x,net->point[j].y,net->point[j].z);
-			fprintf(fpam,"%6.1f %6.1f %6.1f\n",
-				net->point[j].x - origin_shift[0],
-				net->point[j].y - origin_shift[1],
-				net->point[j].z - origin_shift[2]);
-		}
-	}
-	fprintf(fpam,"\n@5\n");
-	for (i=0;i<net->ne;i++) {
-		edge = net->edgeList[i];
-		for (k=0;k<edge.npts;k++) {
-			j = edge.pt[k];
-			fprintf(fpam,"%6.2f\n",net->point[j].d);
-			//if (net->point[j].d > diam_max) {
-			//	printf("d > diam_max: edge: %d ne: %d k: %d d: %6.2f\n",i,net->ne,k,net->point[j].d);
-			//	exit(1);
-			//}
-		}
-	}
-	fclose(fpam);
-	printf("Completed WriteAmiraFile\n");
-	return 0;
-}
-
-//-----------------------------------------------------------------------------------------------------
-// Read Amira SpatialGraph file
-//-----------------------------------------------------------------------------------------------------
-int ReadAmiraFile(char *amFile, NETWORK *net)
-{
-	int i, j, k, kp, npts;
-	int np_used, ne_used;
-	EDGE edge;
-	char line[STR_LEN];
-
-	fprintf(fpout,"ReadAmiraFile: %s\n",amFile);
-	FILE *fpam = fopen(amFile,"r");
-
-	npts = 0;
-	kp = 0;
-	k = 0;
-	while (k < 3) {
-		fgets(line, STR_LEN, fpam);		// reads until newline character
-		printf("%s\n",line);
-		if (strncmp(line,"define VERTEX",13) == 0) {
-			sscanf(line+13,"%d",&net->nv);
-			k++;
-		}
-		if (strncmp(line,"define EDGE",11) == 0) {
-			sscanf(line+11,"%d",&net->ne);
-			k++;
-		}
-		if (strncmp(line,"define POINT",12) == 0) {
-			sscanf(line+12,"%d",&net->np);
-			k++;
-		}
-	}
-
-	net->vertex = (VERTEX *)malloc(net->nv*sizeof(VERTEX));
-	net->edgeList = (EDGE *)malloc(net->ne*sizeof(EDGE));
-	net->point = (POINT *)malloc(net->np*sizeof(POINT));
-	printf("Allocated arrays: %d %d %d\n",net->np,net->nv,net->ne);
-
-	// Initialize
-	for (i=0; i<net->ne; i++) {
-		net->edgeList[i].used = false;
-	}
-	for (i=0; i<net->np; i++) {
-		net->point[i].used = false;
-	}
-	printf("Initialised\n");
-
-	while (1) {
-		if (fgets(line, STR_LEN, fpam) == NULL) {
-			printf("Finished reading SpatialGraph file\n\n");
-			fclose(fpam);
-			break;
-		}
-		if (line[0] == '@') {
-			sscanf(line+1,"%d",&k);
-			if (k == 1) {
-				for (i=0;i<net->nv;i++) {
-					if (fgets(line, STR_LEN, fpam) == NULL) {
-						printf("ERROR reading section @1\n");
-						return 1;
-					}
-					sscanf(line,"%f %f %f\n",&(net->vertex[i].point.x),&(net->vertex[i].point.y),&(net->vertex[i].point.z));
-//					kp = i;
-					net->vertex[i].point.d = 0;
-//					net->point[kp] = net->vertex[i].point;
-				}
-//				kp++;
-				printf("Got vertices\n");
-			} else if (k == 2) {
-				for (i=0;i<net->ne;i++) {
-					if (fgets(line, STR_LEN, fpam) == NULL) {
-						printf("ERROR reading section @2\n");
-						return 1;
-					}
-					sscanf(line,"%d %d",&net->edgeList[i].vert[0],&net->edgeList[i].vert[1]);
-					net->edgeList[i].used = true;
-				}
-				printf("Got edge vertex indices\n");
-			} else if (k == 3) {
-				for (i=0;i<net->ne;i++) {
-					if (fgets(line, STR_LEN, fpam) == NULL) {
-						printf("ERROR reading section @3\n");
-						return 1;
-					}
-					sscanf(line,"%d",&net->edgeList[i].npts);
-					fprintf(fpout,"i: %6d npts: %4d\n",i,net->edgeList[i].npts);
-					if (net->edgeList[i].npts < 1) {
-						printf("ReadAmiraFile: i: %d npts: %d\n",i,net->edgeList[i].npts);
-						return 1;
-					}
-					net->edgeList[i].npts_used = net->edgeList[i].npts;
-					net->edgeList[i].pt = (int *)malloc(net->edgeList[i].npts*sizeof(int));
-					net->edgeList[i].pt_used = (int *)malloc(net->edgeList[i].npts*sizeof(int));
-					npts += net->edgeList[i].npts;
-//					net->edgeList[i].pt[0] = net->edgeList[i].vert[0];
-//					net->edgeList[i].pt[net->edgeList[i].npts-1] = net->edgeList[i].vert[1];
-				}
-				printf("Got edge npts, total: %d\n",npts);
-			} else if (k == 4) {
-				for (i=0;i<net->ne;i++) {
-					edge = net->edgeList[i];
-					for (k=0;k<edge.npts;k++) {
-						if (fgets(line, STR_LEN, fpam) == NULL) {
-							printf("ERROR reading section @4\n");
-							return 1;
-						}
-//						if (k > 0 && k<edge.npts-1) {
-							sscanf(line,"%f %f %f",&net->point[kp].x,&net->point[kp].y,&net->point[kp].z);
-							net->edgeList[i].pt[k] = kp;
-							net->edgeList[i].pt_used[k] = kp;
-							kp++;
-//						}
-					}
-				}
-			} else if (k == 5) {
-				for (i=0;i<net->ne;i++) {
-					edge = net->edgeList[i];
-					float dave = 0;
-					for (k=0;k<edge.npts;k++) {
-						if (fgets(line, STR_LEN, fpam) == NULL) {
-							printf("ERROR reading section @5\n");
-							return 1;
-						}
-						j = edge.pt[k];
-						sscanf(line,"%f",&net->point[j].d);
-						if (net->point[j].d == 0) {
-							printf("Error: ReadAmiraFile: zero diameter: i: %d npts: %d k: %d j: %d\n",i,edge.npts,k,j);
-							return 1;
-						}
-//						if (j < net->nv) {		// because the first nv points are vertices
-//							net->vertex[j].point.d = net->point[j].d;
-//						}
-						dave += net->point[j].d;
-						net->edgeList[i].segavediam = dave/edge.npts;
-					}
-				}
-				printf("Got point thicknesses\n");
-			}
-		}
-	}
-	// Flag used points
-	for (i=0; i<net->ne; i++) {
-		edge = net->edgeList[i];
-		net->edgeList[i].netID = 0;
-		for (k=0; k<edge.npts; k++) {
-			j = edge.pt[k];
-			net->point[j].used = true;
-		}
-	}
-	for (i=0;i<net->nv;i++) {
-		net->vertex[i].netID = 0;
-	}
-	fclose(fpam);
-	np_used = 0;
-	for (j=0; j<net->np; j++) {
-		if (net->point[j].used) np_used++;
-	}
-	printf("Points: np: %d np_used: %d\n",net->np,np_used);
-	ne_used = 0;
-	for (j=0; j<net->ne; j++) {
-		if (net->edgeList[j].used) ne_used++;
-	}
-	printf("Edges: ne: %d ne_used: %d\n",net->ne,ne_used);
-	return 0;
-}
-
-//-----------------------------------------------------------------------------------------------------
 // Check for vertex index iv in ivlist.  If it exists, return the index. 
 // Otherwise add it to the list, increment nv, return the index.
 //-----------------------------------------------------------------------------------------------------
@@ -716,7 +470,7 @@ int CreateDiamSelectNet(NETWORK *net0, NETWORK *net1, float diam_min, float diam
 int CreateLenSelectNet(NETWORK *net0, NETWORK *net1, float len_min, float len_max)
 {
 	int i, j, ie, iv, kp, kp1, kp2, kv, ne, nv, kin;
-	float len, dx, dy, dz;
+	float len;
 	bool in;
 	EDGE *elist;
 	int *ivlist;
@@ -844,7 +598,7 @@ int myFactorial( int integer)
 //-----------------------------------------------------------------------------------------------------
 int CheckNetwork(NETWORK *net)
 {
-	int iv, i, k, ne, nv, n2;
+	int iv, i, ne, nv, n2;
 
 	fprintf(fpout,"CheckNetwork\n");
 	nv = net->nv;
@@ -1154,23 +908,20 @@ int main(int argc, char **argv)
 	err = ReadAmiraFile(input_amfile,NP0);
 	if (err != 0) return 2;
 
-	err = CheckNetwork(NP0);
-	if (err != 0) return 3;
-
 	NP1 = (NETWORK *)malloc(sizeof(NETWORK));
 	if (use_diameter) {
 		err = CreateDiamSelectNet(NP0,NP1,diam_min,diam_max,diam_flag);
-		if (err != 0) return 4;
+		if (err != 0) return 3;
 	} else {
 		err = CreateLenSelectNet(NP0,NP1,len_min,len_max);
-		if (err != 0) return 5;
+		if (err != 0) return 4;
 	}
 	printf("NP1: ne, nv, np: %d %d %d\n",NP1->ne,NP1->nv,NP1->np);
 
 	if (connect) {
 		NP2 = (NETWORK *)malloc(sizeof(NETWORK));
 		err = CreateLargestConnectedNet(NP1,NP2);
-		if (err != 0) return 6;
+		if (err != 0) return 5;
 	}
 
 	origin_shift[0] = 0;
@@ -1179,26 +930,26 @@ int main(int argc, char **argv)
 
 	if (connect) {
 		err = WriteAmiraFile(output_amfile,input_amfile,NP2,origin_shift);
-		if (err != 0) return 7;
+		if (err != 0) return 6;
 		if (cmgui_flag == 1) {
 			err = WriteCmguiData(output_basename,NP2,origin_shift);
-			if (err != 0) return 8;
+			if (err != 0) return 7;
 		}
 		err = EdgeDimensions(NP2->edgeList,NP2->point,NP2->ne);
-		if (err != 0) return 9;
+		if (err != 0) return 8;
 		err = CreateDistributions(NP2);
-		if (err != 0) return 10;
+		if (err != 0) return 9;
 	} else {
 		err = WriteAmiraFile(output_amfile,input_amfile,NP1,origin_shift);
-		if (err != 0) return 7;
+		if (err != 0) return 6;
 		if (cmgui_flag == 1) {
 			err = WriteCmguiData(output_basename,NP1,origin_shift);
-			if (err != 0) return 8;
+			if (err != 0) return 7;
 		}
 		err = EdgeDimensions(NP1->edgeList,NP1->point,NP1->ne);
-		if (err != 0) return 9;
+		if (err != 0) return 8;
 		err = CreateDistributions(NP1);
-		if (err != 0) return 10;
+		if (err != 0) return 9;
 	}
 	return 0;
 }

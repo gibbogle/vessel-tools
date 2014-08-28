@@ -117,13 +117,9 @@ int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[])
 	int kelem = 0;
 	for (ie=0; ie<net->ne; ie++) {
 		edge = net->edgeList[ie];
-//		printf("ie: %d used: %d npts: %d\n",ie,edge.used,edge.npts);
 		if (edge.used) {
 			npts = edge.npts;
-	//		npts = edge.npts_used;
 			int kfrom = edge.pt[0];
-	//		int kfrom = edge.pt_used[0];
-	//		point_used[kfrom] = true;
 			for (ip=1; ip<npts; ip++) {
 				int k2 = edge.pt[ip];
 				double d = dist(net,kfrom,k2);
@@ -153,7 +149,6 @@ int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[])
 		}
 	}
 	printf("wrote node data\n");
-//	fclose(dotcom);
 	fclose(exelem);
 	fclose(exnode);
 	return 0;

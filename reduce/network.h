@@ -62,5 +62,8 @@ float dist(NETWORK *net, int k1, int k2);
 int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[]);
 int EdgeDimensions(EDGE *edges, POINT *points, int ne);
 int CreateDistributions(NETWORK *net);
+bool EqualPoints(POINT p1, POINT p2);
+int WriteAmiraFile(char *amFileOut, char *amFileIn, NETWORK *net, float origin_shift[]);
+int ReadAmiraFile(char *amFile, NETWORK *net);
 
 #endif // NETWORK_H

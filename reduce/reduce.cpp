@@ -30,16 +30,6 @@ float dist(NETWORK *net, int k1, int k2)
 }
 
 //-----------------------------------------------------------------------------------
-//-----------------------------------------------------------------------------------
-bool EqualPoints(POINT p1, POINT p2)
-{
-	if (p1.x != p2.x) return false;
-	if (p1.y != p2.y) return false;
-	if (p1.z != p2.z) return false;
-	return true;
-}
-
-//-----------------------------------------------------------------------------------
 // mode = 'N' for numbers
 //        'D' for diameters
 //        'P' for positions
@@ -62,295 +52,9 @@ void showedge(NETWORK *net, int ie, char mode)
 }
 
 //-----------------------------------------------------------------------------------------------------
-// Write Amira SpatialGraph file
-//-----------------------------------------------------------------------------------------------------
-int WriteAmiraFile(char *amFileOut, char *amFileIn, NETWORK *net, float origin_shift[])
-{
-	int i, k, j, npts;
-	EDGE edge;
-
-	fprintf(fpout,"\nWriteAmiraFile: %s\n",amFileOut);
-	npts = 0;
-	for (i=0;i<net->ne;i++) {
-		npts += net->edgeList[i].npts;
-	}
-
-	FILE *fpam = fopen(amFileOut,"w");
-	fprintf(fpam,"# AmiraMesh 3D ASCII 2.0\n");
-	fprintf(fpam,"# Created by zoom.exe from: %s\n",amFileIn);
-	fprintf(fpam,"\n");
-	fprintf(fpam,"define VERTEX %d\n",net->nv);
-	fprintf(fpam,"define EDGE %d\n",net->ne);
-	fprintf(fpam,"define POINT %d\n",npts);
-	fprintf(fpam,"\n");
-	fprintf(fpam,"Parameters {\n");
-	fprintf(fpam,"    ContentType \"HxSpatialGraph\"\n");
-	fprintf(fpam,"}\n");
-	fprintf(fpam,"\n");
-	fprintf(fpam,"VERTEX { float[3] VertexCoordinates } @1\n");
-	fprintf(fpam,"EDGE { int[2] EdgeConnectivity } @2\n");
-	fprintf(fpam,"EDGE { int NumEdgePoints } @3\n");
-	fprintf(fpam,"POINT { float[3] EdgePointCoordinates } @4\n");
-	fprintf(fpam,"POINT { float thickness } @5\n");
-	fprintf(fpam,"\n");
-	fprintf(fpam,"\n@1\n");
-
-	for (i=0;i<net->nv;i++) {
-//		fprintf(fpam,"%6.1f %6.1f %6.1f\n",net->vertex[i].point.x,net->vertex[i].point.y,net->vertex[i].point.z);
-		fprintf(fpam,"%6.1f %6.1f %6.1f\n",
-			net->vertex[i].point.x - origin_shift[0],
-			net->vertex[i].point.y - origin_shift[1],
-			net->vertex[i].point.z - origin_shift[2]);
-	}
-	fprintf(fpam,"\n@2\n");
-	for (i=0;i<net->ne;i++) {
-		edge = net->edgeList[i];
-		fprintf(fpam,"%d %d\n",edge.vert[0],edge.vert[1]);
-	}
-	fprintf(fpam,"\n@3\n");
-	for (i=0;i<net->ne;i++) {
-		edge = net->edgeList[i];
-		fprintf(fpam,"%d\n",edge.npts);
-	}
-	fprintf(fpam,"\n@4\n");
-	for (i=0;i<net->ne;i++) {
-		edge = net->edgeList[i];
-		for (k=0;k<edge.npts;k++) {
-			j = edge.pt[k];
-//			fprintf(fpam,"%6.1f %6.1f %6.1f\n",net->point[j].x,net->point[j].y,net->point[j].z);
-			fprintf(fpam,"%6.1f %6.1f %6.1f\n",
-				net->point[j].x - origin_shift[0],
-				net->point[j].y - origin_shift[1],
-				net->point[j].z - origin_shift[2]);
-		}
-	}
-	fprintf(fpam,"\n@5\n");
-	for (i=0;i<net->ne;i++) {
-		edge = net->edgeList[i];
-		for (k=0;k<edge.npts;k++) {
-			j = edge.pt[k];
-			fprintf(fpam,"%6.2f\n",net->point[j].d);
-		}
-	}
-	fclose(fpam);
-	printf("Completed WriteAmiraFile\n");
-	return 0;
-}
-
-//-----------------------------------------------------------------------------------------------------
-// Read Amira SpatialGraph file
-//-----------------------------------------------------------------------------------------------------
-int ReadAmiraFile(char *amFile, NETWORK *net)
-{
-	int i, j, k, kp, npts;
-	int np_used, ne_used;
-	EDGE edge;
-	char line[STR_LEN];
-
-	fprintf(fpout,"ReadAmiraFile: %s\n",amFile);
-	FILE *fpam = fopen(amFile,"r");
-
-	npts = 0;
-	kp = 0;
-	k = 0;
-	while (k < 3) {
-		fgets(line, STR_LEN, fpam);		// reads until newline character
-		printf("%s\n",line);
-		if (strncmp(line,"define VERTEX",13) == 0) {
-			sscanf(line+13,"%d",&net->nv);
-			k++;
-		}
-		if (strncmp(line,"define EDGE",11) == 0) {
-			sscanf(line+11,"%d",&net->ne);
-			k++;
-		}
-		if (strncmp(line,"define POINT",12) == 0) {
-			sscanf(line+12,"%d",&net->np);
-			k++;
-		}
-	}
-
-	net->vertex = (VERTEX *)malloc(net->nv*sizeof(VERTEX));
-	net->edgeList = (EDGE *)malloc(net->ne*sizeof(EDGE));
-	net->point = (POINT *)malloc(net->np*sizeof(POINT));
-	printf("Allocated arrays: %d %d %d\n",net->np,net->nv,net->ne);
-
-	// Initialize
-	for (i=0; i<net->ne; i++) {
-		net->edgeList[i].used = false;
-	}
-	for (i=0; i<net->np; i++) {
-		net->point[i].used = false;
-	}
-	printf("Initialised\n");
-
-	while (1) {
-		if (fgets(line, STR_LEN, fpam) == NULL) {
-			printf("Finished reading SpatialGraph file\n\n");
-			fclose(fpam);
-			break;
-		}
-		if (line[0] == '@') {
-			sscanf(line+1,"%d",&k);
-			if (k == 1) {
-				for (i=0;i<net->nv;i++) {
-					if (fgets(line, STR_LEN, fpam) == NULL) {
-						printf("ERROR reading section @1\n");
-						return 1;
-					}
-					sscanf(line,"%f %f %f\n",&(net->vertex[i].point.x),&(net->vertex[i].point.y),&(net->vertex[i].point.z));
-					net->vertex[i].point.d = 0;
-					net->vertex[i].used = true;
-				}
-				printf("Got vertices\n");
-			} else if (k == 2) {
-				for (i=0;i<net->ne;i++) {
-					if (fgets(line, STR_LEN, fpam) == NULL) {
-						printf("ERROR reading section @2\n");
-						return 1;
-					}
-					sscanf(line,"%d %d",&net->edgeList[i].vert[0],&net->edgeList[i].vert[1]);
-					net->edgeList[i].used = true;
-				}
-				printf("Got edge vertex indices\n");
-			} else if (k == 3) {
-				for (i=0;i<net->ne;i++) {
-					if (fgets(line, STR_LEN, fpam) == NULL) {
-						printf("ERROR reading section @3\n");
-						return 1;
-					}
-					sscanf(line,"%d",&net->edgeList[i].npts);
-//					fprintf(fpout,"i: %6d npts: %4d\n",i,net->edgeList[i].npts);
-					if (net->edgeList[i].npts < 1) {
-						printf("ReadAmiraFile: i: %d npts: %d\n",i,net->edgeList[i].npts);
-						return 1;
-					}
-					net->edgeList[i].npts_used = net->edgeList[i].npts;
-					net->edgeList[i].pt = (int *)malloc(net->edgeList[i].npts*sizeof(int));
-					net->edgeList[i].pt_used = (int *)malloc(net->edgeList[i].npts*sizeof(int));
-					npts += net->edgeList[i].npts;
-				}
-				printf("Got edge npts, total: %d\n",npts);
-			} else if (k == 4) {
-				for (i=0;i<net->ne;i++) {
-					edge = net->edgeList[i];
-					for (k=0;k<edge.npts;k++) {
-						if (fgets(line, STR_LEN, fpam) == NULL) {
-							printf("ERROR reading section @4\n");
-							return 1;
-						}
-						sscanf(line,"%f %f %f",&net->point[kp].x,&net->point[kp].y,&net->point[kp].z);
-						net->edgeList[i].pt[k] = kp;
-						net->edgeList[i].pt_used[k] = kp;
-						kp++;
-					}
-				}
-			} else if (k == 5) {
-				for (i=0;i<net->ne;i++) {
-					edge = net->edgeList[i];
-					float dave = 0;
-					for (k=0;k<edge.npts;k++) {
-						if (fgets(line, STR_LEN, fpam) == NULL) {
-							printf("ERROR reading section @5\n");
-							return 1;
-						}
-						j = edge.pt[k];
-						sscanf(line,"%f",&net->point[j].d);
-						if (net->point[j].d == 0) {
-							printf("Error: ReadAmiraFile: zero diameter: i: %d npts: %d k: %d j: %d\n",i,edge.npts,k,j);
-							return 1;
-						}
-						dave += net->point[j].d;
-						net->edgeList[i].segavediam = dave/edge.npts;
-					}
-				}
-				printf("Got point thicknesses\n");
-			}
-		}
-	}
-	// Flag used points
-	for (i=0; i<net->ne; i++) {
-		edge = net->edgeList[i];
-		net->edgeList[i].netID = 0;
-		for (k=0; k<edge.npts; k++) {
-			j = edge.pt[k];
-			net->point[j].used = true;
-		}
-	}
-	for (i=0;i<net->nv;i++) {
-		net->vertex[i].netID = 0;
-	}
-	fclose(fpam);
-	np_used = 0;
-	for (j=0; j<net->np; j++) {
-		if (net->point[j].used) np_used++;
-	}
-	printf("Points: np: %d np_used: %d\n",net->np,np_used);
-	ne_used = 0;
-	for (j=0; j<net->ne; j++) {
-		net->edgeList[j].netID = j;
-		if (net->edgeList[j].used) ne_used++;
-	}
-	printf("Edges: ne: %d ne_used: %d\n",net->ne,ne_used);
-	return 0;
-}
-
-//-----------------------------------------------------------------------------------------------------
-// Check for vertex index iv in ivlist.  If it exists, return the index. 
-// Otherwise add it to the list, increment nv, return the index.
-//-----------------------------------------------------------------------------------------------------
-int ivlistAdd(int iv, int *ivlist, int *nv)
-{
-	if (*nv == 0) {
-		ivlist[0] = iv;
-		*nv = 1;
-		return 0;
-	}
-	for (int i=0; i<*nv; i++) {
-		if (iv == ivlist[i]) {
-			return i;
-		}
-	}
-	ivlist[*nv] = iv;
-	(*nv)++;
-	return *nv-1;
-}
-
-//-----------------------------------------------------------------------------------------------------
-// Find vertex nodes with only two edges connected
-//-----------------------------------------------------------------------------------------------------
-int CheckNetwork1(NETWORK *net, char *str)
-{
-	int iv, i, ne, nv, n2;
-
-	fprintf(fpout,"CheckNetwork: %s\n",str);
-	nv = net->nv;
-	ne = net->ne;
-	for (iv=0; iv<nv; iv++) {
-		net->vertex[iv].nlinks = 0;
-	}
-	// Set up net edges and count vertex edges
-	for (i=0; i<ne; i++) {
-		for (int k=0; k<2;k++) {
-			iv = net->edgeList[i].vert[k];
-			net->vertex[iv].nlinks++;
-		}
-	}
-	n2 = 0;
-	for (iv=0; iv<nv; iv++) {
-		if (net->vertex[iv].nlinks == 2) {
-			n2++;
-//			fprintf(fpout,"vertex: %6d nlinks: %2d\n",iv,net->vertex[iv].nlinks);
-		}
-	}
-	fprintf(fpout,"Number of 2-link vertices: %d\n",n2);
-	return 0;
-}
-
-//-----------------------------------------------------------------------------------------------------
 // Check for a point position repeated on an edge
 //-----------------------------------------------------------------------------------------------------
-int CheckNetwork(NETWORK *net, char *str)
+int CheckNetwork1(NETWORK *net, char *str)
 {
 	int ie, ip, ne, npts,kp0,kp1,kp, ie1, iv0, iv1;
 	float dave, dave1;
@@ -375,7 +79,6 @@ int CheckNetwork(NETWORK *net, char *str)
 			if (EqualPoints(p0,p)) {
 				fprintf(fpout,"CheckNetwork: repeated (0): ie,npts,v0,ip,kp0,kp: %d %d %d %d %d %d\n",ie,npts,0,ip,kp0,kp);
 				fprintf(fpout,"removed\n");
-//				fprintf(fpout,"netID: %d\n",edge.netID);
 				repeated++;
 				net->edgeList[ie].used = false;
 			}
@@ -386,13 +89,11 @@ int CheckNetwork(NETWORK *net, char *str)
 			if (EqualPoints(p,p1)) {
 				fprintf(fpout,"CheckNetwork: repeated (1): ie,npts,ip,v1,kp,kp1: %d %d %d %d %d %d\n",ie,npts,ip,npts-1,kp,kp1);
 				fprintf(fpout,"removed\n");
-//				fprintf(fpout,"netID: %d\n",edge.netID);
 				repeated++;
 				net->edgeList[ie].used = false;
 			}
 		}
 	}
-//	if (repeated > 0) return repeated;
 	// Now check for two edges connecting the same pair of vertices.
 	for (ie=0; ie<ne; ie++) {
 		edge =net->edgeList[ie];
@@ -424,420 +125,26 @@ int CheckNetwork(NETWORK *net, char *str)
 	return 0;
 }	
 
-/*
 //-----------------------------------------------------------------------------------------------------
-// Compute vessel lengths and average diameters.
+// Check for vertex index iv in ivlist.  If it exists, return the index. 
+// Otherwise add it to the list, increment nv, return the index.
 //-----------------------------------------------------------------------------------------------------
-int EdgeDimensions(EDGE *edges, POINT *points, int ne)
+int ivlistAdd(int iv, int *ivlist, int *nv)
 {
-	int ie, ip, kp, kprev;
-	float dx, dy, dz, len, dlen, dlen2, ad, r2, r2prev, dsum, lsum, vol, diam;
-	EDGE edge;
-
-	printf("EdgeDimensions:\n");
-	fprintf(fpout,"EdgeDimensions:\n");
-	for (ie=0; ie<ne; ie++) {
-		edge = edges[ie];
-		if (!edge.used) continue;
-		kprev = 0;
-		r2prev = 0;
-		dsum = 0;
-		lsum = 0;
-		vol = 0;
-//		printf("\nedge, npts: %4d %4d\n",ie,edge.npts);
-		for (ip=0; ip<edge.npts; ip++) {
-			kp = edge.pt[ip];
-			ad = points[kp].d;
-			r2 = ad*ad/4;
-//			printf("ip,kp: %4d %4d x,y,z,d: %6.1f %6.1f %6.1f %6.1f\n",ip,kp,points[kp].x,points[kp].y,points[kp].z,points[kp].d);
-			if (ad < 0.001 || ad > 100) {
-				printf("Bad point diameter: edge: %d point: %d ad: %f\n",ie,ip,ad);
-				fprintf(fperr,"Bad point diameter: edge: %d point: %d ad: %f\n",ie,ip,ad);
-				return 1;
-			}
-			if (ip > 0) {
-				dx = points[kprev].x - points[kp].x;
-				dy = points[kprev].y - points[kp].y;
-				dz = points[kprev].z - points[kp].z;
-				dlen2 = dx*dx+dy*dy+dz*dz;
-//				printf("dx,dy,dz,dlen2: %6.1f %6.1f %6.1f %6.1f\n",dx,dy,dz,dlen2);
-				if (dlen2 == 0) {
-					printf("EdgeDimensions: error: dlen = 0: ie,npts,ip,kp: %d %d %d %d point: %6.1f %6.1f %6.1f\n",
-						 ie,edge.npts,ip,kp,points[kp].x,points[kp].y,points[kp].z);
-					fprintf(fpout,"EdgeDimensions: error: dlen = 0: ie,npts,ip,kp: %d %d %d %d point: %6.1f %6.1f %6.1f\n",
-						 ie,edge.npts,ip,kp,points[kp].x,points[kp].y,points[kp].z);
-					return 2;
-				}
-				dlen = sqrt(dlen2);
-				vol += PI*dlen*(r2 + r2prev)/2;
-				lsum += dlen;
-			}
-			kprev = kp;
-			r2prev = r2;
-		}
-		len = lsum;
-		diam = 2*sqrt(vol/(PI*len));
-		edges[ie].length_um = len;	
-		edges[ie].segavediam = diam;	
-//		printf("edge: %4d len,diam: %6.1f %6.1f\n",ie,len,diam);
+	if (*nv == 0) {
+		ivlist[0] = iv;
+		*nv = 1;
+		return 0;
 	}
-	return 0;
+	for (int i=0; i<*nv; i++) {
+		if (iv == ivlist[i]) {
+			return i;
+		}
+	}
+	ivlist[*nv] = iv;
+	(*nv)++;
+	return *nv-1;
 }
-
-//-----------------------------------------------------------------------------------------------------
-// This assumes that edge dimensions (average diameter and length) have already been computed.
-//-----------------------------------------------------------------------------------------------------
-int CreateDistributions(NETWORK *net)
-{
-	int adbox[NBOX], lvbox[NBOX];
-	int segadbox[NBOX];
-	double lsegadbox[NBOX];
-	double ad, len, dave, ddiam, dlen, ltot, dsum, lsegdtot;
-	double ave_len, volume, d95;
-	double ave_pt_diam;		// average point diameter
-	double ave_seg_diam;	// average vessel diameter
-	double ave_lseg_diam;	// length-weighted average vessel diameter
-	int ie, ip, k, ka, kp, ndpts, nlpts, ndtot, nsegdtot;
-	EDGE edge;
-
-	for (k=0;k<NBOX;k++) {
-		adbox[k] = 0;
-		segadbox[k] = 0;
-		lsegadbox[k] = 0;
-		lvbox[k] = 0;
-	}
-	if (use_len_diam) {
-		printf("\nUsing length/diameter lower limit = %6.1f\n\n",len_diam_limit);
-		fprintf(fpout,"\nUsing length/diameter lower limit = %6.1f\n\n",len_diam_limit);
-	} else if (use_len) {
-		printf("\nUsing length lower limit = %6.1f um\n\n",len_limit);
-		fprintf(fpout,"\nUsing length lower limit = %6.1f um\n\n",len_limit);
-	}
-	printf("Compute diameter distributions (length weighted)\n");
-	fprintf(fperr,"Compute diameter distributions (length weighted)\n");
-	// Diameters
-	ddiam = 0.5;
-	ndtot = 0;
-	nsegdtot = 0;
-	lsegdtot = 0;
-	ave_pt_diam = 0;
-	ave_seg_diam = 0;
-	ave_lseg_diam = 0;
-	volume = 0;
-	for (ie=0; ie<net->ne; ie++) {
-		edge = net->edgeList[ie];
-		if (!edge.used) continue;
-		len = edge.length_um;
-		dave = edge.segavediam;
-		if (use_len && len < len_limit) continue;
-		for (ip=0; ip<edge.npts; ip++) {
-			kp = edge.pt[ip];
-			ad = net->point[kp].d;
-			ave_pt_diam += ad;
-			if (ad < 0.001 || ad > 200) {
-				printf("Bad point diameter: edge: %d point: %d ad: %f\n",ie,ip,ad);
-				fprintf(fperr,"Bad point diameter: edge: %d point: %d ad: %f\n",ie,ip,ad);
-				return 1;
-			}
-			ka = int(ad/ddiam + 0.5);
-			if (ka >= NBOX) {
-				printf("Vessel too wide (point): d: %f k: %d\n",ad,ka);
-				fprintf(fperr,"Vessel too wide (point): d: %f k: %d\n",ad,ka);
-				continue;
-			}
-			adbox[ka]++;
-			ndtot++;
-		}
-		net->edgeList[ie].length_um = len;	// already computed
-		if (use_len_diam && len/ad < len_diam_limit) continue;
-		ave_seg_diam += dave;
-		ave_lseg_diam += dave*len;
-//		printf("ie: %6d dave,len,ave_lseg_diam: %8.1f %8.1f %10.1f\n",ie,dave,len,ave_lseg_diam);
-//		fprintf(fpout,"ie: %6d dave,len,ave_lseg_diam: %8.1f %8.1f %10.1f\n",ie,dave,len,ave_lseg_diam);
-		if (dave < 0.001 || dave > 200) {
-			printf("Bad segment diameter: edge: %d ad: %f\n",ie,dave);
-			fprintf(fperr,"Zero segment diameter: edge: %d ad: %f\n",ie,dave);
-			return 1;
-		}
-		ka = int(dave/ddiam + 0.5);
-		if (ka >= NBOX) {
-			printf("Vessel too wide (segment ave): d: %f k: %d\n",dave,ka);
-			fprintf(fperr,"Vessel too wide (segment ave): d: %f k: %d\n",dave,ka);
-			continue;
-		}
-		segadbox[ka]++;
-		nsegdtot++;
-		lsegadbox[ka] += len;
-		lsegdtot += len;
-		volume += len*PI*(dave/2)*(dave/2);
-	}
-	// Determine d95, the diameter that >95% of points exceed.
-	dsum = 0;
-	for (k=0; k<NBOX; k++) {
-		dsum += adbox[k]/float(ndtot);
-		if (dsum > 0.05) {
-			d95 = (k-1)*ddiam;
-			break;
-		}
-	}
-	printf("\nCompute length distributions:\n");
-	fprintf(fperr,"\nCompute length distributions:\n");
-	// Lengths
-	dlen = 1;
-	ltot = 0;
-	ave_len = 0;
-	for (ie=0; ie<net->ne; ie++) {
-		edge = net->edgeList[ie];
-		if (!edge.used) continue;
-		len = edge.length_um;
-		k = int(len/dlen + 0.5);
-		if (use_len && k*dlen <= len_limit) continue;
-		ad = edge.segavediam;
-		if (use_len_diam && len/ad < len_diam_limit) continue;
-		if (k >= NBOX) {
-			printf("Edge too long for boxes: len: %d  %6.1f  k: %d\n",ie,len,k);
-			fprintf(fperr,"Edge too long for boxes: len: %d  %6.1f  k: %d\n",ie,len,k);
-			continue;
-		}
-		lvbox[k]++;
-		ave_len += len;
-		ltot++;
-	}
-	ave_pt_diam /= ndtot;
-	ave_seg_diam /= nsegdtot;
-	ave_lseg_diam /= lsegdtot;
-	fprintf(fpout,"Total vertices: %d  points: %d\n",net->nv,net->np);
-	fprintf(fpout,"Vessels: %d\n",net->ne);
-	printf("\nAverage pt diameter: %6.2f vessel diameter: %6.2f length-weighted: %6.2f\n",
-		ave_pt_diam, ave_seg_diam, ave_lseg_diam);
-	fprintf(fpout,"\nAverage pt diameter: %6.2f vessel diameter: %6.2f length-weighted vessel diameter: %6.2f\n",
-		ave_pt_diam, ave_seg_diam, ave_lseg_diam);
-	printf("Average vessel length: %6.1f\n",ave_len/ltot);
-	fprintf(fpout,"Average vessel length: %6.1f\n",ave_len/ltot);
-	printf("Volume: %10.0f um3\n\n",volume);
-	fprintf(fpout,"Volume: %10.0f um3\n\n",volume);
-
-	for (k=NBOX-1; k>=0; k--) {
-		if (segadbox[k] > 0) break;
-	}
-	ndpts = k+2;
-	fprintf(fpout,"Vessel diameter distribution\n");
-	fprintf(fpout,"   um    number  fraction    length  fraction\n");
-	for (k=0; k<ndpts; k++) {
-		fprintf(fpout,"%6.2f %8d %9.5f  %8.0f %9.5f\n",k*ddiam,segadbox[k],segadbox[k]/float(nsegdtot),
-			lsegadbox[k],lsegadbox[k]/lsegdtot);
-	}
-
-	for (k=NBOX-1; k>=0; k--) {
-		if (lvbox[k] > 0) break;
-	}
-	nlpts = k+2;
-	fprintf(fpout,"Vessel length distribution\n");
-	fprintf(fpout,"   um    number  fraction\n");
-	for (k=0; k<nlpts; k++) {
-		fprintf(fpout,"%6.2f %8d %9.5f\n",k*dlen,lvbox[k],lvbox[k]/ltot);
-	}
-	return 0;
-}
-*/
-
-/*
-//-----------------------------------------------------------------------------------------------------
-// The average diameter of a vessel (edge) is now estimated by dividing the volume by the length.
-// All distances in the .am file are in um.
-//-----------------------------------------------------------------------------------------------------
-int CreateDistributions1(NETWORK *net)
-{
-	int adbox[NBOX], lvbox[NBOX];
-	int segadbox[NBOX];
-	double lsegadbox[NBOX];
-	double ad, len, ddiam, dlen, ltot, lsum, dsum, dvol, r2, r2prev, lsegdtot;
-	double ave_len, volume, d95;
-	double ave_pt_diam;		// average point diameter
-	double ave_seg_diam;	// average vessel diameter
-	double ave_lseg_diam;	// length-weighted average vessel diameter
-	int ie, ip, k, ka, kp, kpprev, ndpts, nlpts, ndtot, nsegdtot;
-	EDGE edge;
-
-	for (k=0;k<NBOX;k++) {
-		adbox[k] = 0;
-		segadbox[k] = 0;
-		lsegadbox[k] = 0;
-		lvbox[k] = 0;
-	}
-	if (use_len_diam) {
-		printf("\nUsing length/diameter lower limit = %6.1f\n\n",len_diam_limit);
-		fprintf(fpout,"\nUsing length/diameter lower limit = %6.1f\n\n",len_diam_limit);
-	} else {
-		printf("\nUsing length lower limit = %6.1f um\n\n",len_limit);
-		fprintf(fpout,"\nUsing length lower limit = %6.1f um\n\n",len_limit);
-	}
-	printf("Compute diameter distributions (length weighted)\n");
-	fprintf(fperr,"Compute diameter distributions (length weighted)\n");
-	// Diameters
-	ddiam = 0.5;
-	ndtot = 0;
-	nsegdtot = 0;
-	lsegdtot = 0;
-	ave_pt_diam = 0;
-	ave_seg_diam = 0;
-	volume = 0;
-	for (ie=0; ie<net->ne; ie++) {
-		edge = net->edgeList[ie];
-		if (!edge.used) continue;
-//		printf("ie: %d npts: %d\n",ie,edge.npts);
-//		fprintf(fperr,"ie: %d npts: %d\n",ie,edge.npts);
-//		fflush(fperr);
-		bool dbug = false;
-		len = edge.length_um;
-		if (!use_len_diam && len < len_limit) continue;
-		kpprev = 0;
-		r2prev = 0;
-		dsum = 0;
-		lsum = 0;
-		dvol = 0;
-		for (ip=0; ip<edge.npts; ip++) {
-			kp = edge.pt[ip];
-			ad = net->point[kp].d;
-			ave_pt_diam += ad;
-			if (dbug) {
-				printf("%d  %d  %f  %f\n",ip,kp,ad,ddiam);
-				fprintf(fperr,"%d  %d  %f  %f\n",ip,kp,ad,ddiam);
-			}
-			fflush(fperr);
-			if (ad < 0.001 || ad > 200) {
-				printf("Bad point diameter: edge: %d point: %d ad: %f\n",ie,ip,ad);
-				fprintf(fperr,"Bad point diameter: edge: %d point: %d ad: %f\n",ie,ip,ad);
-				return 1;
-			}
-			ka = int(ad/ddiam + 0.5);
-			if (ka >= NBOX) {
-				printf("Vessel too wide (point): d: %f k: %d\n",ad,ka);
-				fprintf(fperr,"Vessel too wide (point): d: %f k: %d\n",ad,ka);
-				continue;
-			}
-			adbox[ka]++;
-			ndtot++;
-			if (ip > 0) {
-				dlen = dist(net,kp,kpprev);
-				r2 = ad*ad/4;
-				dvol += PI*dlen*(r2 + r2prev)/2;
-				lsum += dlen;
-			}
-			kpprev = kp;
-			r2prev = r2;
-		}
-		len = lsum;
-//		net->edgeList[ie].length_um = len;	// already computed
-		volume += dvol;
-		if (dbug) {
-			printf("lsum: %f\n",len);
-			fprintf(fperr,"lsum: %f\n",len);
-			fflush(fperr);
-			if (lsum == 0) return 1;
-		}
-		ad = 2*sqrt(dvol/(PI*len));	// segment diameter
-		net->edgeList[ie].segavediam = ad;
-		if (use_len_diam && len/ad < len_diam_limit) continue;
-//		printf("ie: %d dvol,lsum,ad: %8.0f %6.1f %6.1f\n",ie,dvol,lsum,ad);
-		fprintf(fpout,"ie: %d dvol,lsum,ad,total: %8.0f %6.1f %6.1f %8.1f\n",ie,dvol,lsum,ad,ave_seg_diam);
-		if (dvol <= 0) {
-			printf("Bad diameter: %8.2f\n",ad);
-			return 1;
-		}
-		ave_seg_diam += ad;
-		ave_lseg_diam += ad*len;
-		if (ad < 0.001 || ad > 200) {
-			printf("Bad segment diameter: edge: %d ad: %f\n",ie,ad);
-			fprintf(fperr,"Zero segment diameter: edge: %d ad: %f\n",ie,ad);
-			return 1;
-		}
-		ka = int(ad/ddiam + 0.5);
-		if (ka >= NBOX) {
-			printf("Vessel too wide (segment ave): d: %f k: %d\n",ad,ka);
-			fprintf(fperr,"Vessel too wide (segment ave): d: %f k: %d\n",ad,ka);
-			continue;
-		}
-		segadbox[ka]++;
-		nsegdtot++;
-		lsegadbox[ka] += len;
-		lsegdtot += len;
-	}
-	// Determine d95, the diameter that >95% of points exceed.
-	dsum = 0;
-	for (k=0; k<NBOX; k++) {
-		dsum += adbox[k]/float(ndtot);
-		if (dsum > 0.05) {
-			d95 = (k-1)*ddiam;
-			break;
-		}
-	}
-	printf("\nCompute length distributions:\n");
-	fprintf(fperr,"\nCompute length distributions:\n");
-	// Lengths
-	dlen = 1;
-	ltot = 0;
-	ave_len = 0;
-	for (ie=0; ie<net->ne; ie++) {
-		edge = net->edgeList[ie];
-		if (!edge.used) continue;
-		len = edge.length_um;
-		k = int(len/dlen + 0.5);
-		if (!use_len_diam && k*dlen <= len_limit) continue;
-		ad = edge.segavediam;
-		if (use_len_diam && len/ad < len_diam_limit) continue;
-		if (k >= NBOX) {
-			printf("Edge too long for boxes: len: %d  %6.1f  k: %d\n",ie,len,k);
-			fprintf(fperr,"Edge too long for boxes: len: %d  %6.1f  k: %d\n",ie,len,k);
-			continue;
-		}
-		lvbox[k]++;
-		ave_len += len;
-		ltot++;
-	}
-	ave_pt_diam /= ndtot;
-	ave_seg_diam /= nsegdtot;
-	fprintf(fpout,"ave_seg_diam,nsegdtot: %12.3e %8d\n",ave_seg_diam,nsegdtot);
-	ave_lseg_diam /= lsegdtot;
-	fprintf(fpout,"Total vertices: %d  points: %d\n",net->nv,net->np);
-	fprintf(fpout,"Vessels: %d\n",net->ne);
-	printf("\nAverage pt diameter: %6.2f vessel diameter: %6.2f length-weighted: %6.2f\n",
-		ave_pt_diam, ave_seg_diam, ave_lseg_diam);
-	fprintf(fpout,"\nAverage pt diameter: %6.2f vessel diameter: %6.2f length-weighted vessel diameter: %6.2f\n",
-		ave_pt_diam, ave_seg_diam, ave_lseg_diam);
-	printf("Volume: %10.0f\n\n",volume); 
-	printf("Average vessel length: %6.1f\n",ave_len/ltot);
-	fprintf(fpout,"Average vessel length: %6.1f\n",ave_len/ltot);
-	printf("Volume: %10.0f\n\n",volume);
-	printf("Volume: %10.0f\n\n",volume);
-	printf("Volume: %10.0f\n\n",volume);
-	printf("Volume: %10.0f\n\n",volume);
-	printf("Volume: %10.0f\n\n",volume);
-	fprintf(fpout,"Volume: %10.0f\n\n",volume);
-
-	for (k=NBOX-1; k>=0; k--) {
-		if (segadbox[k] > 0) break;
-	}
-	ndpts = k+2;
-	fprintf(fpout,"Vessel diameter distribution\n");
-	fprintf(fpout,"   um    number  fraction    length  fraction\n");
-	for (k=0; k<ndpts; k++) {
-		fprintf(fpout,"%6.2f %8d %9.5f  %8.0f %9.5f\n",k*ddiam,segadbox[k],segadbox[k]/float(nsegdtot),
-			lsegadbox[k],lsegadbox[k]/lsegdtot);
-	}
-
-	for (k=NBOX-1; k>=0; k--) {
-		if (lvbox[k] > 0) break;
-	}
-	nlpts = k+2;
-	fprintf(fpout,"Vessel length distribution\n");
-	fprintf(fpout,"   um    number  fraction\n");
-	for (k=0; k<nlpts; k++) {
-		fprintf(fpout,"%6.2f %8d %9.5f\n",k*dlen,lvbox[k],lvbox[k]/ltot);
-	}
-	return 0;
-}
-*/
 
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
@@ -1293,31 +600,26 @@ int main(int argc, char **argv)
 	err = ReadAmiraFile(input_amfile,NP0);
 	if (err != 0) return 2;
 
-	err = CheckNetwork(NP0,"Original network");
-	if (err != 0) return 3;
-
 	NP1 = (NETWORK *)malloc(sizeof(NETWORK));
 
 	err = ReduceNetwork(NP0,NP1,len_diam_limit);
-	if (err != 0) return 4;
+	if (err != 0) return 3;
 
 	printf("\nNP1: ne, nv, np: %d %d %d\n\n",NP1->ne,NP1->nv,NP1->np);
-	err = CheckNetwork(NP1,"Reduced network");
-	if (err != 0) return 5;
 
 	origin_shift[0] = 0;
 	origin_shift[1] = 0;
 	origin_shift[2] = 0;
 
 	err = WriteAmiraFile(output_amfile,input_amfile,NP1,origin_shift);
-	if (err != 0) return 6;
+	if (err != 0) return 4;
 	if (cmgui_flag == 1) {
 		err = WriteCmguiData(output_basename,NP1,origin_shift);
-		if (err != 0) return 7;
+		if (err != 0) return 5;
 	}
 	err = EdgeDimensions(NP1->edgeList,NP1->point,NP1->ne);
-	if (err != 0) return 8;
+	if (err != 0) return 6;
 	err = CreateDistributions(NP1);
-	if (err != 0) return 9;
+	if (err != 0) return 7;
 	return 0;
 }
