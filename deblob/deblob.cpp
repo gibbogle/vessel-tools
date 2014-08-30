@@ -100,7 +100,8 @@ void process(int zstart, int zend)
 //		printf("x: %4d %4d y: %4d %4d z: %4d %4d\n",x1,x2,y1,y2,z1,z2);
 		int res = check(x1,x2,y1,y2,z1,z2);
 		if (res != 0) {
-			printf("Chopped: x: %4d %4d y: %4d %4d z: %4d %4d\n",x1,x2,y1,y2,z1,z2);
+//			printf("Chopped: x: %4d %4d y: %4d %4d z: %4d %4d\n",x1,x2,y1,y2,z1,z2);
+			printf(".");
 			nchopped++;
 		}
 		x0 += delta;
@@ -110,7 +111,7 @@ void process(int zstart, int zend)
 			if (y0-radius+stencil_size+1 > height-1) {
 				y0 = radius;
 				z0 += delta;
-				printf("z0: %4d\n",z0);
+				printf("\nz0: %4d\n",z0);
 				if (z0-radius+stencil_size+1 > zend) break;
 			}
 		}
