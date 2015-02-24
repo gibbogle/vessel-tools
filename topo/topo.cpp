@@ -3140,12 +3140,16 @@ int deloop(int iter)
 {
 	int i, ii, kv0, kv1, kkv0, kkv1, kv2, kv3, edrop;
 	int npairs, ne2, j1, j2, j3, nloops, ndropped, NE2MAX;
-	int dropped[1000000];
+//	int dropped[1000000];
+	int *dropped;
 	EDGE edge, eedge;
 	PAIR *pair;
 	int *e2;
 	bool dup;
+	bool NEW_dup_delete = true;		// try this!
 
+	printf("deloop: iter: %d\n",iter);
+	printf("deloop: iter: %d\n",iter);
 	printf("deloop: iter: %d\n",iter);
 	fprintf(fperr,"deloop: iter: %d\n",iter);
 
@@ -3189,10 +3193,16 @@ int deloop(int iter)
 						fprintf(fperr,"Error: deloop: not using point\n");
 						return -2;
 					}
+					if (NEW_dup_delete) {
+						edgeList[ii].used = false;
+						vertex[kkv0].nlinks_used--;
+						vertex[kkv1].nlinks_used--;
+						printf("dup: dropped edge: %d  vert: %d %d\n",ii,kkv0,kkv1);
+					}
 					break;
 				}
 			}
-			if (dup) {
+			if (dup && !NEW_dup_delete) {
 				ne2--;
 				edgeList[i].used = false;
 				vertex[kv0].nlinks_used--;
@@ -3332,6 +3342,8 @@ int deloop(int iter)
 
 	// For a triangle (loop) there must be corresponding edges in each pair with opposite sign
 
+	dropped = (int *)malloc(1000000*sizeof(int));
+
 	bool hit;
 	nloops = 0;
 	ndropped = 0;
@@ -3393,7 +3405,7 @@ int deloop(int iter)
 	printf("Number of loops removed: %d\n",nloops);
 	fprintf(fperr,"Number of loops removed: %d\n",nloops);
 	rejoin(ndropped,dropped);
-	printf("did rejoin\n");
+	printf("did rejoin: ndropped: %d\n",ndropped);
 	// Now check for any verticies with only two links, rejoin edges
 	//for (int kv=0; kv<nv; kv++) {
 	//	if (vertex[kv].used) continue;
@@ -3401,7 +3413,7 @@ int deloop(int iter)
 	//		joiner(kv);
 	//	}
 	//}
-
+	free(dropped);
 	return nloops;
 }
 
@@ -4488,6 +4500,7 @@ int TraceSkeleton(int n_prune_cycles)
 	err = checker();
 	if (err != 0) return 1;
 
+	printf("Do deloop\n");
 	for (iter=0; iter<3; iter++) {
 		nloops = deloop(iter);
 		if (nloops < 0) return 1;

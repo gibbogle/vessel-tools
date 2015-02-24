@@ -1,26 +1,15 @@
-// test
 #include <cstdio>
 
-#include "prune.h"
+#include "network.h"
 
-extern int nv, ne, np;
-extern int nv_used, ne_used, np_used;
-extern EDGE *edgeList;
-extern VERTEX *vertex;
-extern POINT *point;
 extern FILE *fperr, *fpout;
-
-int testfunction(void)
-{
-	printf("testfunction\n");
-	return 0;
-}
 
 //-----------------------------------------------------------------------------------------------------
 // Create CMGUI .com file
 //-----------------------------------------------------------------------------------------------------
-void WriteCom(FILE *dotcom, char *fileName)
+void write_com(FILE *dotcom, char *fileName)
 {
+    fprintf(dotcom, "#Lymph node structure for section %s\n\n", fileName);
     fprintf(dotcom, "# Create a material in addition to the default.\n");
     fprintf(dotcom, "gfx cre mat gold ambient 1 0.7 0 diffuse 1 0.7 0 specular 0.5 0.5 0.5 shininess 0.8\n");
     fprintf(dotcom, "# Read in the reticular mesh (group vessels) and hide the axes.\n");
@@ -99,7 +88,7 @@ void WriteExelemHeader(FILE *exelem)
 // Does the node file need all nodes from 1 to np?
 // A quick test seems to show that neither element nor node numbers need to be consecutive.
 //-----------------------------------------------------------------------------------------------------
-int WriteCmguiData(char *basename)
+int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[])
 {
 	int k, ie, ip, npts;
 	EDGE edge;
@@ -107,7 +96,7 @@ int WriteCmguiData(char *basename)
 	char dotcomname[1024];
 	FILE *exelem, *exnode, *dotcom;
 
-	printf("WriteCmguiData: %s %d %d\n",basename,ne,np);
+	printf("WriteCmguiData: %s %d %d\n",basename,net->ne,net->np);
 	fprintf(fperr,"WriteCmguiData: %s\n",basename);
 	fflush(fperr);
 	sprintf(dotcomname,"%s.com.txt",basename);
@@ -121,13 +110,13 @@ int WriteCmguiData(char *basename)
 	dotcom = fopen(dotcomname,"w");
 	exelem = fopen(exelemname,"w");
 	exnode = fopen(exnodename,"w");
-	WriteCom(dotcom,basename);
+	write_com(dotcom,basename);
 	WriteExelemHeader(exelem);
 	WriteExnodeHeader(exnode);
-	printf("wrote headers: ne: %d np: %d\n",ne,np);
+	printf("wrote headers: ne: %d np: %d\n",net->ne,net->np);
 	int kelem = 0;
-	for (ie=0; ie<ne; ie++) {
-		edge = edgeList[ie];
+	for (ie=0; ie<net->ne; ie++) {
+		edge = net->edgeList[ie];
 //		printf("ie: %d used: %d npts: %d\n",ie,edge.used,edge.npts);
 		if (edge.used) {
 			npts = edge.npts;
@@ -137,29 +126,34 @@ int WriteCmguiData(char *basename)
 	//		point_used[kfrom] = true;
 			for (ip=1; ip<npts; ip++) {
 				int k2 = edge.pt[ip];
-	//			int k2 = edge.pt_used[ip];
-				kelem++;
-				fprintf(exelem, "Element: %d 0 0\n", kelem);
-				fprintf(exelem, "  Nodes: %d %d\n", kfrom+1, k2+1);
-				fprintf(exelem, "  Scale factors: 1 1\n");
-				kfrom = k2;
+				double d = dist(net,kfrom,k2);
+				if (d > 0.5*(net->point[kfrom].d/2+net->point[k2].d/2) || ip == npts-1) {
+					kelem++;
+					fprintf(exelem, "Element: %d 0 0\n", kelem);
+					fprintf(exelem, "  Nodes: %d %d\n", kfrom+1, k2+1);
+					fprintf(exelem, "  Scale factors: 1 1\n");
+					kfrom = k2;
+				}
 			}
 		}
 	}
 	printf("wrote elem data\n");
-	for (k=0; k<np; k++) {
-		if (point[k].used) {
+	for (k=0; k<net->np; k++) {
+		if (net->point[k].used) {
 			fprintf(exnode, "Node: %d\n", k+1);
-			fprintf(exnode, "%6.1f %6.1f %6.1f\n", point[k].x,point[k].y,point[k].z);
-			fprintf(exnode, "%6.2f\n", point[k].d/2);
-			if (point[k].d == 0) {
+			fprintf(exnode, "%6.1f %6.1f %6.1f\n",
+				net->point[k].x - origin_shift[0],
+				net->point[k].y - origin_shift[1],
+				net->point[k].z - origin_shift[2]);
+			fprintf(exnode, "%6.2f\n", net->point[k].d/2);
+			if (net->point[k].d == 0) {
 				printf("Error: zero diameter: %d\n",k);
 				return 1;
 			}
 		}
 	}
 	printf("wrote node data\n");
-	fclose(dotcom);
+//	fclose(dotcom);
 	fclose(exelem);
 	fclose(exnode);
 	return 0;

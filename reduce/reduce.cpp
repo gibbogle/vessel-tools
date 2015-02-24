@@ -19,6 +19,8 @@ float ddiam, dlen;
 bool use_len_limit, use_len_diam_limit;
 float len_limit, len_diam_limit;
 
+float dmin = 5;
+
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
 float dist(NETWORK *net, int k1, int k2)
@@ -50,80 +52,6 @@ void showedge(NETWORK *net, int ie, char mode)
 		printf("\n");
 	}
 }
-
-//-----------------------------------------------------------------------------------------------------
-// Check for a point position repeated on an edge
-//-----------------------------------------------------------------------------------------------------
-int CheckNetwork1(NETWORK *net, char *str)
-{
-	int ie, ip, ne, npts,kp0,kp1,kp, ie1, iv0, iv1;
-	float dave, dave1;
-	EDGE edge, edge1;
-	POINT p0, p1, p;
-	int repeated;
-
-	fprintf(fpout,"CheckNetwork: %s\n",str);
-	repeated = 0;
-	ne = net->ne;
-	for (ie=0; ie<ne; ie++) {
-		edge = net->edgeList[ie];
-		if (!edge.used) continue;
-		npts = edge.npts;
-		kp0 = edge.pt[0];
-		p0 = net->point[kp0];
-		kp1 = edge.pt[npts-1];
-		p1 = net->point[kp1];
-		for (ip=1; ip<npts; ip++) {
-			kp = edge.pt[ip];
-			p = net->point[kp];
-			if (EqualPoints(p0,p)) {
-				fprintf(fpout,"CheckNetwork: repeated (0): ie,npts,v0,ip,kp0,kp: %d %d %d %d %d %d\n",ie,npts,0,ip,kp0,kp);
-				fprintf(fpout,"removed\n");
-				repeated++;
-				net->edgeList[ie].used = false;
-			}
-		}
-		for (ip=0; ip<npts-1; ip++) {
-			kp = edge.pt[ip];
-			p = net->point[kp];
-			if (EqualPoints(p,p1)) {
-				fprintf(fpout,"CheckNetwork: repeated (1): ie,npts,ip,v1,kp,kp1: %d %d %d %d %d %d\n",ie,npts,ip,npts-1,kp,kp1);
-				fprintf(fpout,"removed\n");
-				repeated++;
-				net->edgeList[ie].used = false;
-			}
-		}
-	}
-	// Now check for two edges connecting the same pair of vertices.
-	for (ie=0; ie<ne; ie++) {
-		edge =net->edgeList[ie];
-		iv0 = edge.vert[0];
-		iv1 = edge.vert[1];
-		for (ie1=0; ie1<ne; ie1++) {
-			if (ie1 == ie) continue;
-			edge1 = net->edgeList[ie1];
-			if ((edge1.vert[0]==iv0 && edge1.vert[1]==iv1) || (edge1.vert[0]==iv1 && edge1.vert[1]==iv0)) {
-				// double connection between iv0 and iv1 - remove the thinnest
-				dave = 0;
-				for (ip=0; ip<edge.npts; ip++) {
-					dave += net->point[edge.pt[ip]].d;
-				}
-				dave1 = 0;
-				for (ip=0; ip<edge1.npts; ip++) {
-					dave1 += net->point[edge1.pt[ip]].d;
-				}
-				dave /= edge.npts;
-				dave1 /= edge1.npts;
-				if (dave < dave1) {
-					net->edgeList[ie].used = false;
-				} else {
-					net->edgeList[ie1].used = false;
-				}
-			}
-		}
-	}
-	return 0;
-}	
 
 //-----------------------------------------------------------------------------------------------------
 // Check for vertex index iv in ivlist.  If it exists, return the index. 
@@ -238,6 +166,7 @@ int CreateReducedNet(NETWORK *net0, NETWORK *net1)
 
 //-----------------------------------------------------------------------------------------------------
 // Find vertex nodes with only two edges connected
+// Impose a minimum diameter
 //-----------------------------------------------------------------------------------------------------
 int CompleteNetwork(NETWORK *net)
 {
@@ -344,11 +273,13 @@ int CompleteNetwork(NETWORK *net)
 		}
 		net->edgeList[i].length_um = len;
 		net->edgeList[i].segavediam = dsum/npts;
-		if (i == 0) printf("length of edge 0: %f\n",len);
 		if (len == 0) {
 			printf("Error: CompleteNetwork: len = 0: edge: %d\n",ie);
 			return 1;
 		}
+		//if (net->edgeList[i].segavediam < dmin) {
+		//	net->edgeList[i].used = false;
+		//}
 //		fprintf(fpout,"edge: %6d npts: %3d len: %6.1f diam: %6.1f\n",i,npts,len,dsum/npts);
 	}
 	return 0;

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1092</width>
-    <height>347</height>
+    <width>1170</width>
+    <height>511</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -32,7 +32,7 @@
      <rect>
       <x>90</x>
       <y>0</y>
-      <width>571</width>
+      <width>1071</width>
       <height>21</height>
      </rect>
     </property>
@@ -43,8 +43,8 @@
    <widget class="QPushButton" name="pushButtonCompute">
     <property name="geometry">
      <rect>
-      <x>310</x>
-      <y>230</y>
+      <x>270</x>
+      <y>410</y>
       <width>75</width>
       <height>23</height>
      </rect>
@@ -56,8 +56,8 @@
    <widget class="QLabel" name="label">
     <property name="geometry">
      <rect>
-      <x>30</x>
-      <y>270</y>
+      <x>10</x>
+      <y>440</y>
       <width>41</width>
       <height>16</height>
      </rect>
@@ -69,9 +69,9 @@
    <widget class="QLabel" name="labelResult">
     <property name="geometry">
      <rect>
-      <x>70</x>
-      <y>270</y>
-      <width>1011</width>
+      <x>50</x>
+      <y>440</y>
+      <width>1111</width>
       <height>16</height>
      </rect>
     </property>
@@ -82,10 +82,10 @@
    <widget class="QTextEdit" name="textEdit">
     <property name="geometry">
      <rect>
-      <x>670</x>
-      <y>10</y>
-      <width>411</width>
-      <height>251</height>
+      <x>570</x>
+      <y>50</y>
+      <width>591</width>
+      <height>331</height>
      </rect>
     </property>
    </widget>
@@ -107,7 +107,7 @@
      <rect>
       <x>90</x>
       <y>30</y>
-      <width>571</width>
+      <width>1071</width>
       <height>21</height>
      </rect>
     </property>
@@ -118,7 +118,7 @@
    <widget class="QLineEdit" name="lineEditRatioLimit">
     <property name="geometry">
      <rect>
-      <x>70</x>
+      <x>120</x>
       <y>130</y>
       <width>31</width>
       <height>20</height>
@@ -134,7 +134,7 @@
    <widget class="QLabel" name="labelRatioLimit">
     <property name="geometry">
      <rect>
-      <x>110</x>
+      <x>160</x>
       <y>130</y>
       <width>151</width>
       <height>21</height>
@@ -147,7 +147,7 @@
    <widget class="QCheckBox" name="checkBoxPrune">
     <property name="geometry">
      <rect>
-      <x>70</x>
+      <x>230</x>
       <y>190</y>
       <width>131</width>
       <height>18</height>
@@ -163,8 +163,8 @@
    <widget class="QCheckBox" name="checkBoxCreateCmgui">
     <property name="geometry">
      <rect>
-      <x>310</x>
-      <y>190</y>
+      <x>270</x>
+      <y>370</y>
       <width>121</width>
       <height>18</height>
      </rect>
@@ -179,8 +179,8 @@
    <widget class="QLineEdit" name="lineNprunecycles">
     <property name="geometry">
      <rect>
-      <x>70</x>
-      <y>160</y>
+      <x>220</x>
+      <y>220</y>
       <width>31</width>
       <height>20</height>
      </rect>
@@ -195,9 +195,9 @@
    <widget class="QLabel" name="label_nprunecycles">
     <property name="geometry">
      <rect>
-      <x>110</x>
-      <y>160</y>
-      <width>171</width>
+      <x>260</x>
+      <y>220</y>
+      <width>121</width>
       <height>21</height>
      </rect>
     </property>
@@ -208,8 +208,8 @@
    <widget class="QLineEdit" name="lineEdit_ddiam">
     <property name="geometry">
      <rect>
-      <x>390</x>
-      <y>100</y>
+      <x>240</x>
+      <y>300</y>
       <width>41</width>
       <height>20</height>
      </rect>
@@ -224,8 +224,8 @@
    <widget class="QLabel" name="label_histogram">
     <property name="geometry">
      <rect>
-      <x>390</x>
-      <y>80</y>
+      <x>240</x>
+      <y>280</y>
       <width>141</width>
       <height>16</height>
      </rect>
@@ -243,8 +243,8 @@
    <widget class="QLineEdit" name="lineEdit_dlen">
     <property name="geometry">
      <rect>
-      <x>390</x>
-      <y>130</y>
+      <x>240</x>
+      <y>330</y>
       <width>41</width>
       <height>20</height>
      </rect>
@@ -259,8 +259,8 @@
    <widget class="QLabel" name="label_dlen">
     <property name="geometry">
      <rect>
-      <x>440</x>
-      <y>130</y>
+      <x>290</x>
+      <y>330</y>
       <width>141</width>
       <height>21</height>
      </rect>
@@ -272,8 +272,8 @@
    <widget class="QLabel" name="label_ddiam">
     <property name="geometry">
      <rect>
-      <x>440</x>
-      <y>100</y>
+      <x>290</x>
+      <y>300</y>
       <width>151</width>
       <height>21</height>
      </rect>
@@ -285,8 +285,8 @@
    <widget class="QLabel" name="label_pruning">
     <property name="geometry">
      <rect>
-      <x>70</x>
-      <y>80</y>
+      <x>260</x>
+      <y>100</y>
       <width>141</width>
       <height>16</height>
      </rect>
@@ -304,8 +304,8 @@
    <widget class="QCheckBox" name="checkBox_ratio">
     <property name="geometry">
      <rect>
-      <x>70</x>
-      <y>100</y>
+      <x>140</x>
+      <y>160</y>
       <width>71</width>
       <height>18</height>
      </rect>
@@ -317,13 +317,42 @@
      <bool>true</bool>
     </property>
    </widget>
+   <widget class="QLineEdit" name="lineEditDiamLimit">
+    <property name="geometry">
+     <rect>
+      <x>370</x>
+      <y>130</y>
+      <width>31</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>0</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_dlimit">
+    <property name="geometry">
+     <rect>
+      <x>410</x>
+      <y>130</y>
+      <width>91</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Diameter limit (um)</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1092</width>
+     <width>1170</width>
      <height>18</height>
     </rect>
    </property>

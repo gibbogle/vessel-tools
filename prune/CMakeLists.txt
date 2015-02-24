@@ -35,7 +35,7 @@ MESSAGE(FATAL_ERROR
 ENDIF(ITK_FOUND)
 
 set(PROJECTNAME "prune")
-ADD_EXECUTABLE(${PROJECTNAME} prune.cpp cmgui.cpp)
+ADD_EXECUTABLE(${PROJECTNAME} prune.cpp amira.cpp statistics.cpp cmgui.cpp network.h)
 TARGET_LINK_LIBRARIES(${PROJECTNAME} ${ITK_LIBRARIES} )
 ADD_CUSTOM_COMMAND(TARGET ${PROJECTNAME} POST_BUILD COMMAND copy \"$(TargetPath)\" \"../bin/exec\")
 

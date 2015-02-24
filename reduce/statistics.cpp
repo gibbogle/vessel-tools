@@ -48,7 +48,7 @@ int EdgeDimensions(EDGE *edges, POINT *points, int ne)
 						 ie,edge.npts,ip,kp,points[kp].x,points[kp].y,points[kp].z);
 					fprintf(fpout,"EdgeDimensions: error: dlen = 0: ie,npts,ip,kp: %d %d %d %d point: %6.1f %6.1f %6.1f\n",
 						 ie,edge.npts,ip,kp,points[kp].x,points[kp].y,points[kp].z);
-					return 2;
+//					return 2;
 				}
 				deltalen = sqrt(deltalen2);
 				vol += PI*deltalen*(r2 + r2prev)/2;

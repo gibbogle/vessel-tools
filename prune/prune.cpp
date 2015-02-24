@@ -12,7 +12,7 @@
 #include <assert.h>
 #include <ctime>
 
-#include "prune.h"
+//#include "prune.h"
 
 struct pair_str
 {
@@ -31,13 +31,13 @@ struct loosend_str
 };
 typedef loosend_str LOOSEND;
 
+/*
 struct conn_str
 {
 	int n;
 	int v[5];
 };
 typedef conn_str CONN;
-
 
 int WriteCmguiData(char *basename);
 
@@ -57,9 +57,22 @@ bool use_ratio;
 #define STR_LEN 128
 //#define RATIO_LIMIT 4	// should be an input parameter
 #define PI 3.14159
+*/
+#include "network.h"
+
+FILE *fperr, *fpout;
+
+float ddiam, dlen, dminimum;
+bool use_len_limit, use_len_diam_limit;
+float len_limit, len_diam_limit;
+
+double ratio_limit;
+bool use_ratio;
 
 #define JOIN_LOOSE_ENDS false
 #define DROP_UNCONNECTED false
+
+int CheckNetwork(NETWORK *net, char *str);		// temporary here
 
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
@@ -71,56 +84,56 @@ bool use_ratio;
 
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
-float dist(int k1, int k2)
+float dist(NETWORK *net, int k1, int k2)
 {
-	float dx = point[k2].x - point[k1].x;
-	float dy = point[k2].y - point[k1].y;
-	float dz = point[k2].z - point[k1].z;
+	float dx = net->point[k2].x - net->point[k1].x;
+	float dy = net->point[k2].y - net->point[k1].y;
+	float dz = net->point[k2].z - net->point[k1].z;
 	return sqrt(dx*dx+dy*dy+dz*dz);
 }
 
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
-void showEdges(void)
+void showEdges(NETWORK *net)
 {
 	int i, k, j;
 	EDGE edge;
 
 	fprintf(fperr,"Edge points:\n");
 	for (i=0; i<100; i++) {
-		edge = edgeList[i];
+		edge = net->edgeList[i];
 		fprintf(fperr,"edge: %6d %6d\n",i,edge.npts);
 		for (k=0; k<edge.npts; k++) {
 			j = edge.pt[k];
-			fprintf(fperr,"%6d %6d  %6.1f %6.1f %6.1f\n",k,j,point[j].x,point[j].y,point[j].z);
+			fprintf(fperr,"%6d %6d  %6.1f %6.1f %6.1f\n",k,j,net->point[j].x,net->point[j].y,net->point[j].z);
 		}
 	}
 }
 
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
-int showEdge(int ie)
+int showEdge(NETWORK *net, int ie)
 {
 	int i, kv0, kv1;
 	EDGE edge;
 
-	printf("Edge: %6d Used: %d Points: ",ie,edgeList[ie].used);
-	for (i=0; i<edgeList[ie].npts; i++) 
-		printf("%6d ",edgeList[ie].pt[i]);
+	printf("Edge: %6d Used: %d Points: ",ie,net->edgeList[ie].used);
+	for (i=0; i<net->edgeList[ie].npts; i++) 
+		printf("%6d ",net->edgeList[ie].pt[i]);
 	printf("\n");
-	kv0 = edgeList[ie].vert[0];
-	kv1 = edgeList[ie].vert[1];
-	if (kv0 != edgeList[ie].pt[0]) {
-		printf("kv0 not pt[0]: %d %d\n",kv0,edgeList[ie].pt[0]);
+	kv0 = net->edgeList[ie].vert[0];
+	kv1 = net->edgeList[ie].vert[1];
+	if (kv0 != net->edgeList[ie].pt[0]) {
+		printf("kv0 not pt[0]: %d %d\n",kv0,net->edgeList[ie].pt[0]);
 		exit(1);
 	}
-	if (kv1 != edgeList[ie].pt[edgeList[ie].npts-1]) {
-		printf("kv1 not pt[n-1]: %d %d\n",kv1,edgeList[ie].pt[edgeList[ie].npts-1]);
+	if (kv1 != net->edgeList[ie].pt[net->edgeList[ie].npts-1]) {
+		printf("kv1 not pt[n-1]: %d %d\n",kv1,net->edgeList[ie].pt[net->edgeList[ie].npts-1]);
 		exit(1);
 	}
-	for (i=0;i<ne;i++) {
+	for (i=0;i<net->ne;i++) {
 		if (i == ie) continue;
-		edge = edgeList[i];
+		edge = net->edgeList[i];
 		if (!edge.used) continue;
 		if (edge.vert[0] == kv0 || edge.vert[1] == kv0)
 			printf("  vert[0]: %d connected to edge: %d\n",kv0,i);
@@ -152,22 +165,22 @@ bool samepoint(POINT *p1, POINT *p2)
 //-----------------------------------------------------------------------------------------------------
 // Check consistency between edge vert[] and pt[]
 //-----------------------------------------------------------------------------------------------------
-int checkEdgeEndPts()
+int checkEdgeEndPts(NETWORK *net)
 {
 	EDGE *edge;
 	POINT *pv0, *pv1, *pt0, *pt1;
 	int ie, npts, k, kp0, kp1, kv0, kv1, kvp0, kvp1, err;
 
 	err = 0;
-	for (ie=0; ie<ne; ie++) {
-		edge = &edgeList[ie];
+	for (ie=0; ie<net->ne; ie++) {
+		edge = &net->edgeList[ie];
 		npts = edge->npts;
-		pt0 = &point[edge->pt[0]];
-		pt1 = &point[edge->pt[npts-1]];
+		pt0 = &net->point[edge->pt[0]];
+		pt1 = &net->point[edge->pt[npts-1]];
 		kv0 = edge->vert[0];
 		kv1 = edge->vert[1];
-		pv0 = &vertex[kv0].point;
-		pv1 = &vertex[kv1].point;
+		pv0 = &net->vertex[kv0].point;
+		pv1 = &net->vertex[kv1].point;
 //		if ((kp0==kvp0 && kp1==kvp1) || (kp0==kvp1 && kp1==kvp0)) continue;
 		if ((samepoint(pt0,pv0) && samepoint(pt1,pv1)) || (samepoint(pt0,pv1) && samepoint(pt1,pv0))) continue;
 		err = 1;
@@ -177,6 +190,7 @@ int checkEdgeEndPts()
 	return err;
 }
 
+/*
 //-----------------------------------------------------------------------------------------------------
 // The average diameter of a vessel (edge) is now estimated by dividing the volume by the length.
 // All distances in the .am file are in um.
@@ -562,13 +576,15 @@ int WriteAmiraFile(char *amFileOut, char *amFileIn)
 	printf("Completed WriteAmiraFile\n");
 	return 0;
 }
+*/
 
 //-----------------------------------------------------------------------------------------------------
 // Read Amira SpatialGraph file
+// Old version modified to use *net
 //-----------------------------------------------------------------------------------------------------
-int ReadAmiraFile(char *amFile)
+int ReadAmiraFile_old(char *amFile, NETWORK *net)
 {
-	int i, j, k, kp, npts, nee, npp;
+	int i, j, k, kp, npts, nee, npp, err;
 	EDGE edge;
 	char line[STR_LEN];
 
@@ -582,31 +598,31 @@ int ReadAmiraFile(char *amFile)
 		fgets(line, STR_LEN, fpam);		// reads until newline character
 		printf("%s\n",line);
 		if (strncmp(line,"define VERTEX",13) == 0) {
-			sscanf(line+13,"%d",&nv);
+			sscanf(line+13,"%d",&net->nv);
 			k++;
 		}
 		if (strncmp(line,"define EDGE",11) == 0) {
-			sscanf(line+11,"%d",&ne);
-			nee = 2*ne;
+			sscanf(line+11,"%d",&net->ne);
+			nee = 2*net->ne;
 			k++;
 		}
 		if (strncmp(line,"define POINT",12) == 0) {
-			sscanf(line+12,"%d",&np);
-			npp = 2*np;
+			sscanf(line+12,"%d",&net->np);
+			npp = 2*net->np;
 			k++;
 		}
 	}
 
-	vertex = (VERTEX *)malloc(nv*sizeof(VERTEX));
-	edgeList = (EDGE *)malloc(nee*sizeof(EDGE));	// 2* for added joining edges
-	point = (POINT *)malloc(npp*sizeof(POINT));		// 2* for added joining edges
+	net->vertex = (VERTEX *)malloc(net->nv*sizeof(VERTEX));
+	net->edgeList = (EDGE *)malloc(nee*sizeof(EDGE));	// 2* for added joining edges
+	net->point = (POINT *)malloc(npp*sizeof(POINT));		// 2* for added joining edges
 
 	// Initialize
 	for (i=0; i<nee; i++) {
-		edgeList[i].used = false;
+		net->edgeList[i].used = false;
 	}
 	for (i=0; i<npp; i++) {
-		point[i].used = false;
+		net->point[i].used = false;
 	}
 
 	while (1) {
@@ -618,50 +634,50 @@ int ReadAmiraFile(char *amFile)
 		if (line[0] == '@') {
 			sscanf(line+1,"%d",&k);
 			if (k == 1) {
-				for (i=0;i<nv;i++) {
+				for (i=0;i<net->nv;i++) {
 					if (fgets(line, STR_LEN, fpam) == NULL) {
 						printf("ERROR reading section @1\n");
 						return 1;
 					}
-					sscanf(line,"%f %f %f\n",&vertex[i].point.x,&vertex[i].point.y,&vertex[i].point.z);
+					sscanf(line,"%f %f %f\n",&net->vertex[i].point.x,&net->vertex[i].point.y,&net->vertex[i].point.z);
 					kp = i;
-					vertex[i].point.d = 0;
+					net->vertex[i].point.d = 0;
 //					vertex[i].point.used = true;
-					point[kp] = vertex[i].point;
+					net->point[kp] = net->vertex[i].point;
 				}
 				kp++;
 			} else if (k == 2) {
-				for (i=0;i<ne;i++) {
+				for (i=0;i<net->ne;i++) {
 					if (fgets(line, STR_LEN, fpam) == NULL) {
 						printf("ERROR reading section @2\n");
 						return 1;
 					}
-					sscanf(line,"%d %d",&edgeList[i].vert[0],&edgeList[i].vert[1]);
-					edgeList[i].used = true;
+					sscanf(line,"%d %d",&net->edgeList[i].vert[0],&net->edgeList[i].vert[1]);
+					net->edgeList[i].used = true;
 				}
 				printf("Got edge vertex indices\n");
 			} else if (k == 3) {
-				for (i=0;i<ne;i++) {
+				for (i=0;i<net->ne;i++) {
 					if (fgets(line, STR_LEN, fpam) == NULL) {
 						printf("ERROR reading section @3\n");
 						return 1;
 					}
-					sscanf(line,"%d",&edgeList[i].npts);
-					if (edgeList[i].npts < 1) {
-						printf("ReadAmiraFile: i: %d npts: %d\n",i,edgeList[i].npts);
+					sscanf(line,"%d",&net->edgeList[i].npts);
+					if (net->edgeList[i].npts < 1) {
+						printf("ReadAmiraFile: i: %d npts: %d\n",i,net->edgeList[i].npts);
 						return 1;
 					}
-					edgeList[i].npts_used = edgeList[i].npts;
-					edgeList[i].pt = (int *)malloc(edgeList[i].npts*sizeof(int));
-					edgeList[i].pt_used = (int *)malloc(edgeList[i].npts*sizeof(int));
-					npts += edgeList[i].npts;
-					edgeList[i].pt[0] = edgeList[i].vert[0];
-					edgeList[i].pt[edgeList[i].npts-1] = edgeList[i].vert[1];
+					net->edgeList[i].npts_used = net->edgeList[i].npts;
+					net->edgeList[i].pt = (int *)malloc(net->edgeList[i].npts*sizeof(int));
+					net->edgeList[i].pt_used = (int *)malloc(net->edgeList[i].npts*sizeof(int));
+					npts += net->edgeList[i].npts;
+					net->edgeList[i].pt[0] = net->edgeList[i].vert[0];
+					net->edgeList[i].pt[net->edgeList[i].npts-1] = net->edgeList[i].vert[1];
 				}
 				printf("Got edge npts, total: %d\n",npts);
 			} else if (k == 4) {
-				for (i=0;i<ne;i++) {
-					edge = edgeList[i];
+				for (i=0;i<net->ne;i++) {
+					edge = net->edgeList[i];
 					float len = 0;
 					for (k=0;k<edge.npts;k++) {
 						if (fgets(line, STR_LEN, fpam) == NULL) {
@@ -669,20 +685,20 @@ int ReadAmiraFile(char *amFile)
 							return 1;
 						}
 						if (k > 0 && k<edge.npts-1) {
-							sscanf(line,"%f %f %f",&point[kp].x,&point[kp].y,&point[kp].z);
-							edgeList[i].pt[k] = kp;
-							edgeList[i].pt_used[k] = kp;
+							sscanf(line,"%f %f %f",&net->point[kp].x,&net->point[kp].y,&net->point[kp].z);
+							net->edgeList[i].pt[k] = kp;
+							net->edgeList[i].pt_used[k] = kp;
 							kp++;
 						}
 						if (k > 0) {
-							len = len + dist(edgeList[i].pt[k-1],edgeList[i].pt[k]);
+							len = len + dist(net,net->edgeList[i].pt[k-1],net->edgeList[i].pt[k]);
 						}
 					}
-					edgeList[i].length_um = len;
+					net->edgeList[i].length_um = len;
 				}
 			} else if (k == 5) {
-				for (i=0;i<ne;i++) {
-					edge = edgeList[i];
+				for (i=0;i<net->ne;i++) {
+					edge = net->edgeList[i];
 					float dave = 0;
 					for (k=0;k<edge.npts;k++) {
 						if (fgets(line, STR_LEN, fpam) == NULL) {
@@ -690,19 +706,16 @@ int ReadAmiraFile(char *amFile)
 							return 1;
 						}
 						j = edge.pt[k];
-						sscanf(line,"%f",&point[j].d);
-						if (j == 13) {
-							printf("j=13: d: %f\n",point[j].d);
-						}
-						if (point[j].d == 0) {
+						sscanf(line,"%f",&net->point[j].d);
+						if (net->point[j].d == 0) {
 							printf("Error: ReadAmiraFile: zero diameter: i: %d npts: %d k: %d j: %d\n",i,edge.npts,k,j);
 							return 1;
 						}
-						if (j < nv) {		// because the first nv points are vertices
-							vertex[j].point.d = point[j].d;
+						if (j < net->nv) {		// because the first nv points are vertices
+							net->vertex[j].point.d = net->point[j].d;
 						}
-						dave += point[j].d;
-						edgeList[i].segavediam = dave/edge.npts;
+						dave += net->point[j].d;
+						net->edgeList[i].segavediam = dave/edge.npts;
 					}
 				}
 				printf("Got point thicknesses\n");
@@ -710,21 +723,27 @@ int ReadAmiraFile(char *amFile)
 		}
 	}
 	// Flag used points
-	for (i=0; i<ne; i++) {
-		edge = edgeList[i];
+	for (i=0; i<net->ne; i++) {
+		edge = net->edgeList[i];
 		for (k=0; k<edge.npts; k++) {
 			j = edge.pt[k];
-			point[j].used = true;
+			net->point[j].used = true;
 		}
 	}
 	fclose(fpam);
-	return 0;
+
+	err = CheckNetwork(net, "ReadAmiraFile");
+
+	return err;
 }
+
 
 //-----------------------------------------------------------------------------------------------------
 // Check that all edges are completed, i.e. no vertex appears within an edge.
+// This assumes that edge.vert[0] = edge.pt[0] and edge.vert[1] = edge.pt[npts-1]
+// This equality was guaranteed by the previous readAmiraFile(), but not by the revised (simple) version.
 //-----------------------------------------------------------------------------------------------------
-int adjoinEdges(void)
+int adjoinEdges(NETWORK *net)
 {
 	int *nvrefs;
 	PAIR *pair;
@@ -732,27 +751,36 @@ int adjoinEdges(void)
 	int temp[1000];	// should be big enough
 	EDGE edge1, edge2;
 
-	printf("adjoinEdges\n");
-	nvrefs = (int *)malloc(nv*sizeof(int));
-	pair = (PAIR *)malloc(nv*sizeof(PAIR));
+	printf("adjoinEdges: nv: %d\n",net->nv);
+	nvrefs = (int *)malloc(10*net->nv*sizeof(int));
+	pair = (PAIR *)malloc(10*net->nv*sizeof(PAIR));
+	int cnt = 0;
 	for (;;) {
-		for (iv=0; iv<nv; iv++) {
+		cnt++;
+		for (iv=0; iv<net->nv; iv++) {
 			nvrefs[iv] = 0;
 			pair[iv].i1 = 0;
 			pair[iv].i2 = 0;
 		}
 		neunused = 0;
 		ivmax = 0;
-		for (ie=0; ie<ne; ie++) {
-			edge1 = edgeList[ie];
+		for (ie=0; ie<net->ne; ie++) {
+			edge1 = net->edgeList[ie];
 			if (!edge1.used) {
 				neunused++;
-//				fprintf(fpout,"Unused edge: %d  %d\n",neunused,ie);
+//				printf("Unused edge: %d  %d\n",neunused,ie);
 				continue;
 			}
 			n1 = edge1.npts;
 			kv0 = edge1.pt[0];
 			kv1 = edge1.pt[n1-1];
+//			printf("edge: %d %d %d %d\n",ie,n1,kv0,kv1);
+//			fflush(stdout);
+			if (kv0 >= 10*net->nv) {
+				printf("kv0 too big: %d %d\n",kv0,net->nv);
+				fflush(stdout);
+				exit(1);
+			}
 			if (nvrefs[kv0] == 0)
 				pair[kv0].i1 = ie;
 			else if (nvrefs[kv0] == 1)
@@ -771,15 +799,15 @@ int adjoinEdges(void)
 		nvunused = 0;
 		for (iv=0; iv<=ivmax; iv++) {
 			if (nvrefs[iv] == 0) {
-	//			printf("Unused: %d\n",iv);
+//				printf("Unused: %d\n",iv);
 				nvunused++;
 			} else if (nvrefs[iv] == 1) {
 				nloose++;
 			} else if (nvrefs[iv] == 2) {
 				i1 = pair[iv].i1;
 				i2 = pair[iv].i2;
-				edge1 = edgeList[i1];
-				edge2 = edgeList[i2];
+				edge1 = net->edgeList[i1];
+				edge2 = net->edgeList[i2];
 				if (!edge1.used || !edge2.used) continue;	// already processed, adjoined
 				ntwo++;
 				// The two edges are edge1 and edge2
@@ -839,8 +867,8 @@ int adjoinEdges(void)
 				edge1.vert[0] = temp[0];
 				edge1.vert[1] = temp[edge1.npts-1];
 				edge1.used = true;
-				edgeList[i1] = edge1;
-				edgeList[i2].used = false;
+				net->edgeList[i1] = edge1;
+				net->edgeList[i2].used = false;
 //				fprintf(fpout,"Adjoined edge: %d to edge: %d\n",i2,i1);
 			}
 		}
@@ -851,6 +879,8 @@ int adjoinEdges(void)
 	}
 	free(nvrefs);
 	free(pair);
+	printf("did adjoinEdges\n");
+	fflush(stdout);
 	return 0;
 }
 
@@ -1020,7 +1050,7 @@ double Q(double *e0, double *e1, double p0[], double p1[], double Vx[], double V
 //   |J11 J12| |dt| = |-F1|
 //   |J21 J22| |dp|   |-F2|
 //-----------------------------------------------------------------------------------------------------
-int joining_edge(double *e0, double *e1, int kp0, int kp1)
+int joining_edge( NETWORK *net, double *e0, double *e1, int kp0, int kp1)
 {
 	double p0[3], p1[3], p[3];		// locations of P0 and P1
 	double Vx[3], Vy[3], Vz[3];		// orthogonal unit vectors
@@ -1035,8 +1065,8 @@ int joining_edge(double *e0, double *e1, int kp0, int kp1)
 	int i, k, kp;
 	double epsilon = 0.00001;
 
-	p0[0] = point[kp0].x; p0[1] = point[kp0].y; p0[2] = point[kp0].z; 
-	p1[0] = point[kp1].x; p1[1] = point[kp1].y; p1[2] = point[kp1].z; 
+	p0[0] = net->point[kp0].x; p0[1] = net->point[kp0].y; p0[2] = net->point[kp0].z; 
+	p1[0] = net->point[kp1].x; p1[1] = net->point[kp1].y; p1[2] = net->point[kp1].z; 
 	makeAxes(e0,p0,p1,Vx,Vy,Vz);
 
 	d = 0;
@@ -1097,21 +1127,21 @@ int joining_edge(double *e0, double *e1, int kp0, int kp1)
 
 	getP(d,theta,phi,p0,Vx,Vy,Vz,p);
 
-	kp = np;
-	point[kp].x = p[0];
-	point[kp].y = p[1];
-	point[kp].z = p[2];
-	point[kp].d = (point[kp0].d + point[kp1].d)/2;
-	point[kp].used = true;
-	np++;
-	edgeList[ne].npts = 3;
-	edgeList[ne].pt = (int *)malloc(edgeList[ne].npts*sizeof(int));
-	edgeList[ne].pt_used = (int *)malloc(edgeList[ne].npts*sizeof(int));
-	edgeList[ne].npts_used = 3;
-	edgeList[ne].pt[0] = kp0;
-	edgeList[ne].pt[1] = kp;
-	edgeList[ne].pt[2] = kp1;
-	len = dist(kp0,kp) + dist(kp,kp1);
+	kp = net->np;
+	net->point[kp].x = p[0];
+	net->point[kp].y = p[1];
+	net->point[kp].z = p[2];
+	net->point[kp].d = (net->point[kp0].d + net->point[kp1].d)/2;
+	net->point[kp].used = true;
+	net->np++;
+	net->edgeList[net->ne].npts = 3;
+	net->edgeList[net->ne].pt = (int *)malloc(net->edgeList[net->ne].npts*sizeof(int));
+	net->edgeList[net->ne].pt_used = (int *)malloc(net->edgeList[net->ne].npts*sizeof(int));
+	net->edgeList[net->ne].npts_used = 3;
+	net->edgeList[net->ne].pt[0] = kp0;
+	net->edgeList[net->ne].pt[1] = kp;
+	net->edgeList[net->ne].pt[2] = kp1;
+	len = dist(net,kp0,kp) + dist(net,kp,kp1);
 	if (len > 300) {
 		printf("Too long! %d %d %d  %f\n",kp0,kp,kp1,len);
 		printf("P0, P, P1\n");
@@ -1120,13 +1150,13 @@ int joining_edge(double *e0, double *e1, int kp0, int kp1)
 		}
 		exit(1);
 	}
-	edgeList[ne].pt_used[0] = kp0;
-	edgeList[ne].pt_used[1] = kp;
-	edgeList[ne].pt_used[2] = kp1;
-	edgeList[ne].vert[0] = kp0;
-	edgeList[ne].vert[1] = kp1;
-	edgeList[ne].used = true;
-	ne++;
+	net->edgeList[net->ne].pt_used[0] = kp0;
+	net->edgeList[net->ne].pt_used[1] = kp;
+	net->edgeList[net->ne].pt_used[2] = kp1;
+	net->edgeList[net->ne].vert[0] = kp0;
+	net->edgeList[net->ne].vert[1] = kp1;
+	net->edgeList[net->ne].used = true;
+	net->ne++;
 	return 0;
 }
 
@@ -1139,7 +1169,7 @@ int joining_edge(double *e0, double *e1, int kp0, int kp1)
 // Currently a single segment is used to join the two vertices.  Need to use intermediate points
 // to create a curve.
 //-----------------------------------------------------------------------------------------------------
-int joinLooseEnds(LOOSEND end[], int nloose)
+int joinLooseEnds(NETWORK *net, LOOSEND end[], int nloose)
 {
 	int i0, i1, k, kp0, kp1, njoined, imax;
 	double *dir0, *dir1;
@@ -1152,7 +1182,7 @@ int joinLooseEnds(LOOSEND end[], int nloose)
 	njoined = 0;
 	for (i0=0; i0<nloose; i0++) {
 		if (end[i0].joined >= 0) continue;
-		edge0 = edgeList[end[i0].iedge];
+		edge0 = net->edgeList[end[i0].iedge];
 		kp0 = edge0.vert[end[i0].iend];
 		dir0 = end[i0].dir;
 		dave0 = end[i0].dave;
@@ -1163,16 +1193,16 @@ int joinLooseEnds(LOOSEND end[], int nloose)
 			if (i0 == i1) continue;
 			if (end[i1].joined >= 0) continue;
 
-			edge1 = edgeList[end[i1].iedge];
+			edge1 = net->edgeList[end[i1].iedge];
 			kp1 = edge1.vert[end[i1].iend];
 			dir1 = end[i1].dir;
 			dave1 = end[i1].dave;
 			if (dave1 > MAX_DIAMETER) continue;
-			d = dist(kp0,kp1);
+			d = dist(net,kp0,kp1);
 			if (d > MAX_END_SEPARATION) continue;
-			vec[0] = point[kp1].x - point[kp0].x;
-			vec[1] = point[kp1].y - point[kp0].y;
-			vec[2] = point[kp1].z - point[kp0].z;
+			vec[0] = net->point[kp1].x - net->point[kp0].x;
+			vec[1] = net->point[kp1].y - net->point[kp0].y;
+			vec[2] = net->point[kp1].z - net->point[kp0].z;
 			ang0 = angle(dir0,vec);
 			if (ang0 < -1.001*PI || ang0 > 1.001*PI) {
 				printf("Bad ang0: %f\n",ang0);
@@ -1197,11 +1227,11 @@ int joinLooseEnds(LOOSEND end[], int nloose)
 			end[i0].joined = imax;
 			end[imax].joined = i0;
 //			printf("Joined: %6d  %6d %6d  %6d %6d  %8.4f\n",njoined,i0,imax,kp0,kp1,smax);
-			edge1 = edgeList[end[imax].iedge];
+			edge1 = net->edgeList[end[imax].iedge];
 			kp1 = edge1.vert[end[imax].iend];
 			dir1 = end[imax].dir;
 
-			joining_edge(dir0,dir1,kp0,kp1);
+			joining_edge(net,dir0,dir1,kp0,kp1);
 		}
 	}
 	return 0;
@@ -1221,35 +1251,39 @@ int joinLooseEnds(LOOSEND end[], int nloose)
 //
 // I don't believe this is finding all the loose ends.
 //-----------------------------------------------------------------------------------------------------
-int pruner(int iter)
+int pruner(NETWORK *net, int iter)
 {
 	int i, j, k, ii, kv0, kv1, n0, n1, j1, j2, k1, k2, nloose, npruned, kp0, err;
 	float len, dave, dsum;
 	EDGE edge, edge0;
-	LOOSEND end[50000];
+	LOOSEND *end;
+	int NLOOSEMAX = 100000;
 
-	printf("pruner\n");
+	printf("pruner: ne: %d\n",net->ne);
+	fflush(stdout);
+
 	nloose = 0;
 	npruned = 0;
+	end = (LOOSEND *)malloc(NLOOSEMAX*sizeof(LOOSEND));
 	// Step through edges, looking for loose ends.
-	for (i=0; i<ne; i++) {
-		if (!edgeList[i].used) continue;
-//		printf("edge: %d\n",i);
-		edge = edgeList[i];
+	for (i=0; i<net->ne; i++) {
+		if (!net->edgeList[i].used) continue;
+		edge = net->edgeList[i];
 		kv0 = edge.vert[0];
 		kv1 = edge.vert[1];
 		n0 = 0;
 		n1 = 0;
-		for (ii=0; ii<ne; ii++) {
-			if (!edgeList[ii].used) continue;
+		for (ii=0; ii<net->ne; ii++) {
+			if (!net->edgeList[ii].used) continue;
 			if (i == ii) continue;
-			if (edgeList[ii].vert[0] == kv0 || edgeList[ii].vert[1] == kv0) n0=1;
-			if (edgeList[ii].vert[0] == kv1 || edgeList[ii].vert[1] == kv1) n1=1;
+			if (net->edgeList[ii].vert[0] == kv0 || net->edgeList[ii].vert[1] == kv0) n0=1;
+			if (net->edgeList[ii].vert[0] == kv1 || net->edgeList[ii].vert[1] == kv1) n1=1;
 		}
 		if (n0+n1 == 0 && DROP_UNCONNECTED) {
 			printf("Error: pruner: edge: %d is unconnected\n",i);
+			fflush(stdout);
 			fprintf(fperr,"Error: pruner: edge: %d is unconnected\n",i);
-			edgeList[i].used = false;
+			net->edgeList[i].used = false;
 //			return 1;
 		} else if ((n0+n1 == 1) || (n0+n1 == 0 && !DROP_UNCONNECTED)) {	// This is a loose end
 			// Need the length and average diameter
@@ -1257,9 +1291,9 @@ int pruner(int iter)
 			dsum = 0;
 			for (k=0; k<edge.npts; k++) {
 				j = edge.pt[k];
-				dsum += point[j].d;
+				dsum += net->point[j].d;
 				if (k > 0) {
-					len += dist(j,edge.pt[k-1]);
+					len += dist(net,j,edge.pt[k-1]);
 				}
 			}
 			dave = dsum/edge.npts;
@@ -1277,22 +1311,24 @@ int pruner(int iter)
 			end[nloose].len = len;
 			k1 = edge.pt[j1];
 			k2 = edge.pt[j2];
-			len = dist(k1,k2);
-			end[nloose].dir[0] = (point[k2].x - point[k1].x)/len;
-			end[nloose].dir[1] = (point[k2].y - point[k1].y)/len;
-			end[nloose].dir[2] = (point[k2].z - point[k1].z)/len;
+			len = dist(net,k1,k2);
+			end[nloose].dir[0] = (net->point[k2].x - net->point[k1].x)/len;
+			end[nloose].dir[1] = (net->point[k2].y - net->point[k1].y)/len;
+			end[nloose].dir[2] = (net->point[k2].z - net->point[k1].z)/len;
 			end[nloose].joined = -1;
-			edge0 = edgeList[end[nloose].iedge];
+			edge0 = net->edgeList[end[nloose].iedge];
 			kp0 = edge0.vert[end[nloose].iend];
 //			fprintf(fpout,"%6d  %6d %2d %2d %2d %6d %6d %6.3f %6.3f %6.3f  %6d\n",nloose,i,end[nloose].iend,j1,j2,k1,k2,
 //				end[nloose].dir[0],end[nloose].dir[1],end[nloose].dir[2],kp0);
 			nloose++;
 		}
 	}
-
 	if (iter == 0 && JOIN_LOOSE_ENDS) {
-		err = joinLooseEnds(end,nloose);
-		if (err != 0) return err;
+		err = joinLooseEnds(net,end,nloose);
+		if (err != 0) {
+			free(end);
+			return err;
+		}
 	}
 
 	npruned = 0;
@@ -1300,12 +1336,12 @@ int pruner(int iter)
 		if (end[i].joined < 0) {
 			if (use_ratio) {
 				if (end[i].len/end[i].dave <= ratio_limit) {	// prune this twig 
-					edgeList[end[i].iedge].used = false;
+					net->edgeList[end[i].iedge].used = false;
 					npruned++;
 				}
 			} else {
 				if (end[i].len <= ratio_limit) {	// prune this twig 
-					edgeList[end[i].iedge].used = false;
+					net->edgeList[end[i].iedge].used = false;
 					npruned++;
 				}
 			}
@@ -1313,6 +1349,7 @@ int pruner(int iter)
 	}
 	printf("Number of loose ends: %d, number pruned: %d\n",nloose,npruned);
 	fprintf(fperr,"Number of loose ends: %d, number pruned: %d\n",nloose,npruned);
+	free(end);
 	return 0;
 }
 
@@ -1335,7 +1372,7 @@ int inlist(int *list, int n, int k)
 // (2) Two vertices are connected externally (side loop)
 // (3) Three vertices are connected externally (3-way junction loop)
 //-----------------------------------------------------------------------------------------------------
-int fixloop(int j1, int j2, int j3)
+int fixloop(NETWORK *net, int j1, int j2, int j3)
 {
 	int e[3];
 	int vert[3];
@@ -1348,19 +1385,19 @@ int fixloop(int j1, int j2, int j3)
 	e[1] = j2;
 	e[2] = j3;
 	for (i=0; i<3; i++) {
-		used[i] = edgeList[e[i]].used;
+		used[i] = net->edgeList[e[i]].used;
 		nconn[i] = 0;
 	}
-	vert[0] = edgeList[e[0]].vert[0];
-	vert[1] = edgeList[e[0]].vert[1];
-	if (edgeList[e[1]].vert[0] == vert[0] || edgeList[e[1]].vert[0] == vert[1]) {
-		vert[2] = edgeList[e[1]].vert[1];
+	vert[0] = net->edgeList[e[0]].vert[0];
+	vert[1] = net->edgeList[e[0]].vert[1];
+	if (net->edgeList[e[1]].vert[0] == vert[0] || net->edgeList[e[1]].vert[0] == vert[1]) {
+		vert[2] = net->edgeList[e[1]].vert[1];
 	} else {
-		vert[2] = edgeList[e[1]].vert[0];
+		vert[2] = net->edgeList[e[1]].vert[0];
 	}
-	for (i=0; i<ne; i++) {
-		kv0 = edgeList[i].vert[0];
-		kv1 = edgeList[i].vert[1];
+	for (i=0; i<net->ne; i++) {
+		kv0 = net->edgeList[i].vert[0];
+		kv1 = net->edgeList[i].vert[1];
 		for (j=0; j<3; j++) {
 			if (vert[j] == kv0 || vert[j] == kv1) {
 				nconn[j] += 1;
@@ -1378,11 +1415,11 @@ int fixloop(int j1, int j2, int j3)
 	}
 	if (nc2 > 0) {
 		for (i=0; i<3; i++) {
-			kv0 = edgeList[e[i]].vert[0];
-			kv1 = edgeList[e[i]].vert[1];
+			kv0 = net->edgeList[e[i]].vert[0];
+			kv1 = net->edgeList[e[i]].vert[1];
 			for (j=0; j<3; j++) {
 				if (nconn[j] == 2 && (vert[j] == kv0 || vert[j] == kv1)) {
-					edgeList[e[i]].used = false;
+					net->edgeList[e[i]].used = false;
 					break;
 				}
 			}
@@ -1390,15 +1427,15 @@ int fixloop(int j1, int j2, int j3)
 	} else if (nc2 == 0) {	// DO NOT arbitrarily choose edge j1, choose longest
 		dmax = 0;
 		for (i=0; i<3; i++) {
-			kv0 = edgeList[e[i]].vert[0];
-			kv1 = edgeList[e[i]].vert[1];
-			d = dist(kv0,kv1);
+			kv0 = net->edgeList[e[i]].vert[0];
+			kv1 = net->edgeList[e[i]].vert[1];
+			d = dist(net,kv0,kv1);
 			if (d > dmax) {
 				imax = i;
 				dmax = d;
 			}
 		}
-		edgeList[e[imax]].used = false;
+		net->edgeList[e[imax]].used = false;
 	}
 
 	return 0;
@@ -1408,37 +1445,42 @@ int fixloop(int j1, int j2, int j3)
 // Search for loops
 // deloop works fine.  Should remove longest side when all three have nconn = 3
 //-----------------------------------------------------------------------------------------------------
-int deloop(void)
+int deloop(NETWORK *net)
 {
 #define NE2MAX 100000
 	int i, ii, kv0, kv1, kkv0, kkv1;
 	int npairs, ne2, j1, j2, j3, nloops, k1, k3;
 	EDGE edge, eedge;
-	PAIR pair[NE2MAX];
-	int e2[NE2MAX];
+	PAIR *pair;
+	int *e2;
 	bool dup;
 
 	printf("deloop\n");
-
+	fflush(stdout);
+	pair = (PAIR *)malloc(NE2MAX*sizeof(PAIR));
+	e2 = (int *)malloc(NE2MAX*sizeof(int));
 // Does any non-vertex point occur in more than one edge?  No.
 	
 	ne2 = 0;
-	for (i=0; i<ne; i++) {
-		edge = edgeList[i];
+	for (i=0; i<net->ne; i++) {
+		edge = net->edgeList[i];
 		if (!edge.used) continue;
 		kv0 = edge.vert[0];
 		kv1 = edge.vert[1];
 		if (edge.npts == 2) {
 			if (ne2 == NE2MAX) {
 				printf("Array dimension e2 exceeded\n");
+				free(pair);
+				free(e2);
 				return 1;
 			}
 //			printf("2-edge: %4d %6d  %6d %6d\n",ne2,i,kv0,kv1);
+//			fflush(stdout);
 			e2[ne2] = i;
 			ne2++;
 			dup = false;
-			for (ii=i+1; ii<ne; ii++) {
-				eedge = edgeList[ii];
+			for (ii=i+1; ii<net->ne; ii++) {
+				eedge = net->edgeList[ii];
 				if (!eedge.used) continue;
 				kkv0 = eedge.vert[0];
 				kkv1 = eedge.vert[1];
@@ -1448,27 +1490,28 @@ int deloop(void)
 //					fprintf(fpout,"%6d  %6d  %4d %4d\n",i,ii,edge.npts,eedge.npts);
 					dup = true;
 					if (eedge.npts == 2) {
-						point[kkv0].d = 1.414*point[kkv0].d;
-						point[kkv1].d = 1.414*point[kkv1].d;
+						net->point[kkv0].d = 1.414*net->point[kkv0].d;
+						net->point[kkv1].d = 1.414*net->point[kkv1].d;
 					}
 					break;
 				}
 			}
 			if (dup) {
 				ne2--;
-				edgeList[i].used = false;
+				net->edgeList[i].used = false;
 			}
 		}
 	}
-	printf("Number of 2-edges (edges with two points): %d\n",ne2);
+//	printf("Number of 2-edges (edges with two points): %d\n",ne2);
+//	fflush(stdout);
 
 	npairs = 0;
 	for (j1=0; j1<ne2; j1++) {
-		edge = edgeList[e2[j1]];
+		edge = net->edgeList[e2[j1]];
 		kv0 = edge.vert[0];
 		kv1 = edge.vert[1];
 		for (j2=j1+1; j2<ne2; j2++) {
-			eedge = edgeList[e2[j2]];
+			eedge = net->edgeList[e2[j2]];
 			if (eedge.vert[0] == kv1) {			// -->  -->
 				pair[npairs].i1 = e2[j1];
 				pair[npairs].i2 = e2[j2];
@@ -1488,12 +1531,14 @@ int deloop(void)
 			}
 		}
 	}
-	printf("Number of 2-edge pairs (connections): %d\n",npairs);
+//	printf("Number of 2-edge pairs (connections): %d\n",npairs);
+//	fflush(stdout);
 	
 	bool hit;
 	nloops = 0;
 	for (i=0; i<npairs; i++) {
 		for (ii=i+1; ii<npairs; ii++) {
+			if (ii > npairs-1) continue;
 			hit = false;
 			if (abs(pair[i].i2) == abs(pair[ii].i1)) {
 				j1 = pair[i].i1;
@@ -1518,24 +1563,28 @@ int deloop(void)
 			}
 			if (hit) {
 				if (j1 > 0)
-					k1 = edgeList[j1].vert[0];
+					k1 = net->edgeList[j1].vert[0];
 				else
-					k1 = edgeList[-j1].vert[1];
+					k1 = net->edgeList[-j1].vert[1];
 				if (j3 > 0)
-					k3 = edgeList[j3].vert[1];
+					k3 = net->edgeList[j3].vert[1];
 				else
-					k3 = edgeList[-j3].vert[0];
+					k3 = net->edgeList[-j3].vert[0];
 				if (k1 == k3) {
 					nloops++;
-					fixloop(abs(j1),abs(j2),abs(j3));
+					fixloop(net,abs(j1),abs(j2),abs(j3));
 				}
 			}
 		}
 	}
+	free(pair);
+	free(e2);
 	printf("Number of loops: %d\n",nloops);
+	fflush(stdout);
 	return 0;
 }
 
+/*
 //-----------------------------------------------------------------------------------------------------
 // Reorder element and node identifiers
 //-----------------------------------------------------------------------------------------------------
@@ -1626,7 +1675,110 @@ int squeezer(void)
 	free(oldpt);
 	return 0;
 }
+*/
 
+//-----------------------------------------------------------------------------------------------------
+// Reorder element and node identifiers, net0 -> net1
+//-----------------------------------------------------------------------------------------------------
+int squeezer(NETWORK *net0, NETWORK *net1)
+{
+	int i, j, k;
+	int ne_x, nv_x, np_x, knew, i_x;
+	int ne, nv, np;
+	EDGE edge;
+	EDGE *edgeList_x;
+	VERTEX *vertex_x;
+	POINT *point_x;
+	int *oldpt;
+
+	printf("squeezer\n");
+	ne = net0->ne;
+	nv = net0->nv;
+	np = net0->np;
+	vertex_x = (VERTEX *)malloc(nv*sizeof(VERTEX));
+	edgeList_x = (EDGE *)malloc(2*ne*sizeof(EDGE));		// 2* for added joining edges
+	point_x = (POINT *)malloc(2*np*sizeof(POINT));
+	net1->vertex = vertex_x;
+	net1->edgeList = edgeList_x;
+	net1->point = point_x;
+	oldpt = (int *)malloc(2*np*sizeof(int));
+
+	ne_x = 0;
+	nv_x = 0;
+	np_x = 0;
+	// First process the vertices
+	for (i=0; i<ne; i++) {
+		if (!net0->edgeList[i].used) continue;
+		edge = edgeList_x[ne_x];
+		edge.used = true;
+		for (j=0; j<2; j++) {
+			knew = inlist(oldpt,np_x,net0->edgeList[i].vert[j]);
+			if (knew == 0) {
+				oldpt[np_x] = net0->edgeList[i].vert[j];
+				vertex_x[np_x].point = net0->point[oldpt[np_x]];
+				point_x[np_x] = net0->point[oldpt[np_x]];
+				knew = np_x;
+				np_x++;
+			}
+			edge.vert[j] = knew;
+		}
+		edgeList_x[ne_x] = edge;
+		ne_x++;
+	}
+	nv_x = np_x;
+
+	// Now add the edge interior points to the list.  These occur once only.
+	i_x = 0;
+	for (i=0; i<ne; i++) {
+//		printf("edge: %d used: %d npts:%d\n",i,edgeList[i].used,edgeList[i].npts);
+		if (!net0->edgeList[i].used) continue;
+		int npts = net0->edgeList[i].npts;
+		if (npts < 1) {
+			printf("squeezer: i: %d npts: %d\n",i,npts);
+			return 1;
+		}
+		edgeList_x[i_x].pt = (int *)malloc(npts*sizeof(int));
+		edge = edgeList_x[i_x];
+		edge.npts = npts;
+		edge.pt[0] = edge.vert[0];
+		for (k=1; k<npts-1; k++) {
+			j = net0->edgeList[i].pt[k];
+			oldpt[np_x] = j;
+			point_x[np_x] = net0->point[j];
+			edge.pt[k] = np_x;
+			np_x++;
+		}
+		edge.pt[npts-1] = edge.vert[1];
+		edgeList_x[i_x] = edge;
+		i_x++;
+	}
+	printf("Added interior edge points\n");
+	printf("ne, ne_x: %d %d  nv, nv_x: %d %d  np, np_x: %d %d\n",ne,ne_x,nv,nv_x,np,np_x);
+
+	/*
+	// Now copy the revised data back into the original arrays
+	nv = nv_x;
+	for (i=0; i<nv; i++) {
+		vertex[i] = vertex_x[i];
+	}
+	ne = ne_x;
+	for (i=0; i<ne; i++) {
+		edgeList[i] = edgeList_x[i];
+	}
+	np = np_x;
+	for (i=0; i<np; i++) {
+		point[i] = point_x[i];
+	}
+	free(vertex_x);
+	free(edgeList_x); 
+	free(point_x);
+	*/
+	net1->ne = ne_x;
+	net1->nv = nv_x;
+	net1->np = np_x;
+	free(oldpt);
+	return 0;
+}
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
 int main(int argc, char **argv)
@@ -1635,13 +1787,23 @@ int main(int argc, char **argv)
 	char *input_amfile;
 	char drive[32], dir[1024],filename[256], ext[32];
 	char errfilename[1024], output_amfile[1024], outfilename[1024], result_file[1024];
+	char output_basename[128];
 	int prune_flag, cmgui_flag, ratio_flag;
-	double ddiam, dlen;
+	float origin_shift[3];
+	NETWORK *net0, *net1;
 
-	if (argc != 10) {
-		printf("Usage: prune input_amfile output_amfile ratio_flag ratio_limit n_prune_cycles prune_flag cmgui_flag delta_diam delta_len\n");
+	if (argc != 11) {
+		printf("Usage: prune input_amfile output_amfile ratio_flag ratio_limit n_prune_cycles prune_flag cmgui_flag delta_diam delta_len dminimum\n");
+		printf("       ratio_flag: = 1 if length/diameter is to be used, 0 if length limit\n");
+		printf("       ratio_limit: either length/diameter limit or length limit\n");
+		printf("       prune_cycle: number of cycles of pruning\n");
+		printf("       prune_flag: = 1 to prune, 0 else\n");
+		printf("       cmgui_flag: = 1 to generate CMGUI files\n");
+		printf("       delta_diam: box size (um) for diameter histogram\n");
+		printf("       delta_len: box size (um) for length histogram\n");
+		printf("       dminimum: all edges with diameter < dminimum are to be removed\n");
 		fperr = fopen("prune_error.log","w");
-		fprintf(fperr,"Usage: prune input_amfile output_amfile ratio_flag ratio_limit n_prune_cycles prune_flag cmgui_flag delta_diam delta_len\n");
+		fprintf(fperr,"Usage: prune input_amfile output_amfile ratio_flag ratio_limit n_prune_cycles prune_flag cmgui_flag delta_diam delta_len dminimum\n");
 		fprintf(fperr,"Submitted command line: argc: %d\n",argc);
 		for (int i=0; i<argc; i++) {
 			fprintf(fperr,"argv: %d: %s\n",i,argv[i]);
@@ -1657,8 +1819,9 @@ int main(int argc, char **argv)
 	sscanf(argv[5],"%d",&n_prune_cycles);
 	sscanf(argv[6],"%d",&prune_flag);
 	sscanf(argv[7],"%d",&cmgui_flag);
-	sscanf(argv[8],"%lf",&ddiam);
-	sscanf(argv[9],"%lf",&dlen);
+	sscanf(argv[8],"%f",&ddiam);
+	sscanf(argv[9],"%f",&dlen);
+	sscanf(argv[10],"%f",&dminimum);
 	use_ratio = (ratio_flag == 1);
 	if (prune_flag == 0) n_prune_cycles = 0;
 	_splitpath(outfilename,drive,dir,filename,ext);
@@ -1673,36 +1836,52 @@ int main(int argc, char **argv)
 //	fprintf(fperr,"drive: %s dir: %s filename: %s ext: %s\n",drive,dir,filename,ext);
 //	fprintf(fperr,"Basename: %s\n",output_basename);
 
+	use_len_diam_limit = false;
+	use_len_limit = false;
+
+	net0 = (NETWORK *)malloc(sizeof(NETWORK));
+
 	fpout = fopen(result_file,"w");	
-	err = ReadAmiraFile(input_amfile);
+	err = ReadAmiraFile_old(input_amfile,net0);
 	if (err != 0) return 2;
 	if (n_prune_cycles > 0) {
-		err = adjoinEdges();
+		if (dminimum > 0) {
+			err = EdgeDimensions(net0->edgeList,net0->point,net0->ne);
+			if (err != 0) return 8;
+		}
+		err = adjoinEdges(net0);
 		if (err != 0) return 3;
-		err = deloop();
+		err = deloop(net0);
 		if (err != 0) return 4;
-		err = adjoinEdges();
+		err = adjoinEdges(net0);
 		if (err != 0) return 3;
 		for (int k=0; k<n_prune_cycles; k++) {
-			err = pruner(k);
+			err = pruner(net0,k);
 			if (err != 0) return 5;
-			err = adjoinEdges();
+			err = adjoinEdges(net0);
 			if (err != 0) return 3;
-			err = checkEdgeEndPts();
+			err = checkEdgeEndPts(net0);
 			if (err != 0) return 6;
 		}
-		err = squeezer();	// must squeeze, or SpatialGraph and CMGUI files are not consistent
+		net1 = (NETWORK *)malloc(sizeof(NETWORK));
+		err = squeezer(net0,net1);	// must squeeze, or SpatialGraph and CMGUI files are not consistent
 		if (err != 0) return 7;
+	} else {
+		net1 = net0;
 	}
-
-	err = WriteAmiraFile(output_amfile,input_amfile);
+	origin_shift[0] = 0;
+	origin_shift[1] = 0;
+	origin_shift[2] = 0;
+	err = WriteAmiraFile(output_amfile,input_amfile,net1,origin_shift);
 	if (err != 0) return 8;
-//	err = oldCreateDistributions();
-	err = CreateDistributions(ddiam, dlen);
-	if (err != 0) return 9;
 	if (cmgui_flag == 1) {
-		err = WriteCmguiData(output_basename);
+		err = WriteCmguiData(output_basename,net1,origin_shift);
 		if (err != 0) return 10;
 	}
+	err = EdgeDimensions(net1->edgeList,net1->point,net1->ne);
+	if (err != 0) return 8;
+	err = CreateDistributions(net1);
+//	err = CreateDistributions(ddiam, dlen);
+	if (err != 0) return 9;
 	return 0;
 }

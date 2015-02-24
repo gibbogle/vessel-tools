@@ -23,13 +23,36 @@ int CheckNetwork(NETWORK *net, char *str)
 	int ie, ip, ne, npts,kp0,kp1,kp, ie1, iv0, iv1;
 	float dave, dave1;
 	EDGE edge, edge1;
-	POINT p0, p1, p;
+	POINT p0, p1, p, pv0, pv1;
 	int repeated;
 
 	printf("CheckNetwork: %s\n",str);
 	fprintf(fpout,"CheckNetwork: %s\n",str);
 	repeated = 0;
 	ne = net->ne;
+	// Check consistency of vert[0] and pt[0], vert[1] and pt[npts-1]
+	for (ie=0; ie<ne; ie++) {
+		edge = net->edgeList[ie];
+		if (!edge.used) continue;
+		npts = edge.npts;
+		kp0 = edge.pt[0];
+		p0 = net->point[kp0];
+		kp1 = edge.pt[npts-1];
+		p1 = net->point[kp1];
+		pv0 = net->vertex[edge.vert[0]].point;
+		pv1 = net->vertex[edge.vert[1]].point;
+		if (!EqualPoints(p0,pv0)) {
+			printf("vert[0] != pt[0]: ie: %d\n",ie);
+			fprintf(fpout,"vert[0] != pt[0]: ie: %d\n",ie);
+			return 99;
+		}
+		if (!EqualPoints(p1,pv1)) {
+			printf("vert[1] != pt[1]: ie: %d\n",ie);
+			fprintf(fpout,"vert[1] != pt[1]: ie: %d\n",ie);
+			return 99;
+		}
+	}
+	// Check for repeated point
 	for (ie=0; ie<ne; ie++) {
 		edge = net->edgeList[ie];
 		if (!edge.used) continue;
@@ -48,6 +71,12 @@ int CheckNetwork(NETWORK *net, char *str)
 				fprintf(fpout,"removed\n");
 				repeated++;
 				net->edgeList[ie].used = false;
+				for (int i=0; i<npts; i++) {
+					kp = edge.pt[i];
+					p = net->point[kp];
+					printf("%d %d %6.1f %6.1f %6.1f\n",i,kp,p.x,p.y,p.z);
+				}
+//				return 99;
 			}
 		}
 		for (ip=0; ip<npts-1; ip++) {
@@ -60,6 +89,12 @@ int CheckNetwork(NETWORK *net, char *str)
 				fprintf(fpout,"removed\n");
 				repeated++;
 				net->edgeList[ie].used = false;
+				for (int i=0; i<npts; i++) {
+					kp = edge.pt[i];
+					p = net->point[kp];
+					printf("%d %d %6.1f %6.1f %6.1f\n",i,kp,p.x,p.y,p.z);
+				}
+//				return 99;
 			}
 		}
 	}
@@ -177,7 +212,7 @@ int WriteAmiraFile(char *amFileOut, char *amFileIn, NETWORK *net, float origin_s
 //-----------------------------------------------------------------------------------------------------
 int ReadAmiraFile(char *amFile, NETWORK *net)
 {
-	int i, j, k, kp, npts;
+	int i, j, k, kp, npts, err;
 	int np_used, ne_used;
 	EDGE edge;
 	char line[STR_LEN];
@@ -327,8 +362,8 @@ int ReadAmiraFile(char *amFile, NETWORK *net)
 	}
 	printf("Edges: ne: %d ne_used: %d\n",net->ne,ne_used);
 
-	CheckNetwork(net, "ReadAmiraFile");
+	err = CheckNetwork(net, "ReadAmiraFile");
 
-	return 0;
+	return err;
 }
 

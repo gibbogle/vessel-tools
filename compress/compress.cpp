@@ -1,5 +1,5 @@
 /*
- * To compress a .tif
+ * To compress a .tif 
  */
 
 #include <cstdio>
