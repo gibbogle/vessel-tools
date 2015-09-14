@@ -27,7 +27,7 @@ using namespace std;
 
 #define MAXPAIRS 100
 #define MAXLABELS 1000000	// 400000
-#define MAXLABLIST 1000		// 100
+#define MAXLABLIST 2000		// 100
 #define NBRS 26
 #define MAXEXP 300
 #define MAXOBJECTS 200000
