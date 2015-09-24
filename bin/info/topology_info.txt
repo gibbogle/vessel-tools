@@ -1,5 +1,6 @@
 Topology information
 
+Parameters:
 voxelsize = size of voxel in um
 diameter  = vessel diameter when a fixed diameter is specified
 

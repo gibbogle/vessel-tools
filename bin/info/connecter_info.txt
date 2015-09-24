@@ -2,7 +2,7 @@ Connecter information
 
 Parameter:
 
-Minimum size of objects
+Minimum size of objects.  Typical value: 10000
 
 The thresholded and filled image is separated into separate connected objects.
 Only objects with more than the minimum voxel count are tracked.  The five
@@ -12,3 +12,4 @@ Albert00.tif
 Albert01.tif
 ..
 Albert04.tif
+
