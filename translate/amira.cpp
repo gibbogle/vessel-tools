@@ -63,14 +63,18 @@ int CheckNetwork(NETWORK *net, char *str)
 			}
 		}
 	}
+	return 0;	// Do not check for doubly connected vertices - probably OK in FRC networks
+
 	// Now check for two edges connecting the same pair of vertices.
 	for (ie=0; ie<ne; ie++) {
-		edge =net->edgeList[ie];
+		edge = net->edgeList[ie];
+		if (!edge.used) continue;
 		iv0 = edge.vert[0];
 		iv1 = edge.vert[1];
 		for (ie1=0; ie1<ne; ie1++) {
 			if (ie1 == ie) continue;
 			edge1 = net->edgeList[ie1];
+			if (!edge1.used) continue;
 			if ((edge1.vert[0]==iv0 && edge1.vert[1]==iv1) || (edge1.vert[0]==iv1 && edge1.vert[1]==iv0)) {
 				// double connection between iv0 and iv1 - remove the thinnest
 				dave = 0;
@@ -86,11 +90,13 @@ int CheckNetwork(NETWORK *net, char *str)
 				if (dave < dave1) {
 					net->edgeList[ie].used = false;
 					printf("CheckNetwork: double connecting edge removed: ie,iv0,iv1: %d %d %d diams: %f %f\n",ie,iv0,iv1,dave,dave1);
-					fprintf(fpout,"CheckNetwork: double connecting edge removed: ie,iv0,iv1: %d %d %d diams: %f %f\n",ie,iv0,iv1,dave,dave1);
+					fprintf(fpout,"CheckNetwork: double connecting edge removed: ie,iv0,iv1: %d %d %d diams: %f %f npts: %d %d\n",
+						ie,iv0,iv1,dave,dave1,edge.npts,edge1.npts);
 				} else {
 					net->edgeList[ie1].used = false;
 					printf("CheckNetwork: double connecting edge removed: ie,iv0,iv1: %d %d %d diams: %f %f\n",ie1,iv0,iv1,dave,dave1);
-					fprintf(fpout,"CheckNetwork: double connecting edge removed: ie,iv0,iv1: %d %d %d diams: %f %f\n",ie1,iv0,iv1,dave,dave1);
+					fprintf(fpout,"CheckNetwork: double connecting edge removed: ie,iv0,iv1: %d %d %d diams: %f %f npts: %d %d\n",
+						ie1,iv0,iv1,dave,dave1,edge.npts,edge1.npts);
 				}
 			}
 		}

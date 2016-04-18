@@ -143,7 +143,10 @@ char output_basename[512];
 bool uniform_diameter;
 bool junction_max;
 double max_ratio;
+double lenlimit;
 bool dbug = false;
+
+bool FRC_fix = true;
 
 #define PI 3.14159
 
@@ -882,15 +885,17 @@ int Rotate(double *v0, double *N, double angle, double *v)
 
 //-----------------------------------------------------------------------------------------------------
 // Get distance from p1[] in direction of unit vector v[] to the first black voxel.
+// For FRC, try reducing the distance by 1/2 to get a better estimate: fix = true
 //-----------------------------------------------------------------------------------------------------
 double GetRadius2(double p1[3], double v[3])
 {
 	int i, k, ixyz[3], ixyzmax[3];
-	double r, dr, xyz;
+	double r, dr, xyz, vox_um, rfix;
 	bool out;
 
 //	printf("GetRadius2\n");
-	dr = vsize[2]/10;
+	vox_um = vsize[0];
+	dr = vox_um/10;
 	ixyzmax[0] = width-1;
 	ixyzmax[1] = height-1;
 	ixyzmax[2] = depth-1;
@@ -902,7 +907,7 @@ double GetRadius2(double p1[3], double v[3])
 		for (k=0; k<3; k++) {
 			xyz = p1[k] + r*v[k];
 			ixyz[k] = xyz/vsize[k];
-			if (ixyz[k] < 0) out = true;;
+			if (ixyz[k] < 0) out = true;
 			if (ixyz[k] > ixyzmax[k]) out = true;
 		}
 //		printf("ixyz: %d %d %d\n",ixyz[0],ixyz[1],ixyz[2]);
@@ -911,13 +916,17 @@ double GetRadius2(double p1[3], double v[3])
 			if (r == 0) {
 				printf("GetRadius2 (a): r2=0: i,x,y,z,V: %d  %d %d %d  %d\n",i,ixyz[0],ixyz[1],ixyz[2],V3D(ixyz[0],ixyz[1],ixyz[2]));
 				fprintf(fperr,"GetRadius2 (a): r2=0: i,x,y,z,V: %d  %d %d %d  %d\n",i,ixyz[0],ixyz[1],ixyz[2],V3D(ixyz[0],ixyz[1],ixyz[2]));
-				return 1.0;
+				return 0;	// was 1.0;
 			}
 			break;
 		}
 		i++;
 	}
-	return r*r;
+	if (FRC_fix) 
+		rfix = MAX(0.0,r-0.5*vox_um);
+	else
+		rfix = r;
+	return rfix*rfix;		// was r*r
 }
 
 //-----------------------------------------------------------------------------------------------------
@@ -935,7 +944,8 @@ int EstimateDiameter(double p0[3], double p1[3], double p2[3], double *r2ave, do
 	double N[3], sum, dp, r2, r2sum;
 	double v0[3], v[3];
 	double angle;
-	int nrays = 16;
+	int nrays;
+	double RMIN = 0.25;	// was 0.5
 
 //	printf("EstimateDiameter: %f %f %f\n",p1[0],p1[1],p1[2]);
 	sum = 0;
@@ -964,32 +974,46 @@ int EstimateDiameter(double p0[3], double p1[3], double p2[3], double *r2ave, do
 	}
 	r2sum = 0;
 	*r2min = 1.0e10;
+	/* old code
+	nrays = 16;
 	for (i=0;i<nrays;i++) {
 		angle = i*(PI/nrays);
 //		printf("angle: %2d %6.2f %6.3f %6.3f %6.3f\n",i,angle,v0[0],v0[1],v0[2]);
 		Rotate(v0,N,angle,v);
 //		printf("angle: %2d %6.2f %6.3f %6.3f %6.3f\n",i,angle,v[0],v[1],v[2]);
 		r2 = GetRadius2(p1,v);
-		if (r2 <= 1.0) {
+		if (r2 <= RMIN*RMIN) {
 //			printf("EstimateDiameter: r2<=1.0: p1: %f %f %f\n",p1[0],p1[1],p1[2]);
-			fprintf(fperr,"EstimateDiameter: r2<=1.0: p1: %f %f %f\n",p1[0],p1[1],p1[2]);
-			break;;
+//			fprintf(fperr,"EstimateDiameter: r2<=1.0: p1: %f %f %f\n",p1[0],p1[1],p1[2]);
+			break;
 		}
 		r2sum += r2;
 		if (r2 < *r2min) *r2min = r2;
 		angle += PI;
 		Rotate(v0,N,angle,v);
 		r2 = GetRadius2(p1,v);
-		if (r2 <= 1.0) {
+		if (r2 <= RMIN*RMIN) {
 //			printf("EstimateDiameter: r2<=1.0: p1: %f %f %f\n",p1[0],p1[1],p1[2]);
-			fprintf(fperr,"EstimateDiameter: r2<=1.0: p1: %f %f %f\n",p1[0],p1[1],p1[2]);
+//			fprintf(fperr,"EstimateDiameter: r2<=1.0: p1: %f %f %f\n",p1[0],p1[1],p1[2]);
 			break;;
 		}
 		r2sum += r2;
 		if (r2 < *r2min) *r2min = r2;
 	}
+	*/
+	nrays = 32;
+	for (i=0;i<nrays;i++) {
+		angle = (2*PI*i)/nrays;
+		Rotate(v0,N,angle,v);
+		r2 = GetRadius2(p1,v);
+//		if (r2 <= RMIN*RMIN) {
+//			break;
+//		}
+		r2sum += r2;
+		if (r2 < *r2min) *r2min = r2;
+	}
 	*r2ave = r2sum/(2*nrays);
-	*r2ave = MAX(1.0,*r2ave);
+	*r2ave = MAX(RMIN*RMIN,*r2ave);
 	return 0;
 }
 
@@ -1054,6 +1078,7 @@ double pointdiameter(int kp)
 }
 
 //-----------------------------------------------------------------------------------------------------
+// NOT USED
 //-----------------------------------------------------------------------------------------------------
 int CrudeGetDiameters(void)
 {
@@ -1438,11 +1463,10 @@ int CreateDistributions()
 	int adbox[NBOX], lvbox[NBOX];
 	int segadbox[NBOX];
 	double lsegadbox[NBOX];
-	double ad, len, ddiam, dlen, ltot, lsum, dsum, dvol, r2, r2prev, lsegdtot;
+	double ad, len, ddiam, dlen, ltot, lsum, dsum, dvol, vol, r2, r2prev, lsegdtot;
 	double ave_len, volume, d95;
 	double ave_pt_diam, ave_seg_diam;
 	int ie, ip, k, ka, kp, kpprev, ndpts, nlpts, ndtot, nsegdtot, nptstot, nptsusedtot;
-	double lenlimit = 4.0;
 	EDGE edge;
 
 	for (k=0;k<NBOX;k++) {
@@ -1467,7 +1491,7 @@ int CreateDistributions()
 		edge = edgeList[ie];
 		if (!edge.used) continue;
 //		printf("ie: %d npts: %d\n",ie,edge.npts);
-		fprintf(fperr,"ie: %d npts: %d npts_used: %d\n",ie,edge.npts,edge.npts_used);
+//		fprintf(fperr,"ie: %d npts: %d npts_used: %d\n",ie,edge.npts,edge.npts_used);
 		fflush(fperr);
 		nptstot += edge.npts;
 		nptsusedtot += edge.npts_used;
@@ -1476,7 +1500,7 @@ int CreateDistributions()
 		r2prev = 0;
 		dsum = 0;
 		lsum = 0;
-		dvol = 0;
+		vol = 0;
 		for (ip=0; ip<edge.npts; ip++) {
 			kp = edge.pt[ip];
 			ad = avediameter[kp];
@@ -1499,24 +1523,27 @@ int CreateDistributions()
 			}
 			adbox[ka]++;
 			ndtot++;
+			r2 = ad*ad/4;
 			if (ip > 0) {
 				dlen = dist_um(kp,kpprev);
-				r2 = ad*ad/4;
-				dvol += PI*dlen*(r2 + r2prev)/2;
+				dvol = PI*dlen*(r2 + r2prev)/2;
+				vol += dvol;
 				lsum += dlen;
+//				fprintf(fperr,"ie: %d ip: %d kp: %d ad: %6.2f dlen: %6.2f r2: %6.2f r2prev: %6.2f dvol: %6.2f\n",
+//					ie,ip,kp,ad,dlen,r2,r2prev,dvol);
 			}
 			kpprev = kp;
 			r2prev = r2;
 		}
 		edgeList[ie].length_um = lsum;
-		volume += dvol;
+		volume += vol;
 		if (dbug) {
 			printf("lsum: %f\n",lsum);
 			fprintf(fperr,"lsum: %f\n",lsum);
 			fflush(fperr);
 			if (lsum == 0) return 1;
 		}
-		ad = 2*sqrt(dvol/(PI*lsum));	// segment diameter
+		ad = 2*sqrt(vol/(PI*lsum));	// segment diameter
 		ave_seg_diam += ad;
 		if (ad < 0.001) {
 			printf("Zero segment diameter: edge: %d ad: %f\n",ie,ad);
@@ -1529,6 +1556,7 @@ int CreateDistributions()
 			fprintf(fperr,"Vessel too wide (segment ave): d: %f k: %d\n",ad,ka);
 			continue;
 		}
+//		fprintf(fperr,"edge: %4d len,diam,vol,ka: %6.1f %6.1f %6.1f %d\n",ie,lsum,ad,vol,ka);
 		segadbox[ka]++;
 		nsegdtot++;
 		lsegadbox[ka] += lsum;
@@ -1553,7 +1581,7 @@ int CreateDistributions()
 		edge = edgeList[ie];
 		if (!edge.used) continue;
 		len = edge.length_um;
-		k = int(len/dlen);
+		k = int(len/dlen + 0.5);	// was k = int(len/dlen)
 		if (len <= lenlimit) continue;
 		if (k >= NBOX) {
 			printf("Edge too long: ie: %d  k: %d len: %f  k: %d\n",ie,k,len);
@@ -1567,7 +1595,7 @@ int CreateDistributions()
 	ave_pt_diam /= ndtot;
 	ave_seg_diam /= nsegdtot;
 	fprintf(fpout,"Total vertices: %d  points: %d\n",nv,np);
-	fprintf(fpout,"Vessels: %d\n",ne);
+	fprintf(fpout,"Vessels: %d ltot: %d\n",ne,int(ltot));
 	printf("Average pt diameter: %6.2f vessel diameter: %6.2f\n",ave_pt_diam, ave_seg_diam);
 	fprintf(fpout,"Average pt diameter: %6.2f vessel diameter: %6.2f\n",ave_pt_diam, ave_seg_diam);
 	printf("Average vessel length: %6.1f\n",ave_len/ltot);
@@ -3720,10 +3748,10 @@ int main(int argc, char**argv)
 	char errfilename[256], amfilename[256];
 	bool squeeze = true;
 
-	if (argc != 13) {
-		printf("Usage: topo skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z calib_param fixed_diam uniform_flag junction_max_flag max_ratio n_prune_cycles\n");
+	if (argc != 14) {
+		printf("Usage: topo skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z calib_param fixed_diam uniform_flag junction_max_flag max_ratio n_prune_cycles lenlimit\n");
 		fperr = fopen("topo_error.log","w");
-		fprintf(fperr,"Usage: topo skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z calib_param fixed_diam uniform_flag junction_max_flag max_ratio n_prune_cycles\n");
+		fprintf(fperr,"Usage: topo skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z calib_param fixed_diam uniform_flag junction_max_flag max_ratio n_prune_cycles lenlimit\n");
 		fprintf(fperr,"Submitted command line: argc: %d\n",argc);
 		for (int i=0; i<argc; i++) {
 			fprintf(fperr,"argv: %d: %s\n",i,argv[i]);
@@ -3756,6 +3784,7 @@ int main(int argc, char**argv)
 	sscanf(argv[10],"%d",&junction_max_flag);
 	sscanf(argv[11],"%lf",&max_ratio);
 	sscanf(argv[12],"%d",&n_prune_cycles);
+	sscanf(argv[13],"%lf",&lenlimit);
 
 	vsize[0] = voxelsize_x;
 	vsize[1] = voxelsize_y;
@@ -3777,6 +3806,13 @@ int main(int argc, char**argv)
 	if (FIXED_DIAMETER > 0) {
 		printf("Using a fixed vessel diameter: %f\n",FIXED_DIAMETER);
 		fprintf(fpout,"Using a fixed vessel diameter: %f\n",FIXED_DIAMETER);
+	} else if (FRC_fix) {
+		printf("\nNOTE: This version of the program is applicable to FRC networks.\n");
+		printf("A small correction is made to the estimate of vessel radius (-0.5 um)\n");
+		printf("Accurate diameter estimation is impossible with fewer than 5 pixels per diameter\n\n");
+		fprintf(fpout,"\nNOTE: This version of the program is applicable to FRC networks.\n");
+		fprintf(fpout,"A small correction is made to the estimate of vessel radius (-0.5 um)\n");
+		fprintf(fpout,"Accurate diameter estimation is impossible with fewer than 5 pixels per diameter\n\n");
 	}
 	uniform_diameter = (uniform_flag==1);
 	junction_max = (junction_max_flag==1);

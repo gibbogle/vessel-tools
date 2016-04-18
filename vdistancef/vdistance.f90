@@ -1,7 +1,10 @@
 ! To estimate the probability distribution of distance from tissue to the nearest blood vessel.
 ! Uses points within the convex hull of a random set of points (?)  
 !
-! New method: use the close file from peel2 to determine if a point is inside or outside
+! New method: use the closedata file from peel2 to determine if a point is inside or outside
+! (As far as I can tell, the hull program is fine for creating the closedata file)
+! Note that the closedata file (with a small ball radius) is simply a way to represent the segmented network (?)
+! The advantage is that a voxel is represented by a single bit.
 
 module data_mod
 use par_zig_mod
@@ -117,7 +120,7 @@ else
     write(*,*) ' to analyze a cubic/spherical subregion with centre (x0,y0,z0), radius R, using the close file'
     write(*,*) ' shape = C for a cube, = S for a sphere'
     write(*,*) ' datafile is the temporary file used to pass the distribution data to maketiff which does the conversion'
-    write(*,*) ' If grid_dx = 0 the sampling points and randomly placed'
+    write(*,*) ' If grid_dx = 0 the sampling points are randomly placed'
 !   write(*,*) ' If constant_radius != 0 all vessels are given this radius'
     write(*,*) ' If threshold != 0 the sampling points are used to generate the image_file data, voxel=255 if distance > threshold'
     write(*,*) ' If the close files is used, voxel dimensions (um) must be specified: vx, vy, vz'
@@ -342,6 +345,8 @@ res = 0
 end subroutine
 
 !-----------------------------------------------------------------------------------------
+! If use_close, determines which points on the grid are inside the tissue region (i.e. the LN)
+! The closedata file was created by hull.exe (or peel2.exe).
 !-----------------------------------------------------------------------------------------
 subroutine create_in(res)
 integer :: res

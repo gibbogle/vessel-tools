@@ -56,7 +56,7 @@ void MainWindow::smoother()
 	QString qstr, resultstr;
 	char cmdstr[256];
 
-	qstr = QCoreApplication::applicationDirPath() + "/exec/smooth ";
+    qstr = QCoreApplication::applicationDirPath() + "/exec/smooth ";
 	qstr += infileName;
 	qstr += " ";
 	qstr += outfileName;
@@ -81,6 +81,8 @@ void MainWindow::smoother()
 		resultstr = "FAILED: Read error on input file";
 	else if (res == 3)
 		resultstr = "FAILED: Write error on output file";
+    else
+        resultstr = "Unknown error";
 	ui->labelResult->setText(resultstr);
 }
 

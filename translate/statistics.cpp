@@ -12,15 +12,18 @@ extern float ddiam, dlen;
 //-----------------------------------------------------------------------------------------------------
 int EdgeDimensions(EDGE *edges, POINT *points, int ne)
 {
-	int ie, ip, kp, kprev;
-	float dx, dy, dz, len, deltalen, deltalen2, ad, r2, r2prev, dsum, lsum, vol, diam;
+	int ie, ip, kp, kprev,ka;
+	float dx, dy, dz, len, deltalen, deltalen2, ad, r2, r2prev, dsum, lsum, vol, diam, dvol;
+	int ne_used;
 	EDGE edge;
 
 	printf("EdgeDimensions:\n");
 	fprintf(fpout,"EdgeDimensions:\n");
+	ne_used = 0;
 	for (ie=0; ie<ne; ie++) {
 		edge = edges[ie];
 		if (!edge.used) continue;
+		ne_used++;
 		kprev = 0;
 		r2prev = 0;
 		dsum = 0;
@@ -51,8 +54,11 @@ int EdgeDimensions(EDGE *edges, POINT *points, int ne)
 					return 2;
 				}
 				deltalen = sqrt(deltalen2);
-				vol += PI*deltalen*(r2 + r2prev)/2;
+				dvol = PI*deltalen*(r2 + r2prev)/2;
+				vol += dvol;
 				lsum += deltalen;
+//				fprintf(fperr,"ie: %d ip: %d kp: %d ad: %6.2f dlen: %6.2f r2: %6.2f r2prev: %6.2f dvol: %6.2f\n",
+//					ie,ip,kp,ad,deltalen,r2,r2prev,dvol);
 			}
 			kprev = kp;
 			r2prev = r2;
@@ -61,8 +67,10 @@ int EdgeDimensions(EDGE *edges, POINT *points, int ne)
 		diam = 2*sqrt(vol/(PI*len));
 		edges[ie].length_um = len;	
 		edges[ie].segavediam = diam;	
-//		printf("edge: %4d len,diam: %6.1f %6.1f\n",ie,len,diam);
+		ka = int(diam/ddiam + 0.5);
+//		fprintf(fperr,"edge: %4d len,diam,vol,ka: %6.1f %6.1f %6.1f %d\n",ie,len,diam,vol,ka);
 	}
+	fprintf(fperr,"Number of edges used: %d\n",ne_used);
 	return 0;
 }
 
@@ -173,7 +181,7 @@ int CreateDistributions(NETWORK *net)
 		if (!edge.used) continue;
 		len = edge.length_um;
 		k = int(len/dlen + 0.5);
-		if (use_len_limit && k*dlen <= len_limit) continue;
+		if (use_len_limit && len <= len_limit) continue;
 		ad = edge.segavediam;
 		if (use_len_diam_limit && len/ad < len_diam_limit) continue;
 		if (k >= NBOX) {
@@ -189,7 +197,7 @@ int CreateDistributions(NETWORK *net)
 	ave_seg_diam /= nsegdtot;
 	ave_lseg_diam /= lsegdtot;
 	fprintf(fpout,"Total vertices: %d  points: %d\n",net->nv,net->np);
-	fprintf(fpout,"Vessels: %d\n",net->ne);
+	fprintf(fpout,"Vessels: %d ltot: %d\n",net->ne,int(ltot));
 	printf("\nAverage pt diameter: %6.2f vessel diameter: %6.2f length-weighted: %6.2f\n",
 		ave_pt_diam, ave_seg_diam, ave_lseg_diam);
 	fprintf(fpout,"\nAverage pt diameter: %6.2f vessel diameter: %6.2f length-weighted vessel diameter: %6.2f\n",
@@ -220,4 +228,4 @@ int CreateDistributions(NETWORK *net)
 		fprintf(fpout,"%6.2f %8d %9.5f\n",k*dlen,lvbox[k],lvbox[k]/ltot);
 	}
 	return 0;
-}
+} 

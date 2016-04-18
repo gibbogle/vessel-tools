@@ -1,0 +1,24 @@
+Conduit_analyser information
+
+This program analyses a conduit (fibroreticular) network stored in Amira Spatialgraph format (.am file).
+
+The program has two functions: 
+(1) To join dead ends in the network (if possible) and trim unconnected dead ends.
+(2) To estimate the coefficient of motility Cm of cells moving on the network.
+These two functions are carried out by separate program executions.  The network should be healed (joined, trimmed) before Cm estimation.
+The shrinkage compensation factor must always be specified. The dimensions in the .am files are always left unscaled, but the shrinkage factor is used when Cm is estimated.
+
+For the healing pass, which is selected by checking "Join and trim dead ends", the user must set the (unscaled) upper limit on length of an added connection.
+
+The following parameters control the Cm estimation:
+
+Starting sphere centre and radius.  Cell paths have starting points within a sphere defined by the centre and radius.
+
+Average speed.  This is the average speed with which cells move along fibres.  
+A speed is assigned to each path as a random variate drawn from a Gaussian distribution with this mean and with standard deviation = 1/10 of this value.
+
+Cosine power.  At a fibre junction probabilities are assigned to the various exit fibres.  The probability of taking a particular fibre is proportional to cos(theta)^n where theta is the turning angle and n = cosine power.
+
+Number of trials.  This is the number of cell paths that are generated.  The distance d from the starting point is calculated after one hour.  Cm = (1/6)*(average d^2).
+
+Number of paths.  If "Save paths" is checked this is the number of paths that will be saved in the output file for displaying later.

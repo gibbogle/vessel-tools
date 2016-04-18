@@ -151,7 +151,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>1.95</string>
+     <string>1</string>
     </property>
    </widget>
    <widget class="QLabel" name="labelVoxelSize_y">
@@ -248,7 +248,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>1.95</string>
+     <string>1</string>
     </property>
    </widget>
    <widget class="QLabel" name="labelVoxelSize_z">
@@ -274,7 +274,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>1.95</string>
+     <string>1</string>
     </property>
    </widget>
    <widget class="QLabel" name="labelVoxelSize_x">
@@ -381,7 +381,7 @@
     <property name="geometry">
      <rect>
       <x>120</x>
-      <y>300</y>
+      <y>290</y>
       <width>21</width>
       <height>20</height>
      </rect>
@@ -397,13 +397,42 @@
     <property name="geometry">
      <rect>
       <x>150</x>
-      <y>300</y>
+      <y>290</y>
       <width>161</width>
       <height>21</height>
      </rect>
     </property>
     <property name="text">
      <string>Number of extra prune cycles</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="lineEditLenlimit">
+    <property name="geometry">
+     <rect>
+      <x>120</x>
+      <y>320</y>
+      <width>21</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>0</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_lenlimit">
+    <property name="geometry">
+     <rect>
+      <x>150</x>
+      <y>320</y>
+      <width>161</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Length limit for distribution (um)</string>
     </property>
    </widget>
   </widget>
