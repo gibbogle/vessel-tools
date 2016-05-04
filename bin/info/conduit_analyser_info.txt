@@ -22,3 +22,10 @@ Cosine power.  At a fibre junction probabilities are assigned to the various exi
 Number of trials.  This is the number of cell paths that are generated.  The distance d from the starting point is calculated after one hour.  Cm = (1/6)*(average d^2).
 
 Number of paths.  If "Save paths" is checked this is the number of paths that will be saved in the output file for displaying later.
+
+In computing network statistics, there are three options concerning treatment of very short vessels:
+Option 1: all vessels are included
+Option 2: vessels less than the specified length limit are excluded
+Option 3: vessels with length/diameter less than the specified limit are excluded
+
+The widths of the boxes used for counting vessels to compute the probability distributions must be specified.

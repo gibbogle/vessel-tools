@@ -49,7 +49,7 @@ POINT centre;
 int *pathcnt;
 POINT **path;
 
-FILE *fperr, *fpout;
+FILE *fpout, *fperr;
 
 double shrink_factor;	// = 1.25;	// to correct for sample shrinkage
 double max_len;
@@ -76,7 +76,11 @@ int MAXBLOCK;
 int *blocks;
 int count[NX][NY][NZ];
 int ndead;
-//#define V(a,b,c)  p[(c)*xysize+(b)*width+(a)]
+
+bool use_len_limit, use_len_diam_limit;
+float len_limit, len_diam_limit;
+float ddiam, dlen;
+#define NBOX 100
 
 #define N1 MAXBLOCK
 #define N2 2*MAXBLOCK
@@ -87,6 +91,173 @@ int ndead;
 std::seed_seq seq;
 std::mt19937 gen(seq);
 //std::uniform_real_distribution<double> dist( 0.0, 1.0 ) ;
+
+
+//-----------------------------------------------------------------------------------------------------
+// This assumes that edge dimensions (average diameter and length) have already been computed.
+//-----------------------------------------------------------------------------------------------------
+int CreateDistributions(NETWORK *net)
+{
+	int adbox[NBOX], lvbox[NBOX];
+	int segadbox[NBOX];
+	double lsegadbox[NBOX];
+	double ad, len, dave, ltot, dsum, lsegdtot;
+	double ave_len, volume, d95;
+	double ave_pt_diam;		// average point diameter
+	double ave_seg_diam;	// average vessel diameter
+	double ave_lseg_diam;	// length-weighted average vessel diameter
+	int ie, ip, k, ka, kp, ndpts, nlpts, ndtot, nsegdtot;
+	EDGE edge;
+
+	for (k=0;k<NBOX;k++) {
+		adbox[k] = 0;
+		segadbox[k] = 0;
+		lsegadbox[k] = 0;
+		lvbox[k] = 0;
+	}
+	if (use_len_diam_limit) {
+		printf("\nUsing length/diameter lower limit = %6.1f\n\n",len_diam_limit);
+		fprintf(fpout,"\nUsing length/diameter lower limit = %6.1f\n\n",len_diam_limit);
+	} else if (use_len_limit) {
+		printf("\nUsing length lower limit = %6.1f um\n\n",len_limit);
+		fprintf(fpout,"\nUsing length lower limit = %6.1f um\n\n",len_limit);
+	}
+	printf("\nDistributions\n");
+	printf("shrinkage compensation factor: %6.2f\n\n",shrink_factor);
+	fprintf(fpout,"\nDistributions\n");
+	fprintf(fpout,"shrinkage compensation factor: %6.2f\n\n",shrink_factor);
+	printf("Compute diameter distributions (length weighted)\n");
+	fprintf(fpout,"Compute diameter distributions (length weighted)\n");
+
+	// Diameters
+//	ddiam = 0.5;
+	ndtot = 0;
+	nsegdtot = 0;
+	lsegdtot = 0;
+	ave_pt_diam = 0;
+	ave_seg_diam = 0;
+	ave_lseg_diam = 0;
+	volume = 0;
+	for (ie=0; ie<net->ne; ie++) {
+		edge = net->edgeList[ie];
+//		printf("ie: %d\n",ie);
+		if (!edge.used) continue;
+		len = shrink_factor*edge.length_um;
+		dave = edge.segavediam;
+//		printf("ie,len,dave: %d %f %f\n",ie,len,dave);
+		if (use_len_limit && len < len_limit) continue;
+		for (ip=0; ip<edge.npts; ip++) {
+			kp = edge.pt[ip];
+			ad = net->point[kp].d;
+			ave_pt_diam += ad;
+			if (ad < 0.001 || ad > 200) {
+				printf("Bad point diameter: edge: %d point: %d ad: %f\n",ie,ip,ad);
+				fprintf(fpout,"Bad point diameter: edge: %d point: %d ad: %f\n",ie,ip,ad);
+				return 1;
+			}
+			ka = int(ad/ddiam + 0.5);
+			if (ka >= NBOX) {
+				printf("Vessel too wide (point): d: %f k: %d\n",ad,ka);
+				fprintf(fpout,"Vessel too wide (point): d: %f k: %d\n",ad,ka);
+				continue;
+			}
+			adbox[ka]++;
+			ndtot++;
+		}
+//		net->edgeList[ie].length_um = len;	// already computed 
+		if (use_len_diam_limit && len/ad < len_diam_limit) continue;
+		ave_seg_diam += dave;
+		ave_lseg_diam += dave*len;
+//		printf("ie: %6d dave,len,ave_lseg_diam: %8.1f %8.1f %10.1f\n",ie,dave,len,ave_lseg_diam);
+//		fprintf(fpout,"ie: %6d dave,len,ave_lseg_diam: %8.1f %8.1f %10.1f\n",ie,dave,len,ave_lseg_diam);
+		if (dave < 0.001 || dave > 200) {
+			printf("Bad segment diameter: edge: %d ad: %f\n",ie,dave);
+			fprintf(fpout,"Zero segment diameter: edge: %d ad: %f\n",ie,dave);
+			return 1;
+		}
+		ka = int(dave/ddiam + 0.5);
+		if (ka >= NBOX) {
+			printf("Vessel too wide (segment ave): d: %f k: %d\n",dave,ka);
+			fprintf(fpout,"Vessel too wide (segment ave): d: %f k: %d\n",dave,ka);
+			continue;
+		}
+		segadbox[ka]++;
+		nsegdtot++;
+		lsegadbox[ka] += len;
+		lsegdtot += len;
+		volume += len*PI*(dave/2)*(dave/2);
+	}
+	// Determine d95, the diameter that >95% of points exceed.
+	dsum = 0;
+	for (k=0; k<NBOX; k++) {
+		dsum += adbox[k]/float(ndtot);
+		if (dsum > 0.05) {
+			d95 = (k-1)*ddiam;
+			break;
+		}
+	}
+	printf("\nCompute length distributions:\n");
+	fprintf(fpout,"\nCompute length distributions:\n");
+	// Lengths
+//	dlen = 1;
+	ltot = 0;
+	ave_len = 0;
+	for (ie=0; ie<net->ne; ie++) {
+		edge = net->edgeList[ie];
+		if (!edge.used) continue;
+		len = shrink_factor*edge.length_um;
+		k = int(len/dlen + 0.5);
+		if (use_len_limit && len <= len_limit) continue;
+		ad = edge.segavediam;
+		if (use_len_diam_limit && len/ad < len_diam_limit) continue;
+		if (k >= NBOX) {
+			printf("Edge too long for boxes: len: %d  %6.1f  k: %d\n",ie,len,k);
+			fprintf(fpout,"Edge too long for boxes: len: %d  %6.1f  k: %d\n",ie,len,k);
+			continue;
+		}
+		lvbox[k]++;
+		ave_len += len;
+		ltot++;
+	}
+	ave_pt_diam /= ndtot;
+	ave_seg_diam /= nsegdtot;
+	ave_lseg_diam /= lsegdtot;
+	fprintf(fpout,"Total vertices: %d  points: %d\n",net->nv,net->np);
+	fprintf(fpout,"Vessels: %d ltot: %d\n",net->ne,int(ltot));
+	printf("\nAverage pt diameter: %6.2f vessel diameter: %6.2f length-weighted: %6.2f\n",
+		ave_pt_diam, ave_seg_diam, ave_lseg_diam);
+	fprintf(fpout,"\nAverage pt diameter: %6.2f vessel diameter: %6.2f length-weighted vessel diameter: %6.2f\n",
+		ave_pt_diam, ave_seg_diam, ave_lseg_diam);
+	printf("Average vessel length: %6.1f\n",ave_len/ltot);
+	fprintf(fpout,"Average vessel length: %6.1f\n",ave_len/ltot);
+	printf("Volume: %10.0f um3\n\n",volume);
+	fprintf(fpout,"Volume: %10.0f um3\n\n",volume);
+
+	for (k=NBOX-1; k>=0; k--) {
+		if (segadbox[k] > 0) break;
+	}
+	ndpts = k+2;
+	fprintf(fpout,"Vessel diameter distribution\n");
+	fprintf(fpout,"   um    number  fraction    length  fraction\n");
+	for (k=0; k<ndpts; k++) {
+		fprintf(fpout,"%6.2f %8d %9.5f  %8.0f %9.5f\n",k*ddiam,segadbox[k],segadbox[k]/float(nsegdtot),
+			lsegadbox[k],lsegadbox[k]/lsegdtot);
+	}
+
+	for (k=NBOX-1; k>=0; k--) {
+		if (lvbox[k] > 0) break;
+	}
+	nlpts = k+2;
+	fprintf(fpout,"Vessel length distribution\n");
+	fprintf(fpout,"   um    number  fraction\n");
+	for (k=0; k<nlpts; k++) {
+		fprintf(fpout,"%6.2f %8d %9.5f\n",k*dlen,lvbox[k],lvbox[k]/ltot);
+	}
+	return 0;
+} 
+
+
+
 
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
@@ -322,7 +493,7 @@ int ReadAmiraFile(char *amFile, NETWORK *net)
 							len = len + distance(net,net->edgeList[i].pt[k-1],net->edgeList[i].pt[k]);
 						}
 					}
-					net->edgeList[i].length_vox = len;
+					net->edgeList[i].length_um = len;
 				}
 			} else if (k == 5) {
 				for (i=0;i<net->ne;i++) {
@@ -671,6 +842,7 @@ void makeFibreList(NETWORK *net)
 
 	make26directions();
 	nfibres = net->ne;
+	/*
 	Lmin = 1.0e10;
 	Lmax = 0;
 	Lsum = 0;
@@ -681,6 +853,7 @@ void makeFibreList(NETWORK *net)
 	}
 	for (i=0; i<10; i++)
 		NBbin[i] = 0;
+	*/
 	fibre = (FIBRE *)malloc(nfibres*sizeof(FIBRE));
 	xmin = ymin = zmin = 1.0e10;
 	xmax = ymax = zmax = 0;
@@ -690,8 +863,9 @@ void makeFibreList(NETWORK *net)
 		fibre[k].kv[1] = net->edgeList[k].vert[1];
 		fibre[k].pt[0] = net->edgeList[k].pt[0];
 		fibre[k].pt[1] = net->edgeList[k].pt[net->edgeList[k].npts-1];
-		fibre[k].L_actual = net->edgeList[k].length_vox;
+		fibre[k].L_actual = net->edgeList[k].length_um;
 		L_actual_sum += fibre[k].L_actual;
+		/*
 		Lmin = MIN(Lmin,fibre[k].L_actual);
 		Lmax = MAX(Lmax,fibre[k].L_actual);
 		Lsum += fibre[k].L_actual;
@@ -707,6 +881,7 @@ void makeFibreList(NETWORK *net)
 			i_limit = MIN(i_limit,NBINS);
 			Lbin_limit[i_limit] += 1;
 		}
+		*/
 		int npts = net->edgeList[k].npts;
 		fibre[k].L_direct = distance(net,net->edgeList[k].pt[0],net->edgeList[k].pt[npts-1]);
 		L_direct_sum += fibre[k].L_direct;
@@ -743,6 +918,7 @@ void makeFibreList(NETWORK *net)
 	printf("\nShrinkage compensation factor: %6.2f\n\n",shrink_factor);
 	printf("Average L_actual: %6.2f  scaled: %6.2f\n",L_actual_sum/nfibres,shrink_factor*L_actual_sum/nfibres);
 	printf("Average L_direct: %6.2f  scaled: %6.2f\n",L_direct_sum/nfibres,shrink_factor*L_direct_sum/nfibres);
+	/*
 	printf("Min L_actual:     %6.2f  scaled: %6.2f\n",Lmin,shrink_factor*Lmin);
 	printf("Max L_actual:     %6.2f  scaled: %6.2f\n",Lmax,shrink_factor*Lmax);
 	printf("Total length: %10.0f  scaled: %10.0f\n",Lsum,shrink_factor*Lsum);
@@ -760,8 +936,8 @@ void makeFibreList(NETWORK *net)
 	for (i=1; i<=NBINS; i++) {
 		fprintf(fpout,"%4.1f %10.4f %10.4f %10.4f\n",i*deltaL,Lbin[i]/nfibres,Lbin_scaled[i]/nfibres,Lbin_limit[i]/nf_limit);
 	}
+	*/
 	fflush(fpout);
-//	return;
 
 	nvbin = 0;
 	for (k=0; k<nfibres; k++) {
@@ -1414,7 +1590,7 @@ void connect(NETWORK *NP1)
 		temp_edgeList[j].vert[0] = NP1->edgeList[i].vert[0];
 		temp_edgeList[j].vert[1] = NP1->edgeList[i].vert[1];
 		temp_edgeList[j].segavediam = NP1->edgeList[i].segavediam;
-		temp_edgeList[j].length_vox = NP1->edgeList[i].length_vox;
+		temp_edgeList[j].length_um = NP1->edgeList[i].length_um;
 		j++;
 		free(NP1->edgeList[i].pt);
 	}
@@ -1434,7 +1610,7 @@ void connect(NETWORK *NP1)
 		NP1->edgeList[i].vert[0] = temp_edgeList[i].vert[0];
 		NP1->edgeList[i].vert[1] = temp_edgeList[i].vert[1];
 		NP1->edgeList[i].segavediam = temp_edgeList[i].segavediam;
-		NP1->edgeList[i].length_vox = temp_edgeList[i].length_vox;
+		NP1->edgeList[i].length_um = temp_edgeList[i].length_um;
 	}
 	free(temp_edgeList);
 	printf("Copied temp_edgelist to edgelist\n");
@@ -1491,6 +1667,8 @@ int main(int argc, char **argv)
 	char output_basename[256];
 	int do_connect;
 	float origin_shift[3];
+	int limit_mode;
+	float limit_value;
 
 	int itpt;
 	double *tpt;
@@ -1507,49 +1685,69 @@ int main(int argc, char **argv)
 	printf("For the healing pass, set max_len \n(unscaled upper limit on length of an added connection).\n");
 	printf("The shrinkage compensation factor must be specified\n(Note that the dimensions in the am file are left unscaled)\n");
 	printf("\n");
-	if (argc != 5 && argc != 12) {
+	if (argc != 9 && argc != 16) {
 		printf("To perform joining and trimming of dead ends:\n");
-		printf("Usage: conduit_analyse input_amfile output_file sfactor max_len\n");
-		printf("       sfactor  = shrinkage compensation factor e.g. 1.25\n");
-		printf("       max_len  = upper limit on (unscaled) connecting fibre length (um)\n");
+		printf("Usage: conduit_analyse input_amfile output_file sfactor max_len limit_mode limit_value ddiam dlen\n");
+		printf("       sfactor     = shrinkage compensation factor e.g. 1.25\n");
+		printf("       max_len     = upper limit on (unscaled) connecting fibre length (um)\n");
+		printf("       limit_mode  = restriction for computing fibre statistics:\n                     0 = no limit, 1 = len limit, 2 =  len/diam limit\n");
+		printf("       limit_value = value of limit for the chosen mode\n");
+		printf("       ddiam       = bin size for diameter distribution\n");
+		printf("       dlen        = bin size for length distribution\n");
 		printf("\nTo simulate cell paths and estimate Cm:\n");
-		printf("Usage: conduit_analyse input_amfile output_file sfactor npow ntrials x0 y0 z0 radius speed npaths\n");
-		printf("       sfactor  = shrinkage compensation factor e.g. 1.25\n");
-		printf("       npow     = power of cos(theta) in weighting function for prob. of taking\n                  a branch (theta = turning angle)\n");
-		printf("       ntrials  = number of cell paths simulated\n");
-		printf("       x0,y0,z0 = centre of sphere within which the cell paths start (um)\n");
-		printf("       radius   = radius of sphere within which the cell paths start (um)\n");
-		printf("       speed    = mean cell speed (um/min) (Note that CV = %6.2f)\n",CV);
-		printf("       npaths   = number of cell paths to save\n");
+		printf("Usage: conduit_analyse input_amfile output_file sfactor npow ntrials x0 y0 z0 radius speed npaths limit_mode limit_value ddiam dlen\n");
+		printf("       sfactor     = shrinkage compensation factor e.g. 1.25\n");
+		printf("       npow        = power of cos(theta) in weighting function for prob. of \n                     taking a branch (theta = turning angle)\n");
+		printf("       ntrials     = number of cell paths simulated\n");
+		printf("       x0,y0,z0    = centre of sphere within which the cell paths start (um)\n");
+		printf("       radius      = radius of sphere within which the cell paths start (um)\n");
+		printf("       speed       = mean cell speed (um/min) (Note that CV = %6.2f)\n",CV);
+		printf("       npaths      = number of cell paths to save\n");
+		printf("       limit_mode  = restriction for computing fibre statistics:\n                     0 = no limit, 1 = len limit, 2 =  len/diam limit\n");
+		printf("       limit_value = value of limit for the chosen mode\n");
+		printf("       ddiam       = bin size for diameter distribution\n");
+		printf("       dlen        = bin size for length distribution\n");
 		printf("\n");
-		fperr = fopen("conduit_analyse_error.log","w");
-		fprintf(fperr,"To perform joining and trimming of dead ends:\n");
-		fprintf(fperr,"Usage: conduit_analyse input_amfile output_file sfactor max_len\n");
-		fprintf(fperr,"       sfactor  = shrinkage compensation factor e.g. 1.25\n");
-		fprintf(fperr,"       max_len  = upper limit on (unscaled) connecting fibre length (um)\n");
-		fprintf(fperr,"\nTo simulate cell paths and estimate Cm:\n");
-		fprintf(fperr,"Usage: conduit_analyse input_amfile output_file sfactor npow ntrials x0 y0 z0 radius speed npaths\n");
-		fprintf(fperr,"       sfactor  = shrinkage compensation factor e.g. 1.25\n");
-		fprintf(fperr,"       npow     = power of cos(theta) in weighting function for prob. of taking\n                  a branch (theta = turning angle)\n");
-		fprintf(fperr,"       ntrials  = number of cell paths simulated\n");
-		fprintf(fperr,"       x0,y0,z0 = centre of sphere within which the cell paths start (um)\n");
-		fprintf(fperr,"       radius   = radius of sphere within which the cell paths start (um)\n");
-		fprintf(fperr,"       speed    = mean cell speed (um/min) (Note that CV = %6.2f)\n",CV);
-		fprintf(fperr,"       npaths   = number of cell paths to save\n");
-		fprintf(fperr,"\n");
-		fprintf(fperr,"Submitted command line: argc: %d\n",argc);
+		fpout = fopen("conduit_analyse_error.log","w");
+		fprintf(fpout,"To perform joining and trimming of dead ends:\n");
+		fprintf(fpout,"Usage: conduit_analyse input_amfile output_file sfactor max_len\n");
+		fprintf(fpout,"       sfactor     = shrinkage compensation factor e.g. 1.25\n");
+		fprintf(fpout,"       max_len     = upper limit on (unscaled) connecting fibre length (um)\n");
+		fprintf(fpout,"       limit_mode  = restriction for computing fibre statistics:\n                     0 = no limit, 1 = len limit, 2 =  len/diam limit\n");
+		fprintf(fpout,"       limit_value = value of limit for the chosen mode\n");
+		fprintf(fpout,"       ddiam       = bin size for diameter distribution\n");
+		fprintf(fpout,"       dlen        = bin size for length distribution\n");
+		fprintf(fpout,"\nTo simulate cell paths and estimate Cm:\n");
+		fprintf(fpout,"Usage: conduit_analyse input_amfile output_file sfactor npow ntrials x0 y0 z0 radius speed npaths\n");
+		fprintf(fpout,"       sfactor     = shrinkage compensation factor e.g. 1.25\n");
+		fprintf(fpout,"       npow        = power of cos(theta) in weighting function for prob. of \n                     taking a branch (theta = turning angle)\n");
+		fprintf(fpout,"       ntrials     = number of cell paths simulated\n");
+		fprintf(fpout,"       x0,y0,z0    = centre of sphere within which the cell paths start (um)\n");
+		fprintf(fpout,"       radius      = radius of sphere within which the cell paths start (um)\n");
+		fprintf(fpout,"       speed       = mean cell speed (um/min) (Note that CV = %6.2f)\n",CV);
+		fprintf(fpout,"       npaths      = number of cell paths to save\n");
+		fprintf(fpout,"       limit_mode  = restriction for computing fibre statistics:\n                     0 = no limit, 1 = len limit, 2 =  len/diam limit\n");
+		fprintf(fpout,"       limit_value = value of limit for the chosen mode\n");
+		fprintf(fpout,"       ddiam       = bin size for diameter distribution\n");
+		fprintf(fpout,"       dlen        = bin size for length distribution\n");
+		fprintf(fpout,"\n");
+		fprintf(fpout,"Submitted command line: argc: %d\n",argc);
 		for (int i=0; i<argc; i++) {
-			fprintf(fperr,"argv: %d: %s\n",i,argv[i]);
+			fprintf(fpout,"argv: %d: %s\n",i,argv[i]);
 		}
-		fclose(fperr);
+		fclose(fpout);
 		return 1;	// Wrong command line
 	} 
 	input_amfile = argv[1];
 	output_file = argv[2];
 	fpout = fopen(output_file,"w");	
 	sscanf(argv[3],"%lf",&shrink_factor);
-	if (argc == 5) {
+	if (argc == 9) {
 		sscanf(argv[4],"%lf",&max_len);
+		sscanf(argv[5],"%d",&limit_mode);
+		sscanf(argv[6],"%f",&limit_value);
+		sscanf(argv[7],"%f",&ddiam);
+		sscanf(argv[8],"%f",&dlen);
 		do_connect = true;
 
 		//char add_str[13];
@@ -1566,7 +1764,7 @@ int main(int argc, char **argv)
 		//fprintf(fpout,"\noutput_amfile: %s\n",output_amfile);
 		//return 0;
 
-	} else if (argc == 12) {
+	} else if (argc == 16) {
 		sscanf(argv[4],"%d",&npow);
 		sscanf(argv[5],"%d",&ntrials);
 		sscanf(argv[6],"%f",&centre.x);
@@ -1575,6 +1773,10 @@ int main(int argc, char **argv)
 		sscanf(argv[9],"%lf",&start_radius);
 		sscanf(argv[10],"%lf",&mean_speed);
 		sscanf(argv[11],"%d",&npaths);
+		sscanf(argv[12],"%d",&limit_mode);
+		sscanf(argv[13],"%f",&limit_value);
+		sscanf(argv[14],"%f",&ddiam);
+		sscanf(argv[15],"%f",&dlen);
 		do_connect = false;
 		save_paths = (npaths > 0);
 		if (save_paths) {
@@ -1585,6 +1787,19 @@ int main(int argc, char **argv)
 				path[i] = (POINT *)malloc(NTIMES*sizeof(POINT));
 			}
 		}
+	}
+
+	if (limit_mode == 0) {
+		use_len_diam_limit = false;
+		use_len_limit = false;
+	} else 	if (limit_mode == 1) {
+		use_len_diam_limit = false;
+		use_len_limit = true;
+		len_limit = limit_value;
+	} else 	if (limit_mode == 2) {
+		use_len_diam_limit = true;
+		use_len_limit = false;
+		len_diam_limit = limit_value;
 	}
 
 	/*
@@ -1603,6 +1818,9 @@ int main(int argc, char **argv)
 	origin_shift[0] = 0;
 	origin_shift[1] = 0;
 	origin_shift[2] = 0;
+//	printf("ne: %d\n",NP0->ne);
+	err = CreateDistributions(NP0);
+	if (err != 0) return 4;
 
 	makeFibreList(NP0);
 	printf("did makeFibreList\n");

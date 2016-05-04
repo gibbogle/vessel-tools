@@ -16,12 +16,13 @@
 #include "itkImage.h"
 #include "itkImageFileReader.h"
 #include "itkImageFileWriter.h"
-#include <itkDanielssonDistanceMapImageFilter.h>
+//#include <itkDanielssonDistanceMapImageFilter.h>
 #include "itkSize.h"
-#include "itkThresholdImageFilter.h"
-#include "itkBinaryThresholdImageFilter.h"
-#include "itkMeanImageFilter.h"
+//#include "itkThresholdImageFilter.h"
+//#include "itkBinaryThresholdImageFilter.h"
+//#include "itkMeanImageFilter.h"
 //#include "itkBoxMeanImageFilter.h"
+//#include "itkBoxMeanImageFilter.hxx"
 
 typedef itk::Image<unsigned char,3> ImageType;
 ImageType::Pointer im;
@@ -255,13 +256,6 @@ int main(int argc, char**argv)
 	FILE *fp;
 	char errfile[] = "error.log";
 	fp = fopen(errfile,"w");
-	FILE *fpmaria;
-	char mariafile[] = "maria.txt";
-	fpmaria = fopen(mariafile,"w");
-
-	for (int i=0; i<argc; i++) {
-		fprintf(fpmaria,"argv: %d: %s\n",i,argv[i]);
-	}
 
 	if (USE_ITK_FILTER)
 		printf("Using itk:::BoxMeanImageFilter with %d threads\n",NTHREADS);
@@ -294,9 +288,6 @@ int main(int argc, char**argv)
 	sscanf(argv[4],"%d",&npar);
 	printf("NCPU: %d\n",npar);
 
-	fprintf(fpmaria,"Input image file: %s\n",argv[1]);
-	fprintf(fpmaria,"Output image file: %s\n",argv[2]);
-
 	typedef itk::ImageFileReader<ImageType> FileReaderType;
 	FileReaderType::Pointer reader = FileReaderType::New();
 
@@ -309,9 +300,7 @@ int main(int argc, char**argv)
 	{
 		std::cout << e << std::endl;
 		fprintf(fp,"Read error on input file\n");
-		fprintf(fpmaria,"Read error on input file\n");
 		fclose(fp);
-		fclose(fpmaria);
 		return 2;
 	}
 
@@ -323,16 +312,13 @@ int main(int argc, char**argv)
 	imsize = width*height;
 
 	printf("Image dimensions: width, height, depth: %d %d %d\n",width,height,depth);
-	fprintf(fpmaria,"Image dimensions: width, height, depth: %d %d %d\n",width,height,depth);
 	longsize = width;
 	longsize *= height;
 	longsize *= depth;
 	printf("Array size: %lld\n",longsize);
-	fprintf(fpmaria,"Array size: %lld\n",longsize);
 
 	if (!USE_ITK_FILTER)
 	{
-		fprintf(fpmaria,"Using fastsmth\n");
 		p = (unsigned char *)(im->GetBufferPointer());
 		average = (unsigned char*)malloc(imsize*depth*sizeof(unsigned char));
 		fastsmth(radius, npar);
@@ -363,7 +349,6 @@ int main(int argc, char**argv)
 	}
 	*/
 	printf("Averaging completed\n");
-	fprintf(fpmaria,"Averaging completed\n");
 
 	typedef itk::ImageFileWriter<ImageType> FileWriterType;
 	FileWriterType::Pointer writer = FileWriterType::New();
@@ -379,16 +364,11 @@ int main(int argc, char**argv)
 	{
 		std::cout << e << std::endl;
 		fprintf(fp,"Write error on output file\n");
-		fprintf(fpmaria,"Write error on output file\n");
 		fclose(fp);
-		fclose(fpmaria);
 		return 3;
 	}
 	printf("Created smoothed image file: %s\n",argv[2]);
-	fprintf(fpmaria,"Created smoothed image file: %s\n",argv[2]);
 	printf("Elapsed time: %ld seconds \n",(long int)(time(NULL)-t1));
-	fclose(fp);
-	fclose(fpmaria);
 
 	return 0;
 }

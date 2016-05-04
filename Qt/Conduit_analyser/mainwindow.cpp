@@ -67,11 +67,32 @@ void MainWindow::savepaths_checkbox(){
     }
 }
 
+void MainWindow::on_radioButton_len_limit_toggled(bool checked)
+{
+    ui->lineEdit_len_limit->setEnabled(checked);
+}
+
+void MainWindow::on_radioButton_len_diam_limit_toggled(bool checked)
+{
+    ui->lineEdit_len_diam_limit->setEnabled(checked);
+}
+
 void MainWindow::conduit_analyser()
 {
 	int res;
-    QString qstr, resultstr;
     char cmdstr[2048];
+    QString limitmodestr, limitvaluestr, qstr, resultstr;
+
+    if (ui->radioButton_no_limit->isChecked()) {
+        limitmodestr = "0";
+        limitvaluestr = "0";
+    } else if (ui->radioButton_len_limit->isChecked()) {
+        limitmodestr = "1";
+        limitvaluestr = ui->lineEdit_len_limit->text();
+    } else {
+        limitmodestr = "2";
+        limitvaluestr = ui->lineEdit_len_diam_limit->text();
+    }
 
     qstr = QCoreApplication::applicationDirPath() + "/exec/conduit_analyse ";
 	qstr += inputFileName;
@@ -99,6 +120,14 @@ void MainWindow::conduit_analyser()
         qstr += " ";
         qstr += ui->lineEdit_npaths->text();
     }
+    qstr += " ";
+    qstr += limitmodestr;
+    qstr += " ";
+    qstr += limitvaluestr;
+    qstr += " ";
+    qstr += ui->lineEdit_ddiam->text();
+    qstr += " ";
+    qstr += ui->lineEdit_dlen->text();
 
 	if (qstr.size()>(int)sizeof(cmdstr)-1) {
 		printf("Failed to convert qstr->cmdstr since qstr didn't fit\n");
@@ -115,11 +144,11 @@ void MainWindow::conduit_analyser()
 	else if (res == 1)
 		resultstr = "FAILED: wrong number of arguments";
 	else if (res == 2)
-		resultstr = "FAILED: Read error on input file";
+        resultstr = "FAILED: read error on input file";
 	else if (res == 3)
-		resultstr = "FAILED: Write error on output file";
+        resultstr = "FAILED: write error on output file";
 	else if (res == 4)
-		resultstr = "FAILED: out of memory";
+        resultstr = "FAILED: error in CreateDistributions";
 	ui->labelResult->setText(resultstr);
 }
 

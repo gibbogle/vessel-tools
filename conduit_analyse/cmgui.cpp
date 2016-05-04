@@ -8,7 +8,7 @@ extern int nv_used, ne_used, np_used;
 extern EDGE *edgeList;
 extern VERTEX *vertex;
 extern POINT *point;
-extern FILE *fperr, *fpout;
+extern FILE *fpout, *fpout;
 extern float distance(NETWORK *net, int k1, int k2);
 
 int testfunction(void)
@@ -84,16 +84,16 @@ int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[])
 	FILE *exelem, *exnode;
 
 	printf("WriteCmguiData: %s %d %d\n",basename,net->ne,net->np);
-	fprintf(fperr,"WriteCmguiData: %s\n",basename);
-	fflush(fperr);
+	fprintf(fpout,"WriteCmguiData: %s\n",basename);
+	fflush(fpout);
 //	sprintf(dotcomname,"%s.com",output_basename);
 	sprintf(exelemname,"%s.exelem",basename);
 	sprintf(exnodename,"%s.exnode",basename);
 	printf("exelem file: %s\n",exelemname);
 	printf("exnode file: %s\n",exnodename);
-	fprintf(fperr,"exelem file: %s\n",exelemname);
-	fprintf(fperr,"exnode file: %s\n",exnodename);
-	fflush(fperr);
+	fprintf(fpout,"exelem file: %s\n",exelemname);
+	fprintf(fpout,"exnode file: %s\n",exnodename);
+	fflush(fpout);
 //	dotcom = fopen(dotcomname,"w");
 	exelem = fopen(exelemname,"w");
 	exnode = fopen(exnodename,"w");
