@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1022</width>
-    <height>441</height>
+    <width>1377</width>
+    <height>461</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -83,7 +83,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>370</y>
+      <y>380</y>
       <width>41</width>
       <height>16</height>
      </rect>
@@ -96,8 +96,8 @@
     <property name="geometry">
      <rect>
       <x>50</x>
-      <y>370</y>
-      <width>961</width>
+      <y>380</y>
+      <width>1321</width>
       <height>16</height>
      </rect>
     </property>
@@ -108,9 +108,9 @@
    <widget class="QTextEdit" name="textEdit">
     <property name="geometry">
      <rect>
-      <x>490</x>
+      <x>670</x>
       <y>50</y>
-      <width>521</width>
+      <width>701</width>
       <height>311</height>
      </rect>
     </property>
@@ -233,7 +233,7 @@
    <widget class="QRadioButton" name="radioButton_length">
     <property name="geometry">
      <rect>
-      <x>290</x>
+      <x>280</x>
       <y>90</y>
       <width>101</width>
       <height>18</height>
@@ -324,7 +324,7 @@
     </property>
     <property name="geometry">
      <rect>
-      <x>280</x>
+      <x>270</x>
       <y>110</y>
       <width>131</width>
       <height>81</height>
@@ -393,13 +393,109 @@
      </property>
     </widget>
    </widget>
+   <widget class="QGroupBox" name="groupBox_ratio">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>470</x>
+      <y>109</y>
+      <width>120</width>
+      <height>81</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string/>
+    </property>
+    <widget class="QLabel" name="label_ratio">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>10</y>
+       <width>31</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Ratio</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="lineEditRatio">
+     <property name="geometry">
+      <rect>
+       <x>50</x>
+       <y>10</y>
+       <width>41</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="inputMask">
+      <string>2; </string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="radioButton_ratio_less">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>40</y>
+       <width>82</width>
+       <height>18</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Select &lt; ratio</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+     <attribute name="buttonGroup">
+      <string>buttonGroup_ratio</string>
+     </attribute>
+    </widget>
+    <widget class="QRadioButton" name="radioButton_ratio_more">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>60</y>
+       <width>82</width>
+       <height>18</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Select &gt; ratio</string>
+     </property>
+     <attribute name="buttonGroup">
+      <string>buttonGroup_ratio</string>
+     </attribute>
+    </widget>
+   </widget>
+   <widget class="QRadioButton" name="radioButton_ratio">
+    <property name="geometry">
+     <rect>
+      <x>470</x>
+      <y>90</y>
+      <width>151</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Select on length/diameter</string>
+    </property>
+    <attribute name="buttonGroup">
+     <string>buttonGroup_selection</string>
+    </attribute>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1022</width>
+     <width>1377</width>
      <height>18</height>
     </rect>
    </property>
@@ -456,8 +552,8 @@
    <slot>selecter()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>287</x>
-     <y>305</y>
+     <x>244</x>
+     <y>362</y>
     </hint>
     <hint type="destinationlabel">
      <x>382</x>
@@ -474,7 +570,8 @@
   <slot>selecter()</slot>
  </slots>
  <buttongroups>
-  <buttongroup name="buttonGroup_criterion"/>
   <buttongroup name="buttonGroup_selection"/>
+  <buttongroup name="buttonGroup_criterion"/>
+  <buttongroup name="buttonGroup_ratio"/>
  </buttongroups>
 </ui>

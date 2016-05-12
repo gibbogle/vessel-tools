@@ -809,10 +809,14 @@ int main(int argc, char**argv)
 	}
 
 	CreateBoxList();
-
 	width = N[0];
 	height = N[1];
 	depth = N[2];
+
+	//width = 578;
+	//height = 563;
+	//depth = 571;
+
 	printf("width: %d height: %d depth: %d\n",width,height,depth);
 	ImageType::Pointer im = ImageType::New();
 	ImageType::SizeType imsize; 
@@ -830,6 +834,8 @@ int main(int argc, char**argv)
 	im->Allocate();
 	p = (unsigned char *)(im->GetBufferPointer());
 	xysize = width*height;
+
+	printf("Created buffer\n");
 
 	dbug = false;
 	int n = 0;

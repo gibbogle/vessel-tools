@@ -85,16 +85,20 @@ int CheckNetwork(NETWORK *net, char *str)
 				dave1 /= edge1.npts;
 				if (dave < dave1) {
 					net->edgeList[ie].used = false;
-					printf("CheckNetwork: double connecting edge removed: ie,iv0,iv1: %d %d %d diams: %f %f\n",ie,iv0,iv1,dave,dave1);
-					fprintf(fpout,"CheckNetwork: double connecting edge removed: ie,iv0,iv1: %d %d %d diams: %f %f\n",ie,iv0,iv1,dave,dave1);
+//					printf("CheckNetwork: double connecting edge removed: ie,iv0,iv1: %d %d %d diams: %f %f\n",ie,iv0,iv1,dave,dave1);
+//					fprintf(fpout,"CheckNetwork: double connecting edge removed: ie,iv0,iv1: %d %d %d diams: %f %f\n",ie,iv0,iv1,dave,dave1);
 				} else {
 					net->edgeList[ie1].used = false;
-					printf("CheckNetwork: double connecting edge removed: ie,iv0,iv1: %d %d %d diams: %f %f\n",ie1,iv0,iv1,dave,dave1);
-					fprintf(fpout,"CheckNetwork: double connecting edge removed: ie,iv0,iv1: %d %d %d diams: %f %f\n",ie1,iv0,iv1,dave,dave1);
+//					printf("CheckNetwork: double connecting edge removed: ie,iv0,iv1: %d %d %d diams: %f %f\n",ie1,iv0,iv1,dave,dave1);
+//					fprintf(fpout,"CheckNetwork: double connecting edge removed: ie,iv0,iv1: %d %d %d diams: %f %f\n",ie1,iv0,iv1,dave,dave1);
 				}
 			}
 		}
 	}
+	printf("Check completed\n");
+	fprintf(fpout,"Check completed\n");
+	fflush(stdout);
+	fflush(fpout);
 	return 0;
 }	
 

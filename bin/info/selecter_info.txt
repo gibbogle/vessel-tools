@@ -1,16 +1,17 @@
 Selecter information
+--------------------
+This program enables creation of a subset of the network, on the basis of:
+segment diameter, segment length, or length/diameter ratio
 
-This program enables creation of a subset of the network, on the basis of
-either vessel diameter or vessel length.  
-
-If diameter is chosen, the user specifies a range of vessel diameters: (Dmin,Dmax), 
+If diameter is chosen, the user specifies a range of segment diameters: (Dmin, Dmax), 
 and the selection criterion:
+  Average diameter: Segments with average diameter in this range are selected
+  Majority of points: Segments for which more than half the points have diameter in this range are selected
+  All points: Segments for which all points have diameter in this range are selected
 
-Average diameter: Vessels which have average diameter in this range are selected
-Majority of points: Vessels for which more than half the points have diameter in this range are selected
-All points: Vessels for which all points have diameter in this range are selected
+If length is chosen, the user specifies a range of vessel lengths: (Lmin, Lmax)
 
-If length is chosen, the user specifies a range of vessel lengths: (Lmin,Lmax)
+If ratio is chosen, the user specifies the threshold ratio, and whether segments with length/diameter < ratio or > ratio are selected
 
 The user can choose to restrict the network to the largest connected subnetwork.
 

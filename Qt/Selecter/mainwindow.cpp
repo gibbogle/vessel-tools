@@ -9,7 +9,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    connect(ui->buttonGroup_selection, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(on_radioButton_diameter_changed()));
+//    connect(ui->buttonGroup_selection, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(on_radioButton_diameter_changed()));
 
 	ui->textEdit->setReadOnly(true);
         QString infoFile = QCoreApplication::applicationDirPath() + "/info/selecter_info.txt";
@@ -52,16 +52,19 @@ void MainWindow::outFileSelecter()
     ui->labelOutFile->setText(outfileName);
 }
 
-void MainWindow::on_radioButton_diameter_changed()
+void MainWindow::on_buttonGroup_selection_buttonClicked()
 {
     bool is_diam = ui->radioButton_diameter->isChecked();
+    bool is_length = ui->radioButton_length->isChecked();
+    bool is_ratio = ui->radioButton_ratio->isChecked();
     ui->groupBox_diameter->setEnabled(is_diam);
     ui->groupBox_criterion->setEnabled(is_diam);
-    ui->groupBox_length->setEnabled(!is_diam);
     ui->checkBoxConnect->setEnabled(is_diam);
     if (!is_diam) {
         ui->checkBoxConnect->setChecked(false);
     }
+    ui->groupBox_length->setEnabled(is_length);
+    ui->groupBox_ratio->setEnabled(is_ratio);
 }
 
 void MainWindow::selecter()
@@ -81,12 +84,20 @@ void MainWindow::selecter()
         qstr += " ";
         qstr += ui->lineEditDmax->text();
         qstr += " ";
-    } else {
+    } else if (ui->radioButton_length->isChecked()){
         qstr += "0 ";
         qstr += ui->lineEditLmin->text();
         qstr += " ";
         qstr += ui->lineEditLmax->text();
         qstr += " ";
+    } else {
+        qstr += "2 ";
+        qstr += ui->lineEditRatio->text();
+        qstr += " ";
+        if (ui->radioButton_ratio_less->isChecked())
+            qstr += "-1 ";
+        else
+            qstr += "1 ";
     }
     if (ui->checkBoxConnect->isChecked())           // connect_flag
         qstr += "1 ";
@@ -123,12 +134,16 @@ void MainWindow::selecter()
     else if (res == 4)
         resultstr = "FAILED: CreateLenSelectNet error";
     else if (res == 5)
-        resultstr = "FAILED: CreateLargestConnectedNet error";
+        resultstr = "FAILED: CreateRatioSelectNet error";
     else if (res == 6)
-        resultstr = "FAILED: Write error on output AM file";
+        resultstr = "FAILED: CreateLargestConnectedNet error";
     else if (res == 7)
-        resultstr = "FAILED: Write error on output CMGUI files";
+        resultstr = "FAILED: Write error on output AM file";
     else if (res == 8)
+        resultstr = "FAILED: Write error on output CMGUI files";
+    else if (res == 9)
+        resultstr = "FAILED: EdgeDimensions error";
+    else if (res == 10)
         resultstr = "FAILED: Error in computing network statistics";
     else
         resultstr = "WTF?";

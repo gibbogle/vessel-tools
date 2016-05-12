@@ -3,8 +3,8 @@
 #include "network.h"
 
 extern FILE *fperr, *fpout;
-extern bool use_len_limit, use_len_diam_limit;
-extern float len_limit, len_diam_limit;
+//extern bool use_len_limit, use_len_diam_limit;	// No need for these limits here, because the limited network has already been created
+//extern float len_limit, len_diam_limit;
 extern float ddiam, dlen;
 
 //-----------------------------------------------------------------------------------------------------
@@ -88,13 +88,13 @@ int CreateDistributions(NETWORK *net)
 		lsegadbox[k] = 0;
 		lvbox[k] = 0;
 	}
-	if (use_len_diam_limit) {
-		printf("\nUsing length/diameter lower limit = %6.1f\n\n",len_diam_limit);
-		fprintf(fpout,"\nUsing length/diameter lower limit = %6.1f\n\n",len_diam_limit);
-	} else if (use_len_limit) {
-		printf("\nUsing length lower limit = %6.1f um\n\n",len_limit);
-		fprintf(fpout,"\nUsing length lower limit = %6.1f um\n\n",len_limit);
-	}
+	//if (use_len_diam_limit) {
+	//	printf("\nUsing length/diameter lower limit = %6.1f\n\n",len_diam_limit);
+	//	fprintf(fpout,"\nUsing length/diameter lower limit = %6.1f\n\n",len_diam_limit);
+	//} else if (use_len_limit) {
+	//	printf("\nUsing length lower limit = %6.1f um\n\n",len_limit);
+	//	fprintf(fpout,"\nUsing length lower limit = %6.1f um\n\n",len_limit);
+	//}
 	printf("Compute diameter distributions (length weighted)\n");
 	fprintf(fperr,"Compute diameter distributions (length weighted)\n");
 	// Diameters
@@ -111,7 +111,7 @@ int CreateDistributions(NETWORK *net)
 		if (!edge.used) continue;
 		len = edge.length_um;
 		dave = edge.segavediam;
-		if (use_len_limit && len < len_limit) continue;
+//		if (use_len_limit && len < len_limit) continue;
 		for (ip=0; ip<edge.npts; ip++) {
 			kp = edge.pt[ip];
 			ad = net->point[kp].d;
@@ -131,7 +131,7 @@ int CreateDistributions(NETWORK *net)
 			ndtot++;
 		}
 		net->edgeList[ie].length_um = len;	// already computed
-		if (use_len_diam_limit && len/ad < len_diam_limit) continue;
+//		if (use_len_diam_limit && len/ad < len_diam_limit) continue;
 		ave_seg_diam += dave;
 		ave_lseg_diam += dave*len;
 //		printf("ie: %6d dave,len,ave_lseg_diam: %8.1f %8.1f %10.1f\n",ie,dave,len,ave_lseg_diam);
@@ -173,9 +173,9 @@ int CreateDistributions(NETWORK *net)
 		if (!edge.used) continue;
 		len = edge.length_um;
 		k = int(len/dlen + 0.5);
-		if (use_len_limit && k*dlen <= len_limit) continue;
+//		if (use_len_limit && k*dlen <= len_limit) continue;
 		ad = edge.segavediam;
-		if (use_len_diam_limit && len/ad < len_diam_limit) continue;
+//		if (use_len_diam_limit && len/ad < len_diam_limit) continue;
 		if (k >= NBOX) {
 			printf("Edge too long for boxes: len: %d  %6.1f  k: %d\n",ie,len,k);
 			fprintf(fperr,"Edge too long for boxes: len: %d  %6.1f  k: %d\n",ie,len,k);
