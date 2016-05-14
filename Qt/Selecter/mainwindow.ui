@@ -431,7 +431,10 @@
       </rect>
      </property>
      <property name="inputMask">
-      <string>2; </string>
+      <string/>
+     </property>
+     <property name="text">
+      <string>2</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -571,7 +574,7 @@
  </slots>
  <buttongroups>
   <buttongroup name="buttonGroup_selection"/>
-  <buttongroup name="buttonGroup_criterion"/>
   <buttongroup name="buttonGroup_ratio"/>
+  <buttongroup name="buttonGroup_criterion"/>
  </buttongroups>
 </ui>
