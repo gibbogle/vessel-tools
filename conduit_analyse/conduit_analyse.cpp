@@ -842,7 +842,7 @@ void makeFibreList(NETWORK *net)
 
 	make26directions();
 	nfibres = net->ne;
-	/*
+	
 	Lmin = 1.0e10;
 	Lmax = 0;
 	Lsum = 0;
@@ -853,7 +853,7 @@ void makeFibreList(NETWORK *net)
 	}
 	for (i=0; i<10; i++)
 		NBbin[i] = 0;
-	*/
+	
 	fibre = (FIBRE *)malloc(nfibres*sizeof(FIBRE));
 	xmin = ymin = zmin = 1.0e10;
 	xmax = ymax = zmax = 0;
@@ -865,7 +865,7 @@ void makeFibreList(NETWORK *net)
 		fibre[k].pt[1] = net->edgeList[k].pt[net->edgeList[k].npts-1];
 		fibre[k].L_actual = net->edgeList[k].length_um;
 		L_actual_sum += fibre[k].L_actual;
-		/*
+		
 		Lmin = MIN(Lmin,fibre[k].L_actual);
 		Lmax = MAX(Lmax,fibre[k].L_actual);
 		Lsum += fibre[k].L_actual;
@@ -881,7 +881,7 @@ void makeFibreList(NETWORK *net)
 			i_limit = MIN(i_limit,NBINS);
 			Lbin_limit[i_limit] += 1;
 		}
-		*/
+		
 		int npts = net->edgeList[k].npts;
 		fibre[k].L_direct = distance(net,net->edgeList[k].pt[0],net->edgeList[k].pt[npts-1]);
 		L_direct_sum += fibre[k].L_direct;
