@@ -6,7 +6,7 @@
 
 QT       += core gui
 
-TARGET = holefiller
+TARGET = eroder
 TEMPLATE = app
 
 
