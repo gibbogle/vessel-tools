@@ -53,9 +53,11 @@ void MainWindow::join_checkbox(){
     if (ui->checkBox_join->isChecked()) {
         ui->groupBox_traverse->setDisabled(true);
         ui->groupBox_join->setEnabled(true);
+        ui->lineEdit_sfactor->setDisabled(true);
     } else {
         ui->groupBox_traverse->setEnabled(true);
         ui->groupBox_join->setDisabled(true);
+        ui->lineEdit_sfactor->setEnabled(true);
     }
 }
 
@@ -149,6 +151,8 @@ void MainWindow::conduit_analyser()
         resultstr = "FAILED: write error on output file";
 	else if (res == 4)
         resultstr = "FAILED: error in CreateDistributions";
-	ui->labelResult->setText(resultstr);
+    else if (res == 5)
+        resultstr = "FAILED: MAXBLOCK exceeded";
+    ui->labelResult->setText(resultstr);
 }
 

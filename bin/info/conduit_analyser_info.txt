@@ -6,7 +6,9 @@ The program has two functions:
 (1) To join dead ends in the network (if possible) and trim unconnected dead ends.
 (2) To estimate the coefficient of motility Cm of cells moving on the network.
 These two functions are carried out by separate program executions.  The network should be healed (joined, trimmed) before Cm estimation.
-The shrinkage compensation factor must always be specified. The dimensions in the .am files are always left unscaled, but the shrinkage factor is used when Cm is estimated.
+
+The shrinkage compensation factor is not applied when the "join" mode is selected, leaving dimensions in the .am file unscaled.
+Otherwise the shrinkage factor is applied to the network, influencing the dimension distributions and Cm estimates.
 
 For the healing pass, which is selected by checking "Join and trim dead ends", the user must set the (unscaled) upper limit on length of an added connection.
 

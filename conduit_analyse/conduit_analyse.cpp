@@ -109,6 +109,7 @@ int CreateDistributions(NETWORK *net)
 	int ie, ip, k, ka, kp, ndpts, nlpts, ndtot, nsegdtot;
 	EDGE edge;
 
+//	shrink_factor = 1;		// No scaling here - already done with applyShrinkFactor()
 	for (k=0;k<NBOX;k++) {
 		adbox[k] = 0;
 		segadbox[k] = 0;
@@ -142,7 +143,7 @@ int CreateDistributions(NETWORK *net)
 		edge = net->edgeList[ie];
 //		printf("ie: %d\n",ie);
 		if (!edge.used) continue;
-		len = shrink_factor*edge.length_um;
+		len = edge.length_um;
 		dave = edge.segavediam;
 //		printf("ie,len,dave: %d %f %f\n",ie,len,dave);
 		if (use_len_limit && len < len_limit) continue;
@@ -205,7 +206,7 @@ int CreateDistributions(NETWORK *net)
 	for (ie=0; ie<net->ne; ie++) {
 		edge = net->edgeList[ie];
 		if (!edge.used) continue;
-		len = shrink_factor*edge.length_um;
+		len = edge.length_um;
 		k = int(len/dlen + 0.5);
 		if (use_len_limit && len <= len_limit) continue;
 		ad = edge.segavediam;
@@ -255,9 +256,6 @@ int CreateDistributions(NETWORK *net)
 	}
 	return 0;
 } 
-
-
-
 
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
@@ -544,6 +542,24 @@ int ReadAmiraFile(char *amFile, NETWORK *net)
 }
 
 //-----------------------------------------------------------------------------------------------------
+// Scale all relevant distances in the network: point.x, .y, .z and edge.segavediam
+//-----------------------------------------------------------------------------------------------------
+void applyShrinkFactor(NETWORK *net, double shrink_factor)
+{
+	int j;
+	for (j=0; j<net->np; j++) {
+		net->point[j].x *= shrink_factor;
+		net->point[j].y *= shrink_factor;
+		net->point[j].z *= shrink_factor;
+		net->point[j].d *= shrink_factor;
+	}
+	for (j=0; j<net->ne; j++) {
+		net->edgeList[j].segavediam *= shrink_factor;
+		net->edgeList[j].length_um *= shrink_factor;
+	}
+}
+
+//-----------------------------------------------------------------------------------------------------
 // Check for vertex index iv in ivlist.  If it exists, return the index. 
 // Otherwise add it to the list, increment nv, return the index.
 //-----------------------------------------------------------------------------------------------------
@@ -818,7 +834,7 @@ void setupBlockLists(NETWORK *net)
 	}
 	if (maxcount > MAXBLOCK) {
 		printf("Error: MAXBLOCK exceeded\n");
-		exit(1);
+		exit(5);
 	}
 }
 
@@ -829,14 +845,14 @@ void setupBlockLists(NETWORK *net)
 void makeFibreList(NETWORK *net)
 {
 #define NBINS 50
-	int i, k, iv, idir, i_scaled, i_limit, nf_limit;
+	int i, k, iv, idir, i_limit, nf_limit;
 	int ix, iy, iz;
 	int kv[2], nlinks[2];
 	POINT p1, p2;
 	float L_actual_sum=0, L_direct_sum=0;
 	float deltaL = 1.0;
 	float v[3], dotsum[26];
-	float Lmin, Lmax, Lsum, Lbin[NBINS+1], NBbin[10], Lbin_scaled[NBINS+1], Lbin_limit[NBINS+1];
+	float Lmin, Lmax, Lsum, Lbin[NBINS+1], NBbin[10], Lbin_limit[NBINS+1];	//, Lbin_scaled[NBINS+1]
 	float Angbin[46], dang=4;
 	int nvbin, nangbin;
 
@@ -848,7 +864,6 @@ void makeFibreList(NETWORK *net)
 	Lsum = 0;
 	for (i=0; i<=NBINS; i++) {
 		Lbin[i] = 0;
-		Lbin_scaled[i] = 0;
 		Lbin_limit[i] = 0;
 	}
 	for (i=0; i<10; i++)
@@ -872,12 +887,9 @@ void makeFibreList(NETWORK *net)
 		i = fibre[k].L_actual/deltaL + 0.5;
 		i = MIN(i,NBINS);
 		Lbin[i] += 1;
-		i_scaled = shrink_factor*fibre[k].L_actual/deltaL + 0.5;
-		i_scaled = MIN(i_scaled,NBINS);
-		Lbin_scaled[i_scaled] += 1;
-		if (shrink_factor*fibre[k].L_actual > min_len) {
+		if (fibre[k].L_actual > min_len) {
 			nf_limit++;
-			i_limit = shrink_factor*fibre[k].L_actual/deltaL + 0.5;
+			i_limit = fibre[k].L_actual/deltaL + 0.5;
 			i_limit = MIN(i_limit,NBINS);
 			Lbin_limit[i_limit] += 1;
 		}
@@ -911,32 +923,10 @@ void makeFibreList(NETWORK *net)
 	printf("Y: %f %f  DY: %f\n",ymin,ymax,DY);
 	printf("Z: %f %f  DZ: %f\n",zmin,zmax,DZ);
 
-	MAXBLOCK = (20*nfibres)/(NX*NY*NZ*2);
+	MAXBLOCK = (40*nfibres)/(NX*NY*NZ*2);
 	blocks = (int *)malloc(NX*NY*NZ*2*MAXBLOCK*sizeof(int));
 	setupBlockLists(net);
 
-	printf("\nShrinkage compensation factor: %6.2f\n\n",shrink_factor);
-	printf("Average L_actual: %6.2f  scaled: %6.2f\n",L_actual_sum/nfibres,shrink_factor*L_actual_sum/nfibres);
-	printf("Average L_direct: %6.2f  scaled: %6.2f\n",L_direct_sum/nfibres,shrink_factor*L_direct_sum/nfibres);
-	/*
-	printf("Min L_actual:     %6.2f  scaled: %6.2f\n",Lmin,shrink_factor*Lmin);
-	printf("Max L_actual:     %6.2f  scaled: %6.2f\n",Lmax,shrink_factor*Lmax);
-	printf("Total length: %10.0f  scaled: %10.0f\n",Lsum,shrink_factor*Lsum);
-	fprintf(fpout,"\nShrinkage compensation factor: %6.2f\n\n",shrink_factor);
-	fprintf(fpout,"Average L_actual: %6.2f  scaled: %6.2f\n",L_actual_sum/nfibres,shrink_factor*L_actual_sum/nfibres);
-	fprintf(fpout,"Average L_direct: %6.2f  scaled: %6.2f\n",L_direct_sum/nfibres,shrink_factor*L_direct_sum/nfibres);
-	fprintf(fpout,"Min L_actual:     %6.2f  scaled: %6.2f\n",Lmin,shrink_factor*Lmin);
-	fprintf(fpout,"Max L_actual:     %6.2f  scaled: %6.2f\n",Lmax,shrink_factor*Lmax);
-	fprintf(fpout,"Total length:   %8.0f  scaled: %8.0f\n",Lsum,shrink_factor*Lsum);
-	fflush(fpout);
-	fprintf(fpout,"Length distributions:\n");
-	fprintf(fpout,"(Bin size: %3.1f)\n",deltaL);
-	fprintf(fpout,"(the limited distribution is for fibres with length > %4.1f after scaling)\n",min_len);
-	fprintf(fpout,"         unscaled   scaled     limited\n");
-	for (i=1; i<=NBINS; i++) {
-		fprintf(fpout,"%4.1f %10.4f %10.4f %10.4f\n",i*deltaL,Lbin[i]/nfibres,Lbin_scaled[i]/nfibres,Lbin_limit[i]/nf_limit);
-	}
-	*/
 	fflush(fpout);
 
 	nvbin = 0;
@@ -997,63 +987,6 @@ void makeFibreList(NETWORK *net)
 		}
 	}
 
-/*
-	nvbin = 0;
-	for (k=0; k<nfibres; k++) {
-		if (k%1000 == 0) printf("fibre: %d\n",k);
-		kv[0] = fibre[k].kv[0];
-		nlinks[0] = 0;
-		kv[1] = fibre[k].kv[1];
-		nlinks[1] = 0;
-		for (int kk=0; kk<nfibres; kk++) {
-			if (kk == k) continue;
-			if (fibre[kk].kv[0] == kv[0]) {
-				fibre[k].link[0][nlinks[0]] = kk;
-				nlinks[0]++;
-				if (nlinks[0] > MAX_LINKS) {
-					printf("Error: nlinks[0]: %d\n",nlinks[0]);
-					exit(1);
-				}
-			}
-			if (fibre[kk].kv[1] == kv[0]) {
-				fibre[k].link[0][nlinks[0]] = kk;
-				nlinks[0]++;
-				if (nlinks[0] > MAX_LINKS) {
-					printf("Error: nlinks[0]: %d\n",nlinks[0]);
-					exit(1);
-				}
-			}
-			if (fibre[kk].kv[0] == kv[1]) {
-				fibre[k].link[1][nlinks[1]] = kk;
-				nlinks[1]++;
-				if (nlinks[1] > MAX_LINKS) {
-					printf("Error: nlinks[1]: %d\n",nlinks[1]);
-					exit(1);
-				}
-			}
-			if (fibre[kk].kv[1] == kv[1]) {
-				fibre[k].link[1][nlinks[1]] = kk;
-				nlinks[1]++;
-				if (nlinks[1] > MAX_LINKS) {
-					printf("Error: nlinks[1]: %d\n",nlinks[1]);
-					exit(1);
-				}
-			}
-		}
-		fibre[k].nlinks[0] = nlinks[0];
-		fibre[k].nlinks[1] = nlinks[1];
-		if (nlinks[0] > 1) {
-			nvbin++;
-			NBbin[nlinks[0]+1]++;
-		}
-		if (nlinks[1] > 1) {
-			nvbin++;
-			NBbin[nlinks[1]+1]++;
-		}
-//		fprintf(fpout,"fibre: %6d nlinks1,nlinks2: %2d %2d\n",k,nlinks1,nlinks2);
-	}
-
-*/
 	printf("set up nlinks\n");
 
 	if (centre.x==0 || centre.y==0 || centre.z==0) {
@@ -1240,9 +1173,6 @@ void traverse(NETWORK *net, int nsteps, double *tpt, double *res_d2sum, double *
 	double t, speed, std_speed;
 
 	printf("traverse\n");
-	mean_speed /= shrink_factor;	// the mean speed is scaled to account for the fact that the network description
-									// is based on the unscaled measurements - not compensated for shrinkage
-									// This is equivalent to scaling fibre lengths by multiplying by shrink_factor
 	std_speed = CV*mean_speed;
 	res_d2tsum = new double[NDATAPTS];
 	for (i=0; i<NDATAPTS; i++) {
@@ -1317,7 +1247,6 @@ void traverse(NETWORK *net, int nsteps, double *tpt, double *res_d2sum, double *
 			t += fibre[ifib].L_actual/speed;
 			if (t > tpt[itpt]) {
 				d = get_distance(net,ifib0,iend0,ifib,jdir);
-				d *= shrink_factor;
 				d2sum += d*d;
 				d2tsum += d*d/t;
 				res_d2sum[itpt] += d*d;
@@ -1363,7 +1292,6 @@ void traverse(NETWORK *net, int nsteps, double *tpt, double *res_d2sum, double *
 	printf("Number of reversals: %d\n",ndead);
 	fprintf(fpout,"Number of reversals: %d\n",ndead);
 	printf("npaths: %d\n",np);
-//	*Cm = d2sum/(6*npaths*tmax);
 	for (itpt=0; itpt<NDATAPTS; itpt++) {
 		Cm[itpt] = res_d2tsum[itpt]/(6*np);		// this is with fixed time - actual t is used, not tmax
 	}
@@ -1749,6 +1677,7 @@ int main(int argc, char **argv)
 		sscanf(argv[7],"%f",&ddiam);
 		sscanf(argv[8],"%f",&dlen);
 		do_connect = true;
+		shrink_factor = 1;		// when connecting network, do no scaling
 
 		//char add_str[13];
 		//if (max_len < 10)
@@ -1815,6 +1744,10 @@ int main(int argc, char **argv)
 	err = ReadAmiraFile(input_amfile,NP0);
 	if (err != 0) return 2;
 	printf("Read Amira file\n");
+	if (shrink_factor /= 1) {
+		applyShrinkFactor(NP0, shrink_factor);
+		printf("Applied shrink factor correction: %8.3f\n",shrink_factor);
+	}
 	origin_shift[0] = 0;
 	origin_shift[1] = 0;
 	origin_shift[2] = 0;
