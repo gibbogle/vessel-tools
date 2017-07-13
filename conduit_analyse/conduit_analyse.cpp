@@ -829,6 +829,7 @@ void setupBlockLists(NETWORK *net)
 void makeFibreList(NETWORK *net)
 {
 #define NBINS 50
+#define NANGS 45
 	int i, k, iv, idir, i_scaled, i_limit, nf_limit;
 	int ix, iy, iz;
 	int kv[2], nlinks[2];
@@ -837,9 +838,10 @@ void makeFibreList(NETWORK *net)
 	float deltaL = 1.0;
 	float v[3], dotsum[26];
 	float Lmin, Lmax, Lsum, Lbin[NBINS+1], NBbin[10], Lbin_scaled[NBINS+1], Lbin_limit[NBINS+1];
-	float Angbin[46], dang=4;
+	float Angbin[NANGS], dang;
 	int nvbin, nangbin;
 
+	dang = 180./NANGS;
 	make26directions();
 	nfibres = net->ne;
 	
@@ -1082,7 +1084,7 @@ void makeFibreList(NETWORK *net)
 		net->vertex[kv[1]].nf++;
 	}
 	printf("set up vertex.nf\n");
-	for (i=0;i<46;i++)
+	for (i=0;i<NANGS;i++)
 		Angbin[i] = 0;
 	nangbin = 0;
 	for (iv=0; iv<net->nv; iv++) {
@@ -1094,14 +1096,14 @@ void makeFibreList(NETWORK *net)
 				int kf2 = net->vertex[iv].fib[i2];	// Note float counting of pairs of fibres
 				double theta = getAngle(iv,kf1,kf2);
 				i = theta/dang;
-				if (i > 45) exit(1);
+				if (i > NANGS) exit(1);
 				Angbin[i]++;
 				nangbin++;
 			}
 		}
 	}
 	fprintf(fpout,"\nFibre angle distribution: bin size = %f degrees\n",dang);
-	for (i=0; i<46; i++)
+	for (i=0; i<NANGS; i++)
 		fprintf(fpout,"%3d %6.1f %8.5f\n",i,dang*(i+0.5),Angbin[i]/nangbin);
 	printf("made angle distribution\n");
 	// Evaluate directional tendencies

@@ -24,7 +24,6 @@
 typedef itk::Image<unsigned char,3> ImageType;
 ImageType::Pointer inputImage;
 
-
 unsigned char *p, *p2;
 
 #define V(a,b,c)  p[(c)*xysize+(b)*width+(a)]
