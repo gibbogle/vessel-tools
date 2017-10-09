@@ -1168,6 +1168,8 @@ void makeFibreList(NETWORK *net)
 			int knear_end = B(j,1,ix,iy,iz);
 			int k2 = fibre[kk].pt[1];
 			double d = distance(net, k1, k2);
+		}
+	}
 	return;
 }
 
