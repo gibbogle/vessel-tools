@@ -1,0 +1,23 @@
+Topology2 information
+
+Parameters:
+voxelsize = size of voxel in um
+diameter  = vessel diameter when a fixed diameter is specified
+(If an object file is not provided, diameters will not be computed.)
+
+Data from the thresholded, connected object image is combined with data from the skeleton image in order to quantify the network.
+
+The length of each vessel segment is computed (distance along the vessel between junctions), and the distribution (histogram) of lengths is output.
+
+The average vessel diameter is estimated as the average of diameters at skeleton voxels.
+Two probability distributions of vessel diameter are output, one based simply on the number of vessels, the other weighted by vessel length.  This second distribution is more meaningful.
+
+For each vessel the average vessel diameter is computed and applied to all interior points.  This is done in a way that conserves vessel volume.
+Dead-ends shorter than the specified minimum are pruned.
+
+All results are in units of micrometres (um).
+
+If "Fixed diameter" is checked and a diameter value is specified, the network files are generated using this diameter for all vessels.  This aids viewing the network topology.
+
+*** NOT IMPLEMENTED ***
+[At a junction point the diameter is set either to the maximum diameter of the connected vessel segments, or to the average.  If the average option is selected, a threshold value of the ratio of max diam to min diam must be specified.  When the ratio at the junction exceeds this threshold the max diameter is used.  A large threshold value will ensure that the average is always used.]
