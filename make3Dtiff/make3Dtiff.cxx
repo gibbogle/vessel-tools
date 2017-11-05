@@ -46,51 +46,76 @@
 #include "itkImageSeriesReader.h"
 #include "itkImageFileWriter.h"
 #include "itkNumericSeriesFileNames.h"
-//#include "itkPNGImageIO.h"
 #include "itkTIFFImageIO.h"
 #include "itkRescaleIntensityImageFilter.h"
 
 #define V3D(a,b,c)  p3D[(c)*width*height+(b)*width+(a)]
-#define V2D(a,b)  p2D[(b)*width+(a)]
+#define V2D_8(a,b)  p2D_8[(b)*width+(a)]
+#define V2D_16(a,b)  p2D_16[(b)*width+(a)]
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
+bool fexists(const char *filename)
+{
+    return GetFileAttributes(filename) != INVALID_FILE_ATTRIBUTES;
+}
+
 int main( int argc, char ** argv )
 {
+	bool compress=true;
   // Verify the number of parameters in the command line
-  if( argc < 5 )
+  if( argc < 6 )
     {
     std::cerr << "Usage: " << std::endl;
-    std::cerr << argv[0] << " 2DTemplateFile firstSliceValue lastSliceValue  output3DImageFile " << std::endl;
+    std::cerr << argv[0] << " 2DTemplateFile bits firstSliceValue lastSliceValue  output3DImageFile " << std::endl;
+	std::cerr << "E.g.: " << argv[0] << " frame%04d.tif 16 0 99 result3D.tif " << std::endl;
+	std::cerr << "where the 16-bit 2D images are: frame0000.tif, frame0001.tif,..,frame0099.tif " << std::endl;
     return EXIT_FAILURE;
     }
 
-  // We start by defining the {PixelType} and {ImageType}.
-  typedef unsigned char                       PixelType8;
-  typedef unsigned short                      PixelType16;
-  const unsigned int Dimension = 3;
+	// We start by defining the {PixelType} and {ImageType}.
+	typedef unsigned char              PixelType8;
+	typedef unsigned short             PixelType16;
+	const unsigned int Dimension = 3;
 
-//  typedef itk::Image< PixelType16, 2 >  InputImageType;
-  typedef itk::Image< PixelType8, 2 >  InputImageType;
-  typedef itk::Image< PixelType8, Dimension >  OutputImageType;
+	typedef itk::Image< PixelType8, 2 >  InputImageType8;
+	typedef itk::Image< PixelType16, 2 >  InputImageType16;
+	typedef itk::Image< PixelType8, Dimension >  OutputImageType;
   
-  typedef itk::ImageFileReader< InputImageType >  ReaderType;
-  typedef itk::ImageFileWriter< OutputImageType >  WriterType;
+	typedef itk::ImageFileReader< InputImageType8 >  ReaderType8;
+	typedef itk::ImageFileReader< InputImageType16 >  ReaderType16;
+	typedef itk::ImageFileWriter< OutputImageType >  WriterType;
 
-  ReaderType::Pointer reader = ReaderType::New();
-  WriterType::Pointer writer = WriterType::New();
+	ReaderType8::Pointer reader8;		//= ReaderType8::New();
+  	ReaderType16::Pointer reader16;		//= ReaderType16::New();
+	WriterType::Pointer writer = WriterType::New();
 
-  const char * inTemplateFile = argv[1];
+	const char * inTemplateFile = argv[1];
 
-  const unsigned int first = atoi( argv[2] );
-  const unsigned int last  = atoi( argv[3] );
+	const unsigned int bits = atoi( argv[2] );
+	const unsigned int first = atoi( argv[3] );
+	const unsigned int last  = atoi( argv[4] );
 
-  const char * outputFilename = argv[4];
-  char infile[256];
-  int width, height, depth;
-//  unsigned short *p2D;
-  unsigned char *p2D;
-  unsigned char *p3D;
+	const char * outputFilename = argv[5];
+	char infile[256];
+	int width, height, depth;
+	unsigned char *p2D_8;
+	unsigned short *p2D_16;
+	unsigned char *p3D;
+
+  // Testing fexists()
+  //if (fexists("zzz.txt")) {
+	 // printf("file exists\n");
+  //} else {
+	 // printf("file does not exist\n");
+  //}
+  //return 0;
+
+	if (bits == 8) {
+	  	reader8 = ReaderType8::New();
+	} else {
+  		reader16 = ReaderType16::New();
+	}
 
   	OutputImageType::Pointer image3D;
 	image3D = OutputImageType::New();
@@ -101,60 +126,94 @@ int main( int argc, char ** argv )
 	imstart[2] = 0;
 	OutputImageType::RegionType imregion; 
 
-  int z = -1;
-  for (int i=first; i<=last; i++) {
-//	int z = i - first;
-//	sprintf(infile, "E:/Tracking/NN-003_Cycle010_CurrentSettings_Ch2_%06d.tif", i);
-	sprintf(infile, inTemplateFile, i);
-	z++;
-	printf("z: %d  infile: %s\n",z,infile);
-	reader->SetFileName(infile);
-	try
-	{
-		reader->Update();
+	// Count files
+	depth = 0;
+	for (int i=first; i<=last; i++) {
+		sprintf(infile, inTemplateFile, i);
+		// Check for existence of file
+		if (fexists(infile)) depth++;
 	}
-	catch (itk::ExceptionObject &e)
-	{
-		std::cout << e << std::endl;
-		return 1;
-	}
-	InputImageType *im2D = reader->GetOutput();
+	
+	int z = -1;
+	for (int i=first; i<=last; i++) {
+//		int z = i - first;
+		sprintf(infile, inTemplateFile, i);
+		// Check for existence of file
+		if (!fexists(infile)) {
+//			printf("Missing file: %s\n",infile);
+			continue;
+		}
+		z++;
+		printf("z: %d  infile: %s\n",z,infile);
+		if (bits == 8) {
+			reader8->SetFileName(infile);
+			try
+			{
+				reader8->Update();
+			}
+			catch (itk::ExceptionObject &e)
+			{
+				std::cout << e << std::endl;
+				return 1;
+			}
+			InputImageType8 *im2D = reader8->GetOutput();
+			width = im2D->GetLargestPossibleRegion().GetSize()[0];
+			height = im2D->GetLargestPossibleRegion().GetSize()[1];
+ 			p2D_8 = (unsigned char *)(im2D->GetBufferPointer());
+		} else {
+			reader16->SetFileName(infile);
+			try
+			{
+				reader16->Update();
+			}
+			catch (itk::ExceptionObject &e)
+			{
+				std::cout << e << std::endl;
+				return 1;
+			}
+			InputImageType16 *im2D = reader16->GetOutput();
+			width = im2D->GetLargestPossibleRegion().GetSize()[0];
+			height = im2D->GetLargestPossibleRegion().GetSize()[1];
+ 			p2D_16 = (unsigned short *)(im2D->GetBufferPointer());
+		}
 
-	width = im2D->GetLargestPossibleRegion().GetSize()[0];
-	height = im2D->GetLargestPossibleRegion().GetSize()[1];
-//	double range = 4094.;
-	if (i == first) {
-		depth = last - first + 1;
-		printf("Image dimensions: width, height, depth: %d %d %d\n",width,height,depth);
-		imsize[0] = width;
-		imsize[1] = height;
-		imsize[2] = depth;
-		imregion.SetSize(imsize);
-		imregion.SetIndex(imstart);
-		image3D->SetRegions(imregion);
-		image3D->Allocate();
-		p3D = (unsigned char *)(image3D->GetBufferPointer());
-	}
-// 	p2D = (unsigned short *)(im2D->GetBufferPointer());
- 	p2D = (unsigned char *)(im2D->GetBufferPointer());
-	int maxpix = 0;
-	for (int x=0; x<width; x++) {
-		for (int y=0; y<height; y++) {
-			V3D(x,y,z) = V2D(x,y);
-			//maxpix = MAX(maxpix,V2D(x,y));
-			//double r = V2D(x,y)/range;
-			//V3D(x,y,z) = MIN(255,(r*255. + 0.5));
-			//if (z == 1 && x == 162 && y >= 140 && y <= 150) {
-			//	printf("%d %d  V2D: %d  r: %f  V3D: %d\n",x,y,V2D(x,y),r,V3D(x,y,z));
-			//}
+		if (i == first) {
+//			depth = last - first + 1;
+			printf("Image dimensions: width, height, depth: %d %d %d\n",width,height,depth);
+			imsize[0] = width;
+			imsize[1] = height;
+			imsize[2] = depth;
+			imregion.SetSize(imsize);
+			imregion.SetIndex(imstart);
+			image3D->SetRegions(imregion);
+			image3D->Allocate();
+			p3D = (unsigned char *)(image3D->GetBufferPointer());
+		}
+		int maxpix = 0;
+		for (int x=0; x<width; x++) {
+			for (int y=0; y<height; y++) {
+				//maxpix = MAX(maxpix,V2D(x,y));
+				if (bits == 8) {
+					V3D(x,y,z) = V2D_8(x,y);
+				} else {
+					double range = 65536.;
+					double r = V2D_16(x,y)/range;
+					V3D(x,y,z) = MIN(255,(r*255. + 0.5));
+					//if (z == 0 && x <100 && y == 10) {
+					//	printf("%d %d %f  V2D: %d  V3D: %d\n",x,y,r,V2D_16(x,y),V3D(x,y,z));
+					//}
+				}
+			}
 		}
 	}
-//	printf("\n z: %d max: %d\n",z,maxpix);
-  }
 
     writer->SetFileName( outputFilename );
 	writer->SetInput(image3D);
-	writer->UseCompressionOn();
+	if (compress) {
+		writer->UseCompressionOn();
+	} else {
+		writer->UseCompressionOff();
+	}
 	printf("Writing 3D image file\n");
 	try
 	{
