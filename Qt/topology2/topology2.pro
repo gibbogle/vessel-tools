@@ -6,7 +6,7 @@
 
 QT       += core gui
 
-TARGET = topology
+TARGET = topology2
 TEMPLATE = app
 
 
