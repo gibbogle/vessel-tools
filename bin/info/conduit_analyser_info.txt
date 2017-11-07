@@ -1,16 +1,18 @@
 Conduit_analyser information
-
+-----------------------------------
 This program analyses a conduit (fibroreticular) network stored in Amira Spatialgraph format (.am file).
 
 The program has two functions: 
 (1) To join dead ends in the network (if possible) and trim unconnected dead ends.
 (2) To estimate the coefficient of motility Cm of cells moving on the network.
-These two functions are carried out by separate program executions.  The network should be healed (joined, trimmed) before Cm estimation.
+These two functions are carried out by separate program executions.  The network should be healed (joined, trimmed), if desired, before Cm estimation.
 
 The shrinkage compensation factor is not applied when the "join" mode is selected, leaving dimensions in the .am file unscaled.
 Otherwise the shrinkage factor is applied to the network, influencing the dimension distributions and Cm estimates.
 
 For the healing pass, which is selected by checking "Join and trim dead ends", the user must set the (unscaled) upper limit on length of an added connection.
+This pass creates a new .am file, named like this: old-name_jt_max####.am, where #### is the maximum added connection length.
+To compute statistics for this new network, it must be specified as the input Amira file.
 
 The following parameters control the Cm estimation:
 
