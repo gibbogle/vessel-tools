@@ -807,8 +807,9 @@ int getDiameters(void)
 //-----------------------------------------------------------------------------------------------------
 int createVlist()
 {
+#define nblist 1000
 	int k, k0, kp, ke, kl, x, y, z, ib, ib1, ib2, i, len, n, nb, nloops, nends;
-	int blist[100];
+	int blist[nblist];
 	int nbr_temp[30];
 	VOXEL *pv, *pv0;
 	bool repeat, dbug;
@@ -862,7 +863,9 @@ int createVlist()
 		}
 		Vlist[k].nbrs = nbrs;
 	}
+
 	printf("Start cleanup\n");
+	fprintf(fpout,"Start cleanup\n");
 	// Do basic cleanup - remove simple loops and short ends
 	nloops = 0;
 	nends = 0;
@@ -888,6 +891,10 @@ int createVlist()
 						printf("ib: %d k: %d  nbrs: %d\n",ib,k,pv->nbrs);
 						printf("Vlist[384].nbrs: %d\n",Vlist[1].nbrs);
 					}
+					if (len >= nblist) {
+						printf("createVlist: branch length len: %d exceeds nblist\n",len); 
+						exit(1);
+					}
 					blist[len] = k;	// keep track of the branch voxels
 					len++;
 					if (pv->nbrs > 2) {		// another vertex, end of segment
@@ -898,6 +905,7 @@ int createVlist()
 							// Note: when a loop is removed, because pv0->nbr[] has changed we must exit this vertex
 							repeat = true;
 							for (i=0; i<len-1; i++) {
+								if (i >= nblist) exit(1);
 								kl = blist[i];
 								pv = &Vlist[kl];
 								if (pv->nbrs > 2) repeat = false;
@@ -905,6 +913,7 @@ int createVlist()
 							if (!repeat) break;
 							nloops++;
 							for (i=0; i<len-1; i++) {
+								if (i >= nblist) exit(1);
 								kl = blist[i];
 //								printf("remove kl: %d\n",kl);
 								pv = &Vlist[kl];
@@ -915,6 +924,7 @@ int createVlist()
 							// One branch is ib1 = ib, the other, ib2, has pv0->nbr[ib2] = kp
 							ib1 = ib;
 							for (ib=0; ib<pv0->nbrs; ib++) {
+								if (ib >= 30) exit(1);
 								nbr_temp[ib] = pv0->nbr[ib];
 								if (pv0->nbr[ib] == kp) {
 									ib2 = ib;
@@ -950,6 +960,7 @@ int createVlist()
 							nends++;
 							repeat = true;
 							for (i=0; i<len; i++) {
+								if (i >= nblist) exit(1);
 								ke = blist[i];
 //								printf("remove ke: %d\n",ke);
 								pv = &Vlist[ke];
@@ -974,6 +985,7 @@ int createVlist()
 		} while (repeat);
 	}
 	printf("Removed simple loops: %d and short ends: %d\n",nloops,nends);
+	fprintf(fpout,"Removed simple loops: %d and short ends: %d\n",nloops,nends);
 	return 0;
 }
 
@@ -989,6 +1001,7 @@ int traceSegments()
 	bool duplicate, loop, flag, dbug;
 
 	printf("\ntraceSegments\n");
+	fprintf(fpout,"\ntraceSegments\n");
 	net->edgeList = (EDGE *)malloc(MAXEDGES*sizeof(EDGE));
 	edgeList = net->edgeList;
 
@@ -1001,7 +1014,8 @@ int traceSegments()
 	for (k0=1; k0<=nlit; k0++) {
 		dbug = (k0 == -1);
 		pv0 = &Vlist[k0];
-		if (pv0->nbrs < 3) continue;	// not a vertex
+		if (dbug) fprintf(fpout,"k0: %d nbrs: %d\n",k0,pv0->nbrs);
+		if (pv0->nbrs < 3) continue;	// not a 3-vertex
 		if (nsegs < nshow) {
 			printf("\nstart vertex: %d  nbrs: %d\n",k0,pv0->nbrs);
 		}
@@ -1055,8 +1069,11 @@ int traceSegments()
 						pe->pt = (int *)malloc(pe->npts*sizeof(int));
 						for (int i=0; i<pe->npts; i++)
 							pe->pt[i] = segvoxel[i];
-						pe->vert[0] = k0;
-						pe->vert[1] = k;
+//						pe->vert[0] = k0;
+//						pe->vert[1] = k;
+						if (k == 6 || k0 == 6) {
+							fprintf(fpout,"make edge: %d vertices: %d %d\n",nsegs,pe->pt[0],pe->pt[pe->npts-1]);
+						}
 						pe->length_um = len;
 						Vlist[k0].diameter = 0;
 						Vlist[k].diameter = 0;
@@ -1112,8 +1129,11 @@ int traceSegments()
 						pe->pt = (int *)malloc(pe->npts*sizeof(int));
 						for (int i=0; i<pe->npts; i++)
 							pe->pt[i] = segvoxel[i];
-						pe->vert[0] = k0;
-						pe->vert[1] = k;
+//						pe->vert[0] = k0;
+//						pe->vert[1] = k;
+						if (k == 6 || k0 == 6) {
+							fprintf(fpout,"make edge: %d vertices: %d %d\n",nsegs,pe->pt[0],pe->pt[pe->npts-1]);
+						}
 						pe->length_um = len;
 						Vlist[k0].diameter = 0;
 						Vlist[k].diameter = 0;
@@ -1132,18 +1152,24 @@ int traceSegments()
 			if (nsegs < nshow) {
 				if (duplicate) {
 					printf("branch: %d  duplicate: ",ib);
+					fprintf(fpout,"branch: %d  duplicate: ",ib);
 				} else if (loop) {
 					printf("branch: %d  loop\n",ib);
+					fprintf(fpout,"branch: %d  loop\n",ib);
 				} else {
 					printf("branch: %d  segment: %d: ",ib,nsegs);
+					fprintf(fpout,"branch: %d  segment: %d: ",ib,nsegs);
 				}
 				printf(" %d -> %d  nvoxels: %d: ",k0,k,nsegvoxels);
+				fprintf(fpout," %d -> %d  nvoxels: %d: ",k0,k,nsegvoxels);
 				if (nsegvoxels > 2) {
 					for (int i=0; i<nsegvoxels; i++) {
 						printf("%d  ",segvoxel[i]);
+						fprintf(fpout,"%d  ",segvoxel[i]);
 					}
 				}
 				printf("\n");
+				fprintf(fpout,"\n");
 			}
 		}
 	}
@@ -1392,11 +1418,13 @@ int vertexDensity2(int noffsets)
 	VOXEL *pv, *pv0;
 
 	printf("\nvertexDensity2: noffsets: %d\n",noffsets);
+	fprintf(fpout,"\nvertexDensity2: noffsets: %d\n",noffsets);
 	nx = width/3-1;
 	ny = height/3-1;
 	nz = depth/3-1;
 	for (offset=0; offset<noffsets; offset++) {
 		printf("\noffset: %d\n",offset);
+		fprintf(fpout,"\noffset: %d\n",offset);
 	nc = 3*3*3;
 	count = (int *)malloc(nc*sizeof(int));
 	for (int i=0;i<nc;i++) 
@@ -1423,9 +1451,9 @@ int vertexDensity2(int noffsets)
 					}
 				}
 				count[n1]++;
-				if (n1 == 8) {
-					fprintf(fpout,"big count: %d  ix,iy,iz: %d %d %d\n",n1,ix,iy,iz);
-				}
+				//if (n1 == 8) {
+				//	fprintf(fpout,"big count: %d  ix,iy,iz: %d %d %d\n",n1,ix,iy,iz);
+				//}
 				// At this point, we know that there are n lit voxels in the 3x3x3 cube, with indices stored in kvlist[]
 				if (n1 > 1) {
 					// Need to select those that are connected, and the collapse voxel location
@@ -1648,45 +1676,35 @@ int deloop()
 }
 
 //-----------------------------------------------------------------------------------------------------
-// Need to set vertex diameter to the max of the diameters of connected edges
+// Create mapping between Vlist and vertexList
 //-----------------------------------------------------------------------------------------------------
 int createVertexList()
 {
-	int k, ie, i, npts, iv, iv0, iv1;
-	float *dsum;
-	int *nsum;
+	int k, ie, i, npts, iv, iv0, iv1, nt;
+//	float *dsum;
+//	int *nsum;
 	VOXEL *pv;
 	EDGE *pe;
 
-	// Create vertex numbering
+	// Count vertices
 	nv = 0;
 	for (k=1; k<=nlit; k++) {
 		pv = &Vlist[k];
-		if (pv->nbrs == 0 || pv->nbrs == 2) {
-			pv->vertex_num = -1;
-		} else {
-			pv->vertex_num = nv;
-			nv++;
-		}
+		if (pv->nbrs == 1 || pv->nbrs > 2) nv++;
 	}
 	printf("counted vertices: %d\n",nv);
 	vertexList = (VERTEX *)malloc(nv*sizeof(VERTEX));		// this will hold voxel number corresponding to vertex number
+	nt = 0;
 	for (k=1; k<=nlit; k++) {
 		pv = &Vlist[k];
-		if (pv->vertex_num >= 0) {
-			vertexList[pv->vertex_num].voxel_index = k;
+		if (pv->nbrs == 1 || pv->nbrs > 2) {
+			pv->vertex_num = nt;
+			vertexList[nt].voxel_index = k;
+			nt++;
 		}
 	}
 	printf("set vertex voxel indexes\n");
-	/*
-	dsum = (float *)malloc(nv*sizeof(float));
-	nsum = (int *)malloc(nv*sizeof(int));
-	for (iv=0; iv<nv; iv++) {
-		nsum[iv] = 0;
-		dsum[iv] = 0;
-	}
-	
-	printf("calculating vertex diameters???  not used anywhere!\n");
+
 	// Assign vertex numbers to edges
 	for (ie=0;ie<ne;ie++) {
 		pe = &edgeList[ie];
@@ -1695,15 +1713,8 @@ int createVertexList()
 		pe->vert[0] = iv0;
 		iv1 = Vlist[pe->pt[npts-1]].vertex_num;
 		pe->vert[1] = iv1;
-		nsum[iv0]++;
-		dsum[iv0] += pe->segavediam;
-		nsum[iv1]++;
-		dsum[iv1] += pe->segavediam;
 	}
-	for (iv=0; iv<nv; iv++) {
-		vertexList[iv].diameter = dsum[iv]/nsum[iv];
-	}
-	*/
+
 	return 0;
 }
 
