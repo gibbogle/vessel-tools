@@ -62,15 +62,15 @@ bool fexists(const char *filename)
 
 int main( int argc, char ** argv )
 {
-	bool compress=true;
+	bool compress;
   // Verify the number of parameters in the command line
-  if( argc < 6 )
+  if( argc < 7 )
     {
     std::cerr << "Usage: " << std::endl;
-    std::cerr << argv[0] << " 2DTemplateFile bits firstSliceValue lastSliceValue  output3DImageFile " << std::endl;
-	std::cerr << "E.g.: " << argv[0] << " frame%04d.tif 16 0 99 result3D.tif " << std::endl;
-	std::cerr << "where the 16-bit 2D images are: frame0000.tif, frame0001.tif,..,frame0099.tif " << std::endl;
-    return EXIT_FAILURE;
+    std::cerr << argv[0] << " 2DTemplateFile bits firstSliceValue lastSliceValue compressFlag output3DImageFile " << std::endl;
+	std::cerr << "E.g.: " << argv[0] << " frame%04d.tif 8 0 99 result3D.tif " << std::endl;
+	std::cerr << "where the 8-bit 2D images are: frame0000.tif, frame0001.tif,..,frame0099.tif " << std::endl;
+    return 1;
     }
 
 	// We start by defining the {PixelType} and {ImageType}.
@@ -95,8 +95,9 @@ int main( int argc, char ** argv )
 	const unsigned int bits = atoi( argv[2] );
 	const unsigned int first = atoi( argv[3] );
 	const unsigned int last  = atoi( argv[4] );
-
-	const char * outputFilename = argv[5];
+	const unsigned int compressFlag  = atoi( argv[5] );
+	compress = (compressFlag == 1);
+	const char * outputFilename = argv[6];
 	char infile[256];
 	int width, height, depth;
 	unsigned char *p2D_8;
@@ -154,7 +155,7 @@ int main( int argc, char ** argv )
 			catch (itk::ExceptionObject &e)
 			{
 				std::cout << e << std::endl;
-				return 1;
+				return 2;
 			}
 			InputImageType8 *im2D = reader8->GetOutput();
 			width = im2D->GetLargestPossibleRegion().GetSize()[0];
@@ -169,7 +170,7 @@ int main( int argc, char ** argv )
 			catch (itk::ExceptionObject &e)
 			{
 				std::cout << e << std::endl;
-				return 1;
+				return 2;
 			}
 			InputImageType16 *im2D = reader16->GetOutput();
 			width = im2D->GetLargestPossibleRegion().GetSize()[0];
@@ -228,5 +229,5 @@ int main( int argc, char ** argv )
 	}
 	printf("Created filled 3D image file: %s\n",outputFilename);
 
-  return EXIT_SUCCESS;
+  return 0;
 }
