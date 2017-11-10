@@ -353,10 +353,10 @@ int CreateDistributions()
 	int adbox[NBOX], lvbox[NBOX];
 	int segadbox[NBOX];
 	double lsegadbox[NBOX];
-	double ad, len, ddiam, dlen, ltot, lsum, dsum, dvol, vol, r2, r2prev, lsegdtot;
+	double ad, len, ddiam, dlen, lsum, dsum, dvol, vol, r2, r2prev, lsegdtot;
 	double ave_len, volume, d95;
 	double ave_pt_diam, ave_seg_diam;
-	int ie, ip, k, ka, kp, kpprev, ndpts, nlpts, ndtot, nsegdtot, nptstot, nptsusedtot;
+	int ie, ip, k, ka, kp, kpprev, ndpts, nlpts, ndtot, nsegdtot, nptstot, nptsusedtot, ltot;
 	EDGE edge;
 	bool dbug;
 
@@ -368,7 +368,7 @@ int CreateDistributions()
 	}
 	if (use_object) {
 	printf("Compute diameter distributions\n");
-	fprintf(fperr,"Compute diameter distributions\n");
+	fprintf(fpout,"Compute diameter distributions\n");
 	nptstot = 0;
 	nptsusedtot = 0;
 	// Diameters
@@ -379,6 +379,7 @@ int CreateDistributions()
 	ave_pt_diam = 0;
 	ave_seg_diam = 0;
 	volume = 0;
+	lsum = 0;
 	for (ie=0; ie<ne; ie++) {
 		edge = edgeList[ie];
 //		if (!edge.used) continue;
@@ -438,8 +439,9 @@ int CreateDistributions()
 		}
 		ad = 2*sqrt(vol/(PI*lsum));	// segment diameter
 		*/
-		lsum = edge.length_um;
+		lsum += edge.length_um;
 		ad = edge.segavediam;
+		volume += edge.length_um*PI*(ad/2)*(ad/2);
 		ave_seg_diam += ad;
 		if (ad < 0.001) {
 			printf("Zero segment diameter: edge: %d ad: %f\n",ie,ad);
@@ -470,7 +472,7 @@ int CreateDistributions()
 	}
 
 	printf("Compute length distributions: lower limit = %6.1f um\n",len_limit);
-	fprintf(fperr,"Compute length distributions: lower limit = %6.1f um\n",len_limit);
+	fprintf(fpout,"Compute length distributions: lower limit = %6.1f um\n",len_limit);
 	// Lengths
 	dlen = 1;
 	ltot = 0;
@@ -494,10 +496,12 @@ int CreateDistributions()
 	if (use_object) {
 	ave_pt_diam /= ndtot;
 	ave_seg_diam /= nsegdtot;
-	printf("Average vessel diameter: %6.2f\n",ave_seg_diam);
-	fprintf(fpout,"Average vessel diameter: %6.2f\n",ave_seg_diam);
-//	printf("Total vessel volume: %10.0f\n\n",volume);
-//	fprintf(fpout,"Total vessel volume: %10.0f\n\n",volume);
+	printf("Average vessel diameter: %6.2f um\n",ave_seg_diam);
+	fprintf(fpout,"Average vessel diameter: %6.2f um\n",ave_seg_diam);
+	printf("Total vessel volume: %10.0f um3\n",volume);
+	fprintf(fpout,"Total vessel volume: %10.0f um3\n",volume);
+	printf("Total vessel length: %10.0f um\n\n",lsum);
+	fprintf(fpout,"Total vessel length: %10.0f um\n\n",lsum);
 	for (k=NBOX-1; k>=0; k--) {
 		if (segadbox[k] > 0) break;
 	}
@@ -511,9 +515,9 @@ int CreateDistributions()
 	}
 
 //	fprintf(fpout,"Total vertices: %d  points: %d\n",nv,np);
-	fprintf(fpout,"Vessels: %d ltot: %d\n",ne,int(ltot));
-	printf("Average vessel length: %6.1f\n",ave_len/ltot);
-	fprintf(fpout,"Average vessel length: %6.1f\n",ave_len/ltot);
+	fprintf(fpout,"\nNumber of vessels: %d  number exceeding min length: %d\n",ne,ltot);
+	printf("Average vessel length: %6.2f\n",ave_len/ltot);
+	fprintf(fpout,"Average vessel length: %6.2f\n",ave_len/ltot);
 	for (k=NBOX-1; k>=0; k--) {
 		if (lvbox[k] > 0) break;
 	}
@@ -521,7 +525,7 @@ int CreateDistributions()
 	fprintf(fpout,"Vessel length distribution\n");
 	fprintf(fpout,"   um    number  fraction\n");
 	for (k=0; k<nlpts; k++) {
-		fprintf(fpout,"%6.2f %8d %9.5f\n",k*dlen,lvbox[k],lvbox[k]/ltot);
+		fprintf(fpout,"%6.2f %8d %9.5f\n",k*dlen,lvbox[k],lvbox[k]/float(ltot));
 	}
 	printf("nptstot: %d\n",nptstot);
 //	printf("nptsusedtot: %d\n",nptsusedtot);
@@ -793,12 +797,12 @@ int getDiameters(void)
 		n = MIN(n,100);
 		diamdist[n-1]++;	
 	}
-	printf("n  diam count\n");
-	fprintf(fpout,"n  diam count\n");
-	for (i=0; i<100; i++) {
-		printf("%d %6.1f %d\n",i+1,(i+1)*ddiam,diamdist[i]);
-		fprintf(fpout,"%d %6.1f %d\n",i+1,(i+1)*ddiam,diamdist[i]);
-	}
+	//printf("n  diam count\n");
+	//fprintf(fpout,"n  diam count\n");
+	//for (i=0; i<100; i++) {
+	//	printf("%d %6.1f %d\n",i+1,(i+1)*ddiam,diamdist[i]);
+	//	fprintf(fpout,"%d %6.1f %d\n",i+1,(i+1)*ddiam,diamdist[i]);
+	//}
 	return 0;
 }
 
@@ -1069,11 +1073,6 @@ int traceSegments()
 						pe->pt = (int *)malloc(pe->npts*sizeof(int));
 						for (int i=0; i<pe->npts; i++)
 							pe->pt[i] = segvoxel[i];
-//						pe->vert[0] = k0;
-//						pe->vert[1] = k;
-						if (k == 6 || k0 == 6) {
-							fprintf(fpout,"make edge: %d vertices: %d %d\n",nsegs,pe->pt[0],pe->pt[pe->npts-1]);
-						}
 						pe->length_um = len;
 						Vlist[k0].diameter = 0;
 						Vlist[k].diameter = 0;
@@ -1115,7 +1114,7 @@ int traceSegments()
 //					if (nsegs == 0) printf("seg 0: k: %d len: %f\n",k,len);
 //					fprintf(fpout,"end: %d  len: %f\n",nends,len);
 					nends++;
-					if (len > 5) {	// drop short ends
+					if (len > min_end_len) {	// drop short ends
 						int klen = MIN(99,int(len + 0.5));
 						lendist[klen]++;
 
@@ -1129,11 +1128,6 @@ int traceSegments()
 						pe->pt = (int *)malloc(pe->npts*sizeof(int));
 						for (int i=0; i<pe->npts; i++)
 							pe->pt[i] = segvoxel[i];
-//						pe->vert[0] = k0;
-//						pe->vert[1] = k;
-						if (k == 6 || k0 == 6) {
-							fprintf(fpout,"make edge: %d vertices: %d %d\n",nsegs,pe->pt[0],pe->pt[pe->npts-1]);
-						}
 						pe->length_um = len;
 						Vlist[k0].diameter = 0;
 						Vlist[k].diameter = 0;
@@ -1722,7 +1716,7 @@ int createVertexList()
 //-----------------------------------------------------------------------------------------------------
 int main(int argc, char**argv)
 {
-	double voxelsize_x, voxelsize_y, voxelsize_z;
+	float voxelsize_x, voxelsize_y, voxelsize_z;
 	char *vessFile, *skelFile;
 	int count, err;
 	char *outfilename;
@@ -1759,13 +1753,13 @@ int main(int argc, char**argv)
 
 	skelFile = argv[1];
 	vessFile = argv[2];
-	sscanf(argv[4],"%lf",&voxelsize_x);
-	sscanf(argv[5],"%lf",&voxelsize_y);
-	sscanf(argv[6],"%lf",&voxelsize_z);
+	sscanf(argv[4],"%f",&voxelsize_x);
+	sscanf(argv[5],"%f",&voxelsize_y);
+	sscanf(argv[6],"%f",&voxelsize_z);
 	sscanf(argv[7],"%f",&diam_flag);
 	sscanf(argv[8],"%f",&FIXED_DIAMETER);
-	sscanf(argv[9],"%lf",&len_limit);
-	sscanf(argv[10],"%lf",&min_end_len);
+	sscanf(argv[9],"%f",&len_limit);
+	sscanf(argv[10],"%f",&min_end_len);
 
 	fixed_diam_flag = (diam_flag == 1);
 	vsize[0] = voxelsize_x;
@@ -1793,7 +1787,7 @@ int main(int argc, char**argv)
 	fprintf(fpout,"Output basename: %s\n",output_basename);
 	printf("Voxel size: x,y,z: %f %f %f\n",voxelsize_x, voxelsize_y,voxelsize_z);
 	fprintf(fpout,"Voxel size: x,y,z: %f %f %f\n",voxelsize_x, voxelsize_y,voxelsize_z);
-	// now segment diameter is always uniform
+	fprintf(fpout,"Distribution length limit: %6.1f  Minimum dead-end length: %6.1f\n",len_limit,min_end_len);
 	printf("Fixed diameter flag: %d\n",fixed_diam_flag);		
 	fprintf(fperr,"Fixed diameter flag: %d\n",fixed_diam_flag);
 	if (fixed_diam_flag) {
