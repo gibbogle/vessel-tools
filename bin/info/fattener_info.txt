@@ -1,0 +1,7 @@
+Fattener info
+---------------
+
+The program "fattens" a skeleton tiff file, making the skeleton easier to see.  
+
+Each voxel is replaced by a filled cube centred on the voxel.  
+The specified line width(which must be an odd number), is the size of the cube.

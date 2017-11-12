@@ -34,6 +34,7 @@ unsigned char *p_in, *p_out;
 int main(int argc, char**argv)
 {
 	int linewidth, radius;
+	float r2, d2;
 	FILE *fp;
 	char errfile[] = "error.log";
 	fp = fopen(errfile,"w");
@@ -52,6 +53,7 @@ int main(int argc, char**argv)
 	printf("Output image file: %s\n",argv[2]);
 	sscanf(argv[3],"%d",&linewidth);
 	radius = (linewidth-1)/2;
+	r2 = radius*radius;
 	printf("Line width: %d  radius: %d\n",linewidth,radius);
 
 
@@ -119,6 +121,7 @@ int main(int argc, char**argv)
 					for (int xx = xfrom; xx <= xto; xx++) {
 						for (int yy = yfrom; yy <= yto; yy++) {
 							for (int zz = zfrom; zz <= zto; zz++) {
+//								d2 = (x-xx)*(x-xx) + (y-yy)*(y-yy) + (z-zz)*(z-zz);
 								V_out(xx,yy,zz) = 255;
 							}
 						}
