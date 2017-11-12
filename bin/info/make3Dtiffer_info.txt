@@ -1,0 +1,16 @@
+make3Dtiffer info
+---------------------
+
+The program creates a 3D tiff from a stack of 2D tiffs.
+
+The user specifies:
+  The directory (folder) where the 2D files are located.
+  The name (and location) of the output 3D file.
+  The template of the 2D file names.  
+    E.g. frame%04d.tif specifies file names like: frame0000.tif, frame0001.tif, frame0003.tif,...
+    i.e. in this case "frame" is followed by 4 digits, padded by leading 0s.
+    (note that the bare file name is supplied here, no directory)
+  The first and last sequence numbers, e.g. if first # = 1, last # = 100 the files joined are: 
+    frame0001.tif, frame0002.tif,...,frame0100.tif
+  The bitsize of the pixels (8 or 16).
+  Compression to be applied or not.

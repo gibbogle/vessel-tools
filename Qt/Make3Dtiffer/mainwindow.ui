@@ -72,7 +72,7 @@
       <x>530</x>
       <y>80</y>
       <width>661</width>
-      <height>221</height>
+      <height>231</height>
      </rect>
     </property>
    </widget>
@@ -354,7 +354,4 @@
   <slot>make3Dtiffer()</slot>
   <slot>directorySelecter()</slot>
  </slots>
- <buttongroups>
-  <buttongroup name="buttonGroupMethod"/>
- </buttongroups>
 </ui>
