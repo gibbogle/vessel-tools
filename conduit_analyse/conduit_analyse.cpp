@@ -78,7 +78,7 @@ double xmin, xmax, ymin, ymax, zmin, zmax;
 double DX, DY, DZ;
 int MAXBLOCK;
 int *blocks;
-int count[NX][NY][NZ];
+int counter[NX][NY][NZ];
 int ndead;
 
 bool use_len_limit, use_len_diam_limit;
@@ -94,9 +94,12 @@ float ddiam, dlen;
 
 int jumpy = 1;
 
-std::seed_seq seq;
-std::mt19937 gen(seq);
-//std::uniform_real_distribution<double> dist( 0.0, 1.0 ) ;
+using namespace std;
+
+//std::seed_seq seq;
+//std::mt19937 gen(seq);
+seed_seq seq;
+mt19937 gen(seq);
 
 
 //-----------------------------------------------------------------------------------------------------
@@ -776,7 +779,7 @@ double getAngle(int iv, int kf1, int kf2)
 
 //-----------------------------------------------------------------------------------------------------
 // For block (ix,iy,iz)
-// for j = 0,..,count[ix][iy][iz]
+// for j = 0,..,counter[ix][iy][iz]
 // B(j,0,ix,iy,iz)  = index of fibre with an end in the block
 // B(j,1,ix,iy,iz)  = fibre end in the block (0 = end 1, 1 = end 2)
 // Note that a fibre may appear twice in the list for a block, if both ends are within the block
@@ -789,7 +792,7 @@ void setupBlockLists(NETWORK *net)
 	for (ix=0;ix<NX;ix++) {
 		for (iy=0;iy<NY;iy++) {
 			for (iz=0;iz<NZ;iz++) {
-				count[ix][iy][iz] = 0;
+				counter[ix][iy][iz] = 0;
 			}
 		}
 	}
@@ -799,22 +802,22 @@ void setupBlockLists(NETWORK *net)
 		ix = (p1.x - xmin)/DX;
 		iy = (p1.y - ymin)/DY;
 		iz = (p1.z - zmin)/DZ;
-		B(count[ix][iy][iz],0,ix,iy,iz) = k;
-		B(count[ix][iy][iz],1,ix,iy,iz) = 0;	// end 1
-		count[ix][iy][iz]++;
+		B(counter[ix][iy][iz],0,ix,iy,iz) = k;
+		B(counter[ix][iy][iz],1,ix,iy,iz) = 0;	// end 1
+		counter[ix][iy][iz]++;
 		p2 = net->point[net->edgeList[k].pt[npts-1]];
 		ix = (p2.x - xmin)/DX;
 		iy = (p2.y - ymin)/DY;
 		iz = (p2.z - zmin)/DZ;
-		B(count[ix][iy][iz],0,ix,iy,iz) = k;
-		B(count[ix][iy][iz],1,ix,iy,iz) = 1;	// end 2
-		count[ix][iy][iz]++;
+		B(counter[ix][iy][iz],0,ix,iy,iz) = k;
+		B(counter[ix][iy][iz],1,ix,iy,iz) = 1;	// end 2
+		counter[ix][iy][iz]++;
 	}
 	int maxcount = 0;
 	for (ix=0;ix<NX;ix++) {
 		for (iy=0;iy<NY;iy++) {
 			for (iz=0;iz<NZ;iz++) {
-				maxcount = MAX(maxcount,count[ix][iy][iz]);
+				maxcount = MAX(maxcount,counter[ix][iy][iz]);
 			}
 		}
 	}
@@ -822,7 +825,7 @@ void setupBlockLists(NETWORK *net)
 	//for (ix=0;ix<NX;ix++) {
 	//	for (iy=0;iy<NY;iy++) {
 	//		for (iz=0;iz<NZ;iz++) {
-	//			printf("Block: %d %d %d  count: %d\n",ix,iy,iz,count[ix][iy][iz]);
+	//			printf("Block: %d %d %d  count: %d\n",ix,iy,iz,counter[ix][iy][iz]);
 	//		}
 	//	}
 	//}
@@ -968,7 +971,7 @@ void makeFibreList(NETWORK *net)
 		iy = (p1.y - ymin)/DY;
 		iz = (p1.z - zmin)/DZ;
 		// Look at all fibre ends in this block
-		for (int j=0; j<count[ix][iy][iz]; j++) {
+		for (int j=0; j<counter[ix][iy][iz]; j++) {
 			int kk = B(j,0,ix,iy,iz);
 			if (kk == k) continue;
 			int kend = B(j,1,ix,iy,iz);
@@ -987,7 +990,7 @@ void makeFibreList(NETWORK *net)
 		iy = (p2.y - ymin)/DY;
 		iz = (p2.z - zmin)/DZ;
 		// Look at all fibre ends in this block
-		for (int j=0; j<count[ix][iy][iz]; j++) {
+		for (int j=0; j<counter[ix][iy][iz]; j++) {
 			int kk = B(j,0,ix,iy,iz);
 			if (kk == k) continue;
 			int kend = B(j,1,ix,iy,iz);
@@ -1161,7 +1164,7 @@ void makeFibreList(NETWORK *net)
 		iy = (p1.y - ymin)/DY;
 		iz = (p1.z - zmin)/DZ;
 		// Look at all fibre ends in this block
-		for (int j=0; j<count[ix][iy][iz]; j++) {
+		for (int j=0; j<counter[ix][iy][iz]; j++) {
 			int kk = B(j,0,ix,iy,iz);
 			if (kk == k) continue;
 			// eliminate fibres connected to this fibre, this end
@@ -1178,7 +1181,8 @@ void makeFibreList(NETWORK *net)
 //-----------------------------------------------------------------------------------------------------
 int random_int(int n1, int n2)
 {
-	std::uniform_int_distribution<int> dist( n1, n2 ) ;
+//	std::uniform_int_distribution<int> dist( n1, n2 ) ;
+	uniform_int_distribution<int> dist( n1, n2 ) ;
 	return dist(gen);
 }
 
@@ -1221,7 +1225,8 @@ int next_fibre(int ifib1, int *jdir)
 //		printf("ilink: %d theta: %f p: %f\n",ilink,theta,p[ilink]);
 		psum += p[ilink];
 	}
-	std::uniform_int_distribution<double> dist( 0, psum ) ;
+//	std::uniform_int_distribution<double> dist( 0, psum ) ;
+	uniform_real_distribution<double> dist( 0, psum ) ;
 	double R = dist(gen);
 	psum = 0;
 	for (ilink=0; ilink<nlinks; ilink++) {
@@ -1338,17 +1343,12 @@ void traverse(NETWORK *net, int nsteps, double *tpt, double *res_d2sum, double *
 		nvisits[i] = 0;
 	}
 	Ltotal = Lsum[nfibres-1];
-//	printf("Ltotal: %f\n",Ltotal);
-	// randomly choose a starting fibre.
-	// the choice should be length-weighted
-//    std::seed_seq seq( { seed, seed*3+1, seed+101, seed*7+57, seed*11+201 } ) ;
-//	std::seed_seq seq;
-//    std::mt19937 gen(seq) ;
-//    std::uniform_int_distribution<int> dist( 1, Nrand ) ;
 
-    std::normal_distribution<double> norm_dist( 0.0, 1.0 ) ;
+//    std::normal_distribution<double> norm_dist( 0.0, 1.0 ) ;
+    normal_distribution<double> norm_dist( 0.0, 1.0 ) ;
 	
-	std::uniform_real_distribution<double> uni_dist( 0.0, 1.0 ) ;
+//	std::uniform_real_distribution<double> uni_dist( 0.0, 1.0 ) ;
+	uniform_real_distribution<double> uni_dist( 0.0, 1.0 ) ;
 	double d, d2sum=0;
 	int np = 0;
 	for (k=0; k<1000000; k++) {
