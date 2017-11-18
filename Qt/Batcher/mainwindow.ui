@@ -660,22 +660,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>pushButtonAnalyse</sender>
-   <signal>clicked()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>conduit_analyser()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>104</x>
-     <y>474</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>503</x>
-     <y>306</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>pushButtonSiteFile</sender>
    <signal>clicked()</signal>
    <receiver>MainWindow</receiver>
@@ -691,12 +675,28 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>pushButtonAnalyse</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>batch_analyser()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>94</x>
+     <y>462</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>215</x>
+     <y>492</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>outputFileSelecter()</slot>
   <slot>inputFileSelecter()</slot>
-  <slot>conduit_analyser()</slot>
   <slot>siteFileSelecter()</slot>
+  <slot>batch_analyser()</slot>
  </slots>
  <buttongroups>
   <buttongroup name="buttonGroup_limits"/>

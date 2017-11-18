@@ -29,7 +29,7 @@ public slots:
 //    void savepaths_checkbox();
     void on_radioButton_len_limit_toggled(bool checked);
     void on_radioButton_len_diam_limit_toggled(bool checked);
-    void conduit_analyser();
+    void batch_analyser();
 
 private:
     Ui::MainWindow *ui;
@@ -38,7 +38,7 @@ public:
 	QString inputFileName;
 	QString outputFileName;
     QString siteFileName;
-    int nsites;
+    QStringList headers;
 };
 
 #endif // MAINWINDOW_H
