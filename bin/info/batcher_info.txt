@@ -1,0 +1,23 @@
+Batcher information
+-----------------------
+This program executes conduit_analyse on a set of subregions of a network stored in Amira Spatialgraph format (.am file).
+
+Site info (name, centre (x0,y0,z0), size (R)) can be entered into the table manually, or read from a file.
+
+The following parameters control the Cm estimation, for each selected site:
+
+Starting sphere centre and radius.  Cell paths have starting points within a sphere defined by the centre and radius.
+
+Average speed.  This is the average speed with which cells move along fibres.  
+A speed is assigned to each path as a random variate drawn from a Gaussian distribution with this mean and with standard deviation = 1/10 of this value.
+
+Cosine power.  At a fibre junction probabilities are assigned to the various exit fibres.  The probability of taking a particular fibre is proportional to cos(theta)^n where theta is the turning angle and n = cosine power.
+
+Number of trials.  This is the number of cell paths that are generated.  The distance d from the starting point is calculated after one hour.  Cm = (1/6)*(average d^2).
+
+In computing network statistics, there are three options concerning treatment of very short vessels:
+Option 1: all vessels are included
+Option 2: vessels less than the specified length limit are excluded
+Option 3: vessels with length/diameter less than the specified limit are excluded
+
+The widths of the boxes used for counting vessels to compute the probability distributions must be specified.
