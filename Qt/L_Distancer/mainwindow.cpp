@@ -142,7 +142,7 @@ void MainWindow::L_distancer()
             ui->labelResult->setText(resultstr);
             return;
         }
-        strcpy(cmdstr, qstr.toAscii().constData());
+        strcpy(cmdstr, qstr.toLocal8Bit().constData());
 
         res = system(cmdstr);
         if (res == 0)
@@ -181,7 +181,7 @@ void MainWindow::L_distancer()
         ui->labelResult->setText(resultstr);
         return;
     }
-    strcpy(cmdstr, qstr.toAscii().constData());
+    strcpy(cmdstr, qstr.toLocal8Bit().constData());
 
     res = system(cmdstr);
     if (res == 0)

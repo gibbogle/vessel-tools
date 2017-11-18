@@ -72,7 +72,7 @@ void MainWindow::SGtiffer()
 		ui->labelResult->setText(resultstr);
 		return;
 	}
-	strcpy(cmdstr, qstr.toAscii().constData());
+	strcpy(cmdstr, qstr.toLocal8Bit().constData());
 
 	ui->labelResult->setText(cmdstr);
 	res = system(cmdstr);

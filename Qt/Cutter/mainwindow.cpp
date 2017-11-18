@@ -70,7 +70,7 @@ void MainWindow::cutter()
 		ui->labelResult->setText(resultstr);
 		return;
 	}
-	strcpy(cmdstr, qstr.toAscii().constData());
+	strcpy(cmdstr, qstr.toLocal8Bit().constData());
 
 //    ui->label_cmd->setText(cmdstr);
 	res = system(cmdstr);

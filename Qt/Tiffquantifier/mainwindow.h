@@ -1,7 +1,11 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include <QMainWindow>
+#ifdef HAVE_QT5
+#include <QtWidgets/QMainWindow>
+#else
+#include <QtGui/QMainWindow>
+#endif
 #include "imageviewer.h"
 
 #define MIN(a,b) (((a)<(b))?(a):(b))

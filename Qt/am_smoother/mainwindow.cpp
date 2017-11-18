@@ -88,7 +88,7 @@ void MainWindow::am_smoother()
 		ui->labelResult->setText(resultstr);
 		return;
 	}
-	strcpy(cmdstr, qstr.toAscii().constData());
+	strcpy(cmdstr, qstr.toLocal8Bit().constData());
 
 	res = system(cmdstr);
 	if (res == 0)

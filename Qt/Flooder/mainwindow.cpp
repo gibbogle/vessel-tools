@@ -73,7 +73,7 @@ void MainWindow::flooder()
 		return;
 	}
 	ui->labelResult->setText("");
-	strcpy(cmdstr, qstr.toAscii().constData());
+	strcpy(cmdstr, qstr.toLocal8Bit().constData());
 
 	res = system(cmdstr);
 	if (res == 0)

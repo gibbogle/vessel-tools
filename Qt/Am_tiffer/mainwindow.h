@@ -1,7 +1,11 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include <QMainWindow>
+#ifdef HAVE_QT5
+#include <QtWidgets/QMainWindow>
+#else
+#include <QtGui/QMainWindow>
+#endif
 #include "itkImage.h"
 #include "itkImageFileReader.h"
 #include "itkImageFileWriter.h"
