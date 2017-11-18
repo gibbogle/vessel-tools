@@ -927,7 +927,7 @@ void makeFibreList(NETWORK *net)
 	printf("Y: %f %f  DY: %f\n",ymin,ymax,DY);
 	printf("Z: %f %f  DZ: %f\n",zmin,zmax,DZ);
 
-	MAXBLOCK = (30*nfibres)/(NX*NY*NZ*2);
+	MAXBLOCK = (50*nfibres)/(NX*NY*NZ*2);
 	printf("MAXBLOCK: %d\n",MAXBLOCK);
 	blocks = (int *)malloc(NX*NY*NZ*2*MAXBLOCK*sizeof(int));
 	setupBlockLists(net);
