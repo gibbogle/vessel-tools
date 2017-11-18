@@ -6,12 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>963</width>
+    <width>1313</width>
     <height>400</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Selection of network with a specified range of vessel diameters</string>
+   <string>Selection of a sub-network</string>
   </property>
   <widget class="QWidget" name="centralWidget">
    <widget class="QPushButton" name="pushButtonInFile">
@@ -32,7 +32,7 @@
      <rect>
       <x>80</x>
       <y>0</y>
-      <width>401</width>
+      <width>1221</width>
       <height>21</height>
      </rect>
     </property>
@@ -45,7 +45,7 @@
      <rect>
       <x>80</x>
       <y>30</y>
-      <width>401</width>
+      <width>1221</width>
       <height>21</height>
      </rect>
     </property>
@@ -97,7 +97,7 @@
      <rect>
       <x>80</x>
       <y>310</y>
-      <width>491</width>
+      <width>1221</width>
       <height>16</height>
      </rect>
     </property>
@@ -108,9 +108,9 @@
    <widget class="QTextEdit" name="textEdit">
     <property name="geometry">
      <rect>
-      <x>490</x>
-      <y>10</y>
-      <width>451</width>
+      <x>660</x>
+      <y>60</y>
+      <width>641</width>
       <height>221</height>
      </rect>
     </property>
@@ -152,14 +152,14 @@
      <rect>
       <x>40</x>
       <y>80</y>
-      <width>351</width>
+      <width>601</width>
       <height>41</height>
      </rect>
     </property>
     <property name="title">
      <string/>
     </property>
-    <widget class="QRadioButton" name="radioButton_range">
+    <widget class="QRadioButton" name="radioButton_block_range">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -169,29 +169,45 @@
       </rect>
      </property>
      <property name="text">
-      <string>Specify ranges</string>
-     </property>
-    </widget>
-    <widget class="QRadioButton" name="radioButton_centre">
-     <property name="geometry">
-      <rect>
-       <x>210</x>
-       <y>10</y>
-       <width>131</width>
-       <height>18</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>Specify centre and size</string>
+      <string>Specify block ranges</string>
      </property>
      <property name="checked">
       <bool>true</bool>
      </property>
     </widget>
+    <widget class="QRadioButton" name="radioButton_block_centre">
+     <property name="geometry">
+      <rect>
+       <x>210</x>
+       <y>10</y>
+       <width>161</width>
+       <height>18</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Specify block centre and size</string>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="radioButton_sphere">
+     <property name="geometry">
+      <rect>
+       <x>400</x>
+       <y>10</y>
+       <width>181</width>
+       <height>18</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Specify sphere centre and radius</string>
+     </property>
+    </widget>
    </widget>
    <widget class="QGroupBox" name="groupBox_range">
     <property name="enabled">
-     <bool>false</bool>
+     <bool>true</bool>
     </property>
     <property name="geometry">
      <rect>
@@ -219,7 +235,7 @@
     </widget>
     <widget class="QLineEdit" name="lineEdit_x1">
      <property name="enabled">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="geometry">
       <rect>
@@ -235,7 +251,7 @@
     </widget>
     <widget class="QLineEdit" name="lineEdit_z1">
      <property name="enabled">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="geometry">
       <rect>
@@ -251,7 +267,7 @@
     </widget>
     <widget class="QLineEdit" name="lineEdit_x2">
      <property name="enabled">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="geometry">
       <rect>
@@ -267,7 +283,7 @@
     </widget>
     <widget class="QLineEdit" name="lineEdit_y1">
      <property name="enabled">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="geometry">
       <rect>
@@ -361,7 +377,7 @@
     </widget>
     <widget class="QLineEdit" name="lineEdit_z2">
      <property name="enabled">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="geometry">
       <rect>
@@ -403,7 +419,7 @@
     </widget>
     <widget class="QLineEdit" name="lineEdit_y2">
      <property name="enabled">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="geometry">
       <rect>
@@ -419,11 +435,14 @@
     </widget>
    </widget>
    <widget class="QGroupBox" name="groupBox_centre">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
     <property name="geometry">
      <rect>
       <x>250</x>
       <y>130</y>
-      <width>141</width>
+      <width>171</width>
       <height>91</height>
      </rect>
     </property>
@@ -556,13 +575,134 @@
      </property>
     </widget>
    </widget>
+   <widget class="QGroupBox" name="groupBox_sphere">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>440</x>
+      <y>130</y>
+      <width>201</width>
+      <height>91</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string/>
+    </property>
+    <widget class="QLineEdit" name="lineEdit_x0">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>20</y>
+       <width>31</width>
+       <height>16</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_centre_2">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>0</y>
+       <width>41</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Centre</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="lineEdit_y0">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>40</y>
+       <width>31</width>
+       <height>16</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="lineEdit_z0">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>60</y>
+       <width>31</width>
+       <height>16</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_x0">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>20</y>
+       <width>21</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>X</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_y0">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>40</y>
+       <width>21</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Y</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_z0">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>60</y>
+       <width>21</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Z</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_radius">
+     <property name="geometry">
+      <rect>
+       <x>90</x>
+       <y>40</y>
+       <width>41</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Radius</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="lineEdit_radius">
+     <property name="geometry">
+      <rect>
+       <x>130</x>
+       <y>40</y>
+       <width>31</width>
+       <height>16</height>
+      </rect>
+     </property>
+    </widget>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>963</width>
+     <width>1313</width>
      <height>18</height>
     </rect>
    </property>
@@ -616,15 +756,15 @@
    <sender>pushButtonZoom</sender>
    <signal>clicked()</signal>
    <receiver>MainWindow</receiver>
-   <slot>selecter()</slot>
+   <slot>blocker()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>287</x>
-     <y>305</y>
+     <x>239</x>
+     <y>321</y>
     </hint>
     <hint type="destinationlabel">
-     <x>382</x>
-     <y>327</y>
+     <x>278</x>
+     <y>319</y>
     </hint>
    </hints>
   </connection>
@@ -634,9 +774,6 @@
   <slot>inFileSelecter()</slot>
   <slot>outFileSelecter()</slot>
   <slot>radioButtonHandler()</slot>
-  <slot>selecter()</slot>
+  <slot>blocker()</slot>
  </slots>
- <buttongroups>
-  <buttongroup name="buttonGroup_criterion"/>
- </buttongroups>
 </ui>

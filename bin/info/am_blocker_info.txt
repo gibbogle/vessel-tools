@@ -1,0 +1,10 @@
+Am_blocker information
+----------------------------
+
+This program enables a sub-network to be cut out of a network (SpatialGraph)
+
+The sub-network is determined by a sub-region, either a rectangular block, or a sphere.
+
+The sub-network comprises all segments that have an end point within the sub-region.
+
+Optionally, the largest connected network is chosen.

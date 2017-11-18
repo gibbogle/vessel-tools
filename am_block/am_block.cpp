@@ -906,24 +906,24 @@ int main(int argc, char **argv)
 		sscanf(argv[8],"%f",&zmax);
 		sscanf(argv[9],"%d",&connect_flag);
 		sscanf(argv[10],"%d",&cmgui_flag);
-	//} else if (argc == 9) {
-	//	use_sphere = true;
-	//	input_amfile = argv[1];
-	//	strcpy(output_amfile,argv[2]);
-	//	sscanf(argv[3],"%f",&centre[0]);
-	//	sscanf(argv[4],"%f",&centre[1]);
-	//	sscanf(argv[5],"%f",&centre[2]);
-	//	sscanf(argv[6],"%f",&radius);
-	//	sscanf(argv[7],"%d",&connect_flag);
-	//	sscanf(argv[8],"%d",&cmgui_flag);
+	} else if (argc == 9) {
+		use_sphere = true;
+		input_amfile = argv[1];
+		strcpy(output_amfile,argv[2]);
+		sscanf(argv[3],"%f",&centre[0]);
+		sscanf(argv[4],"%f",&centre[1]);
+		sscanf(argv[5],"%f",&centre[2]);
+		sscanf(argv[6],"%f",&radius);
+		sscanf(argv[7],"%d",&connect_flag);
+		sscanf(argv[8],"%d",&cmgui_flag);
 	} else {
 		printf("Usage: am_block input_amfile output_amfile xmin xmax ymin ymax zmin zmax connect_flag cmgui_flag\n");
-//		printf(" or\n");
-//		printf("       am_block input_amfile output_amfile centre_x centre_y centre_z radius connect_flag cmgui_flag\n");
+		printf(" or\n");
+		printf("       am_block input_amfile output_amfile centre_x centre_y centre_z radius connect_flag cmgui_flag\n");
 		fperr = fopen("select_error.log","w");
 		fprintf(fperr,"Usage: am_block input_amfile output_amfile xmin xmax ymin ymax zmin zmax connect_flag cmgui_flag\n");
-//		fprintf(fperr," or\n");
-//		fprintf(fperr,"       am_block input_amfile output_amfile centre_x centre_y centre_z radius connect_flag cmgui_flag\n");
+		fprintf(fperr," or\n");
+		fprintf(fperr,"       am_block input_amfile output_amfile centre_x centre_y centre_z radius connect_flag cmgui_flag\n");
 		fprintf(fperr,"Submitted command line: argc: %d\n",argc);
 		for (int i=0; i<argc; i++) {
 			fprintf(fperr,"argv: %d: %s\n",i,argv[i]);

@@ -9,8 +9,12 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    connect(ui->radioButton_block_range, SIGNAL(toggled(bool)), this, SLOT(onToggled()));
+    connect(ui->radioButton_block_centre, SIGNAL(toggled(bool)), this, SLOT(onToggled()));
+    connect(ui->radioButton_sphere, SIGNAL(toggled(bool)), this, SLOT(onToggled()));
+
 	ui->textEdit->setReadOnly(true);
-        QString infoFile = QCoreApplication::applicationDirPath() + "/info/selecter_info.txt";
+        QString infoFile = QCoreApplication::applicationDirPath() + "/info/am_blocker_info.txt";
 	QFile file(infoFile);
 	bool ok = file.open(QIODevice::ReadOnly | QIODevice::Text);
 	if (!ok) {
@@ -89,57 +93,86 @@ void MainWindow::makeRanges(void)
     ui->lineEdit_z2->setText(z2str);
 }
 
-void MainWindow::on_radioButton_centre_toggled(bool checked)
+//void MainWindow::on_radioButton_centre_toggled(bool checked)
+//{
+//    if (checked) {
+//        ui->groupBox_centre->setEnabled(true);
+//        ui->groupBox_range->setEnabled(false);
+//        ui->groupBox_sphere->setEnabled(false);
+//    } else {
+//        ui->groupBox_centre->setEnabled(false);
+//        ui->groupBox_range->setEnabled(true);
+//    }
+//}
+
+void MainWindow::onToggled()
 {
-    if (checked) {
+    if (ui->radioButton_block_centre->isChecked()) {
         ui->groupBox_centre->setEnabled(true);
         ui->groupBox_range->setEnabled(false);
-    } else {
+        ui->groupBox_sphere->setEnabled(false);
+    }
+    if (ui->radioButton_block_range->isChecked()) {
         ui->groupBox_centre->setEnabled(false);
         ui->groupBox_range->setEnabled(true);
-        ui->lineEdit_x1->setEnabled(true);
-        ui->lineEdit_x2->setEnabled(true);
-        ui->lineEdit_y1->setEnabled(true);
-        ui->lineEdit_y2->setEnabled(true);
-        ui->lineEdit_z1->setEnabled(true);
-        ui->lineEdit_z2->setEnabled(true);
+        ui->groupBox_sphere->setEnabled(false);
+    }
+    if (ui->radioButton_sphere->isChecked()) {
+        ui->groupBox_centre->setEnabled(false);
+        ui->groupBox_range->setEnabled(false);
+        ui->groupBox_sphere->setEnabled(true);
     }
 }
 
-
-void MainWindow::selecter()
+void MainWindow::blocker()
 {
 	int res;
 	QString qstr, resultstr;
     char cmdstr[2048];
 
-    if (ui->radioButton_range->isChecked()) {
+    if (ui->radioButton_block_range->isChecked()) {
         x1str = ui->lineEdit_x1->text();
         x2str = ui->lineEdit_x2->text();
         y1str = ui->lineEdit_y1->text();
         y2str = ui->lineEdit_y2->text();
         z1str = ui->lineEdit_z1->text();
         z2str = ui->lineEdit_z2->text();
-    } else {
+    } else if (ui->radioButton_block_centre->isChecked()) {
         makeRanges();
+    } else {
+        x0str = ui->lineEdit_x0->text();
+        y0str = ui->lineEdit_y0->text();
+        z0str = ui->lineEdit_z0->text();
+        Rstr = ui->lineEdit_radius->text();
     }
     qstr = QCoreApplication::applicationDirPath() + "/exec/am_block ";
     qstr += infileName;
     qstr += " ";
     qstr += outfileName;
     qstr += " ";
-    qstr += x1str;
-    qstr += " ";
-    qstr += x2str;
-    qstr += " ";
-    qstr += y1str;
-    qstr += " ";
-    qstr += y2str;
-    qstr += " ";
-    qstr += z1str;
-    qstr += " ";
-    qstr += z2str;
-    qstr += " ";
+    if (ui->radioButton_sphere->isChecked()) {
+        qstr += x0str;
+        qstr += " ";
+        qstr += y0str;
+        qstr += " ";
+        qstr += z0str;
+        qstr += " ";
+        qstr += Rstr;
+        qstr += " ";
+    } else {
+        qstr += x1str;
+        qstr += " ";
+        qstr += x2str;
+        qstr += " ";
+        qstr += y1str;
+        qstr += " ";
+        qstr += y2str;
+        qstr += " ";
+        qstr += z1str;
+        qstr += " ";
+        qstr += z2str;
+        qstr += " ";
+    }
     if (ui->checkBoxConnect->isChecked())           // connect_flag
         qstr += "1 ";
     else

@@ -22,20 +22,23 @@ public:
 public slots:
 	void inFileSelecter();
 	void outFileSelecter();
-    void selecter();
+    void blocker();
 
 private:
     Ui::MainWindow *ui;
     void makeRanges();
     QString x0str, x1str, x2str, y0str, y1str, y2str, z0str, z1str, z2str;
     QString xsizestr, ysizestr, zsizestr;
+    QString Rstr;
 
 public:
 	QString infileName;
 	QString outfileName;
 
+
 private slots:
-    void on_radioButton_centre_toggled(bool checked);
+//    void on_radioButton_centre_toggled(bool checked);
+    void onToggled();
 
 };
 
