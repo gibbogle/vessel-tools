@@ -202,7 +202,7 @@ int CreateDistributions(NETWORK *net)
 	}
     if (natoowide > 0) {
         printf("Number of segment average diameters too big for NBOX: %d\n",natoowide);
-        fprintf(fpout,"Number of segment average diameters too big for NBOX: %d\n",natoowide);
+        fprintf(fpout,"Number of segment average diameters too big for NBOX: %d\n",natoowide); 
     }
     if (nptoowide > 0) {
         printf("Number of point diameters too big for NBOX: %d\n",nptoowide);
