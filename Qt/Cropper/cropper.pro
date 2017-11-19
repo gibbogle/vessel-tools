@@ -22,3 +22,5 @@ HEADERS  += mainwindow.h
 FORMS    += mainwindow.ui
 
 DESTDIR = ../../bin
+
+DEFINES += _CRT_SECURE_NO_WARNINGS

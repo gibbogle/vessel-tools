@@ -115,7 +115,7 @@ int CreateDistributions(NETWORK *net)
 	double ave_pt_diam;		// average point diameter
 	double ave_seg_diam;	// average vessel diameter
 	double ave_lseg_diam;	// length-weighted average vessel diameter
-	int ie, ip, k, ka, kp, ndpts, nlpts, ndtot, nsegdtot;
+    int ie, ip, k, ka, kp, ndpts, nlpts, ndtot, nsegdtot, ntoowide;
 	EDGE edge;
 
 	for (k=0;k<NBOX;k++) {
@@ -143,6 +143,7 @@ int CreateDistributions(NETWORK *net)
 	ndtot = 0;
 	nsegdtot = 0;
 	lsegdtot = 0;
+    ntoowide = 0;
 	ave_pt_diam = 0;
 	ave_seg_diam = 0;
 	ave_lseg_diam = 0;
@@ -166,8 +167,8 @@ int CreateDistributions(NETWORK *net)
 			}
 			ka = int(ad/ddiam + 0.5);
 			if (ka >= NBOX) {
-				printf("Vessel too wide (point): d: %f k: %d\n",ad,ka);
-				fprintf(fpout,"Vessel too wide (point): d: %f k: %d\n",ad,ka);
+                printf("Vessel too wide (point): d: %f k: %d\n",ad,ka);
+                fprintf(fpout,"Vessel too wide (point): d: %f k: %d\n",ad,ka);
 				continue;
 			}
 			adbox[ka]++;
@@ -186,9 +187,10 @@ int CreateDistributions(NETWORK *net)
 		}
 		ka = int(dave/ddiam + 0.5);
 		if (ka >= NBOX) {
-			printf("Vessel too wide (segment ave): d: %f k: %d\n",dave,ka);
-			fprintf(fpout,"Vessel too wide (segment ave): d: %f k: %d\n",dave,ka);
-			continue;
+//			printf("Vessel too wide (segment ave): d: %f k: %d\n",dave,ka);
+//			fprintf(fpout,"Vessel too wide (segment ave): d: %f k: %d\n",dave,ka);
+            ntoowide++;
+            continue;
 		}
 		segadbox[ka]++;
 		nsegdtot++;
@@ -196,6 +198,10 @@ int CreateDistributions(NETWORK *net)
 		lsegdtot += len;
 		volume += len*PI*(dave/2)*(dave/2);
 	}
+    if (ntoowide > 0) {
+        printf("Number of segment average diameters too big for NBOX: %d\n",ntoowide);
+        fprintf(fpout,"Number of segment average diameters too big for NBOX: %d\n",ntoowide);
+    }
 	// Determine d95, the diameter that >95% of points exceed.
 	dsum = 0;
 	for (k=0; k<NBOX; k++) {
