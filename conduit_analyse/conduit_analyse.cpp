@@ -92,7 +92,7 @@ float ddiam, dlen;
 #define N4 2*MAXBLOCK*NX*NY
 #define B(j,kfe,ix,iy,iz) blocks[(iz)*N4 + (iy)*N3 + (ix)*N2 + (kfe)*N1 + (j)]	
 
-int jumpy = 1;
+int jumpy = 0;
 
 using namespace std;
 

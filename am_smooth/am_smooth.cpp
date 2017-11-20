@@ -430,7 +430,7 @@ int amsmooth(NETWORK *net0, NETWORK *net1)
 	bool dbug;
 	EDGE edge0;
 
-	printf("amsmooth\n");
+	printf("\namsmooth\n");
 	net1->ne = net0->ne;
 	net1->nv = net0->nv;
 	net1->vertex = (VERTEX *)malloc(net1->nv*sizeof(VERTEX));
@@ -440,19 +440,20 @@ int amsmooth(NETWORK *net0, NETWORK *net1)
 		net1->vertex[iv].point = net0->vertex[iv].point;
 	}
 	net1->np = 0;
-
 	nptot = 0;
 	for (ie=0; ie<net0->ne; ie++) {
 		edge0 = net0->edgeList[ie];
+		net1->edgeList[ie].pt = (int *)malloc(net0->edgeList[ie].npts*sizeof(int));
+		net1->edgeList[ie].pt_used = (int *)malloc(net0->edgeList[ie].npts*sizeof(int));
 		if (!edge0.used) continue;
-		if (edge0.npts < 5) continue;
+//		if (edge0.npts < 5) continue;
 		dbug = false;
 		kp1 = edge0.pt[0];
 		kp3 = edge0.pt[edge0.npts-1];
 		net1->edgeList[ie].pt[0] = kp1;
 		kp2 = edge0.pt[1];
 		diam1 = net0->point[kp2].d;		//getDiameter(edge.pt[0],edge.pt[1],edge.pt[2]);
-		if (dbug) printf("diam1: %f  %d %d %d\n",diam1,edge0.pt[0],edge0.pt[1],edge0.pt[2]);
+		if (dbug) printf("ie: %d diam1: %f  %d %d %d\n",ie,diam1,edge0.pt[0],edge0.pt[1],edge0.pt[2]);
 		ip1 = 0;
 		ip1++;
 		for (ip0=1; ip0<edge0.npts; ip0++) {
@@ -483,7 +484,6 @@ int amsmooth(NETWORK *net0, NETWORK *net1)
 		for (ip1=0; ip1<net1->np; ip1++)
 			net1->point[ip1].d = diameter;
 	}
-	printf("done: np: %d\n",net1->np);
 	return 0;
 }
 

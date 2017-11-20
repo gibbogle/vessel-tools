@@ -1,9 +1,9 @@
 am_smoother information
-
+------------------------------
 The network is simplified somewhat by reducing the number of points along an edge.
-The criterion is that points are skipped if the length of the segment from the previous accepted point is less than a specified fraction of the vessel average diameter.
-In other words the resulting vessel segments are at least fraction*(vessel diameter) in length.
-If fraction=0 no changes to the segments are made.
+The criterion is that points are skipped if the length of the segment from the previous accepted point is less than a specified multiple of the vessel average diameter.
+In other words the resulting vessel segments are at least multiple*(vessel diameter) in length.
+If multiple=0 no changes to the segments are made.
 
 Optionally the program can be used to generate network files in which all vessels have the same specified diameter.  This modification is applied after network simplification,  and only if the specified diameter is non-zero.
 
