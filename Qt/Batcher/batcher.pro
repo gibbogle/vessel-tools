@@ -10,7 +10,7 @@ greaterThan(QT_MAJOR_VERSION, 4) {
 }
 QT       += core gui
 
-TARGET = conduit_analyser
+TARGET = batcher
 TEMPLATE = app
 
 SOURCES += main.cpp mainwindow.cpp
