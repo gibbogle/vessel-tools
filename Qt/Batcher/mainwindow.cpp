@@ -98,9 +98,9 @@ void MainWindow::siteFileSelecter()
 void MainWindow::outputFileSelecter()
 {
     ui->labelResult->setText("");
-    outputFileName = QFileDialog::getSaveFileName(this,
-        tr("Output file"), ".", tr("Output Files (*.out)"));
-    ui->labelOutputFile->setText(outputFileName);
+    outputBaseFileName = QFileDialog::getSaveFileName(this,
+        tr("Output base name"), ".", tr("Output base name (*.)"));
+    ui->labelOutputFile->setText(outputBaseFileName);
 }
 
 void MainWindow::on_radioButton_len_limit_toggled(bool checked)
@@ -118,6 +118,7 @@ void MainWindow::batch_analyser()
 	int res;
     char cmdstr[2048];
     QString limitmodestr, limitvaluestr, qstr, resultstr;
+    QString outfile_str;
 
     if (ui->radioButton_no_limit->isChecked()) {
         limitmodestr = "0";
@@ -129,79 +130,131 @@ void MainWindow::batch_analyser()
         limitmodestr = "2";
         limitvaluestr = ui->lineEdit_len_diam_limit->text();
     }
-    int isite = 0;
-    for (;;) {
-        isite++;
-        QTableWidgetItem* item = ui->tableWidget->item(isite-1,0);
-        if (!item || item->text().isEmpty()) return;
-//      QString name_str = item->text();
-//      qDebug() << name_str;
-        QString x0_str = ui->tableWidget->item(isite-1,1)->text();
-        QString y0_str = ui->tableWidget->item(isite-1,2)->text();
-        QString z0_str = ui->tableWidget->item(isite-1,3)->text();
-        QString R_str = ui->tableWidget->item(isite-1,4)->text();
-        QString outfile_str = "ca";
-        QString numstr = QString("%1").arg(isite, 2, 10, QChar('0'));
-        outfile_str += numstr;
-        outfile_str += ".out";
-        qstr = QCoreApplication::applicationDirPath() + "/exec/conduit_analyse ";
-        qstr += inputFileName;
-        qstr += " ";
-        qstr += outfile_str;
-        qstr += " ";
-        qstr += ui->lineEdit_sfactor->text();
-        qstr += " ";
-        qstr += ui->lineEdit_pow->text();
-        qstr += " ";
-        qstr += ui->lineEdit_ntrials->text();
-        qstr += " ";
 
-        qstr += x0_str;
-        qstr += " ";
-        qstr += y0_str;
-        qstr += " ";
-        qstr += z0_str;
-        qstr += " ";
-        qstr += R_str;
+    // Two sweeps through the subregions.
+    // First sweep:
+    // To compute Cm at the specified start location, using Cm sphere start radius, with the full network
+    // Second sweep:
+    // Crop out a spherical subregion of specified radius, to compute network statistics for the subregion network
+    // (Note: do we want to use the connected network?)
 
-        qstr += " ";
-        qstr += ui->lineEdit_speed->text();
-        qstr += " ";
-        qstr += "0";    //ui->lineEdit_npaths->text();
-        qstr += " ";
-        qstr += limitmodestr;
-        qstr += " ";
-        qstr += limitvaluestr;
-        qstr += " ";
-        qstr += ui->lineEdit_ddiam->text();
-        qstr += " ";
-        qstr += ui->lineEdit_dlen->text();
+    for (int irun=0; irun<2; irun++) {
+        int isite = 0;
+        for (;;) {
+            isite++;
+            QTableWidgetItem* item = ui->tableWidget->item(isite-1,0);
+            if (!item || item->text().isEmpty()) break;
+            QString x0_str = ui->tableWidget->item(isite-1,1)->text();
+            QString y0_str = ui->tableWidget->item(isite-1,2)->text();
+            QString z0_str = ui->tableWidget->item(isite-1,3)->text();
+            QString R_str = ui->tableWidget->item(isite-1,4)->text();
+            QString numstr = QString("%1").arg(isite, 2, 10, QChar('0'));
+            if (irun == 0) {
+                outfile_str = outputBaseFileName + "_";
+            } else {
+                outfile_str = outputBaseFileName + "_sub_";
+                // Crop the full network to give a spherical subregion network
+                subregionFileName = "subregion_" + numstr + ".am";
+                qstr = QCoreApplication::applicationDirPath() + "/exec/am_block ";
+                qstr += inputFileName;
+                qstr += " ";
+                qstr += subregionFileName;
+                qstr += " ";
+                qstr += x0_str;
+                qstr += " ";
+                qstr += y0_str;
+                qstr += " ";
+                qstr += z0_str;
+                qstr += " ";
+                qstr += R_str;
+                qstr += " 0 0";
+                if (qstr.size()>(int)sizeof(cmdstr)-1) {
+                    printf("Failed to convert qstr->cmdstr since qstr didn't fit\n");
+                    resultstr = "FAILED: cmdstr not big enough for the command";
+                    ui->labelResult->setText(resultstr);
+                    return;
+                }
 
-        if (qstr.size()>(int)sizeof(cmdstr)-1) {
-            printf("Failed to convert qstr->cmdstr since qstr didn't fit\n");
-            resultstr = "FAILED: cmdstr not big enough for the command";
+                ui->labelCommand->setText(qstr);
+                strcpy(cmdstr, qstr.toLocal8Bit().constData());
+                res = system(cmdstr);
+
+                if (res == 0) {
+                    resultstr = "SUCCESS";
+                } else {
+                    resultstr = "am_block failed to crop for site: " + numstr;
+                    ui->labelResult->setText(resultstr);
+                    return;
+                }
+            }
+            outfile_str += numstr;
+            outfile_str += ".out";
+            qstr = QCoreApplication::applicationDirPath() + "/exec/conduit_analyse ";
+            if (irun == 0)
+                qstr += inputFileName;
+            else
+                qstr += subregionFileName;
+            qstr += " ";
+            qstr += outfile_str;
+            qstr += " ";
+            qstr += ui->lineEdit_sfactor->text();
+            qstr += " ";
+            qstr += ui->lineEdit_pow->text();
+            qstr += " ";
+            if (irun == 0)
+                qstr += ui->lineEdit_ntrials->text();
+            else
+                qstr += "100";
+            qstr += " ";
+            qstr += x0_str;
+            qstr += " ";
+            qstr += y0_str;
+            qstr += " ";
+            qstr += z0_str;
+            qstr += " ";
+            if (irun == 0)
+                qstr += ui->lineEdit_Cm_radius->text();
+            else
+                qstr += R_str;
+            qstr += " ";
+            qstr += ui->lineEdit_speed->text();
+            qstr += " ";
+            qstr += "0";    //ui->lineEdit_npaths->text();
+            qstr += " ";
+            qstr += limitmodestr;
+            qstr += " ";
+            qstr += limitvaluestr;
+            qstr += " ";
+            qstr += ui->lineEdit_ddiam->text();
+            qstr += " ";
+            qstr += ui->lineEdit_dlen->text();
+
+            if (qstr.size()>(int)sizeof(cmdstr)-1) {
+                printf("Failed to convert qstr->cmdstr since qstr didn't fit\n");
+                resultstr = "FAILED: cmdstr not big enough for the command";
+                ui->labelResult->setText(resultstr);
+                return;
+            }
+
+            ui->labelCommand->setText(qstr);
+            strcpy(cmdstr, qstr.toLocal8Bit().constData());
+            res = system(cmdstr);
+
+            if (res == 0)
+                resultstr = "SUCCESS";
+            else if (res == 1)
+                resultstr = "FAILED: wrong number of arguments";
+            else if (res == 2)
+                resultstr = "FAILED: read error on input file";
+            else if (res == 3)
+                resultstr = "FAILED: write error on output file";
+            else if (res == 4)
+                resultstr = "FAILED: error in CreateDistributions";
+            else if (res == 5)
+                resultstr = "FAILED: MAXBLOCK exceeded";
             ui->labelResult->setText(resultstr);
-            return;
+            if (res != 0) return;
         }
-//        ui->labelResult->setText(qstr);
-
-        strcpy(cmdstr, qstr.toLocal8Bit().constData());
-
-        ui->labelResult->setText(cmdstr);
-        res = system(cmdstr);
-        if (res == 0)
-            resultstr = "SUCCESS";
-        else if (res == 1)
-            resultstr = "FAILED: wrong number of arguments";
-        else if (res == 2)
-            resultstr = "FAILED: read error on input file";
-        else if (res == 3)
-            resultstr = "FAILED: write error on output file";
-        else if (res == 4)
-            resultstr = "FAILED: error in CreateDistributions";
-        else if (res == 5)
-            resultstr = "FAILED: MAXBLOCK exceeded";
-        ui->labelResult->setText(resultstr);
     }
 }
 

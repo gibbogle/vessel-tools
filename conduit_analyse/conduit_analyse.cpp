@@ -1395,6 +1395,9 @@ void traverse(NETWORK *net, int nsteps, double *tpt, double *res_d2sum, double *
 		float dy = centre.y - p0.y;
 		float dz = centre.z - p0.z;
 		d = sqrt(dx*dx+dy*dy+dz*dz);
+//		printf("ifib0,iend0,kv0: %d %d %d\n",ifib0,iend0,kv0);
+//		printf("centre,p0: %f %f %f   %f %f %f\n",centre.x,centre.y,centre.z,p0.x,p0.y,p0.z);
+//		printf("k,d,start_radius: %d %f %f\n\n",k,d,start_radius);
 		if (d > start_radius) continue;
 		if (save_paths) {
 			if (np < npaths) {
@@ -1413,6 +1416,7 @@ void traverse(NETWORK *net, int nsteps, double *tpt, double *res_d2sum, double *
 		t = 0;
 		for (istep=0; istep<nsteps; istep++) {
 			dt = fibre[ifib].L_actual/speed;
+//			printf("istep,dt: %d %f\n",istep,dt);
 			if (t + dt > tpt[itpt]) {
 //				if (itpt == NDATAPTS-1) {	// This is the last point, we can locate it more accurately on the fibre ifib
 				dt = tpt[itpt] - t;

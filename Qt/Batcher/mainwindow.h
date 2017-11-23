@@ -36,8 +36,9 @@ private:
 
 public:
 	QString inputFileName;
-	QString outputFileName;
+    QString outputBaseFileName;
     QString siteFileName;
+    QString subregionFileName;
     QStringList headers;
 };
 

@@ -19,20 +19,20 @@
      <rect>
       <x>10</x>
       <y>10</y>
-      <width>91</width>
+      <width>111</width>
       <height>23</height>
      </rect>
     </property>
     <property name="text">
-     <string>Input Amira file</string>
+     <string>Amira SG file name</string>
     </property>
    </widget>
    <widget class="QLabel" name="labelInputFile">
     <property name="geometry">
      <rect>
-      <x>110</x>
+      <x>130</x>
       <y>10</y>
-      <width>1251</width>
+      <width>1231</width>
       <height>21</height>
      </rect>
     </property>
@@ -82,9 +82,9 @@
    <widget class="QTextEdit" name="textEdit">
     <property name="geometry">
      <rect>
-      <x>760</x>
+      <x>770</x>
       <y>100</y>
-      <width>601</width>
+      <width>591</width>
       <height>411</height>
      </rect>
     </property>
@@ -94,20 +94,20 @@
      <rect>
       <x>10</x>
       <y>70</y>
-      <width>91</width>
+      <width>111</width>
       <height>23</height>
      </rect>
     </property>
     <property name="text">
-     <string>Output file</string>
+     <string>Output base filename</string>
     </property>
    </widget>
    <widget class="QLabel" name="labelOutputFile">
     <property name="geometry">
      <rect>
-      <x>110</x>
+      <x>130</x>
       <y>70</y>
-      <width>1251</width>
+      <width>1231</width>
       <height>21</height>
      </rect>
     </property>
@@ -149,8 +149,8 @@
      <rect>
       <x>250</x>
       <y>170</y>
-      <width>191</width>
-      <height>101</height>
+      <width>201</width>
+      <height>131</height>
      </rect>
     </property>
     <property name="title">
@@ -159,7 +159,7 @@
     <widget class="QLineEdit" name="lineEdit_speed">
      <property name="geometry">
       <rect>
-       <x>100</x>
+       <x>110</x>
        <y>10</y>
        <width>31</width>
        <height>20</height>
@@ -175,7 +175,7 @@
     <widget class="QLabel" name="label_um3">
      <property name="geometry">
       <rect>
-       <x>140</x>
+       <x>150</x>
        <y>10</y>
        <width>41</width>
        <height>21</height>
@@ -214,7 +214,7 @@
     <widget class="QLineEdit" name="lineEdit_pow">
      <property name="geometry">
       <rect>
-       <x>100</x>
+       <x>110</x>
        <y>40</y>
        <width>31</width>
        <height>20</height>
@@ -230,8 +230,8 @@
     <widget class="QLineEdit" name="lineEdit_ntrials">
      <property name="geometry">
       <rect>
-       <x>100</x>
-       <y>70</y>
+       <x>110</x>
+       <y>100</y>
        <width>41</width>
        <height>20</height>
       </rect>
@@ -247,13 +247,55 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>70</y>
+       <y>100</y>
        <width>91</width>
        <height>21</height>
       </rect>
      </property>
      <property name="text">
       <string>Number of trials</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="lineEdit_Cm_radius">
+     <property name="geometry">
+      <rect>
+       <x>110</x>
+       <y>70</y>
+       <width>31</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>50</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_Cm_radius">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>70</y>
+       <width>101</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Start sphere radius</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_um">
+     <property name="geometry">
+      <rect>
+       <x>150</x>
+       <y>71</y>
+       <width>31</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>(um)</string>
      </property>
     </widget>
    </widget>
@@ -464,7 +506,7 @@
    <widget class="QTableWidget" name="tableWidget">
     <property name="geometry">
      <rect>
-      <x>460</x>
+      <x>480</x>
       <y>170</y>
       <width>256</width>
       <height>291</height>
@@ -563,20 +605,20 @@
      <rect>
       <x>10</x>
       <y>40</y>
-      <width>91</width>
+      <width>111</width>
       <height>23</height>
      </rect>
     </property>
     <property name="text">
-     <string>Read site file</string>
+     <string>Site file name</string>
     </property>
    </widget>
    <widget class="QLabel" name="labelSiteFile">
     <property name="geometry">
      <rect>
-      <x>110</x>
+      <x>130</x>
       <y>40</y>
-      <width>1251</width>
+      <width>1231</width>
       <height>21</height>
      </rect>
     </property>
@@ -587,7 +629,7 @@
    <widget class="QLabel" name="label_sites">
     <property name="geometry">
      <rect>
-      <x>570</x>
+      <x>590</x>
       <y>150</y>
       <width>31</width>
       <height>16</height>
@@ -601,6 +643,32 @@
     </property>
     <property name="text">
      <string>Sites</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_cmd">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>530</y>
+      <width>51</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Command</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="labelCommand">
+    <property name="geometry">
+     <rect>
+      <x>70</x>
+      <y>530</y>
+      <width>1281</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
     </property>
    </widget>
   </widget>
