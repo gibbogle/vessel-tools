@@ -3,7 +3,7 @@ Batcher information
 This program executes conduit_analyse on a set of subregions of a network stored in Amira Spatialgraph format (.am file).
 
 Site info (name, centre (x0,y0,z0), size (R)) can be entered into the table manually, or read from a text file.  (This is to save you having to re-enter the data every time the program is run.)
-The file uses comma-separated fields, one line for each site:
+The file uses comma-separated fields (so the site name must not have any spaces), one line for each site:
 
 Site_abc 100 200 300 100
 Site_def 200 300 400 100
@@ -27,3 +27,5 @@ Option 2: vessels less than the specified length limit are excluded
 Option 3: vessels with length/diameter less than the specified limit are excluded
 
 The widths of the boxes used for counting vessels to compute the probability distributions must be specified.
+
+Optionally the distribution of distance to the nearest conduit can be computed for each spherical subregion.  In this case tiff images of the remote regions (further than the specified threshold distance from the nearest conduit) can be generated.

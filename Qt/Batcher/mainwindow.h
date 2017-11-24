@@ -29,7 +29,11 @@ public slots:
 //    void savepaths_checkbox();
     void on_radioButton_len_limit_toggled(bool checked);
     void on_radioButton_len_diam_limit_toggled(bool checked);
+    void on_checkBoxImage_toggled(bool checked);
     void batch_analyser();
+    int blocker(QString numstr);
+    int distancer(QString numstr);
+    int tiffer(QString numstr);
 
 private:
     Ui::MainWindow *ui;
@@ -39,7 +43,9 @@ public:
     QString outputBaseFileName;
     QString siteFileName;
     QString subregionFileName;
+    QString tempfileName;
     QStringList headers;
+    QString x0_str, y0_str, z0_str, R_str;
 };
 
 #endif // MAINWINDOW_H

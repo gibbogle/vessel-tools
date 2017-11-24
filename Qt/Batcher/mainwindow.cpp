@@ -113,6 +113,182 @@ void MainWindow::on_radioButton_len_diam_limit_toggled(bool checked)
     ui->lineEdit_len_diam_limit->setEnabled(checked);
 }
 
+void MainWindow::on_checkBoxImage_toggled(bool checked)
+{
+    ui->lineEditThreshold->setEnabled(checked);
+}
+
+int MainWindow::blocker(QString numstr)
+{
+    QString qstr, resultstr;
+    char cmdstr[2048];
+    int res;
+
+    qstr = QCoreApplication::applicationDirPath() + "/exec/am_block ";
+    qstr += inputFileName;
+    qstr += " ";
+    qstr += "subregion_" + numstr + ".am";
+
+    qstr += " ";
+    qstr += x0_str;
+    qstr += " ";
+    qstr += y0_str;
+    qstr += " ";
+    qstr += z0_str;
+    qstr += " ";
+    qstr += R_str;
+    qstr += " 0 0";
+    if (qstr.size()>(int)sizeof(cmdstr)-1) {
+        printf("Failed to convert qstr->cmdstr since qstr didn't fit\n");
+        resultstr = "FAILED: cmdstr not big enough for the command";
+        ui->labelResult->setText(resultstr);
+        return -1;
+    }
+
+    ui->labelCommand->setText(qstr);
+    strcpy(cmdstr, qstr.toLocal8Bit().constData());
+    res = system(cmdstr);
+
+    if (res == 0) {
+        resultstr = "SUCCESS";
+    } else {
+        resultstr = "am_block failed to crop for site: " + numstr;
+        ui->labelResult->setText(resultstr);
+    }
+    return res;
+}
+
+int MainWindow::distancer(QString numstr)
+{
+    int res;
+    QString qstr, resultstr;
+    char cmdstr[2048];
+    tempfileName = "imagedata.bin";
+
+    qstr = QCoreApplication::applicationDirPath() + "/exec/vdistancef ";
+    qstr += inputFileName;
+    qstr += " ";
+    qstr += outputBaseFileName + "_dist_" + numstr + ".out";
+    qstr += " ";
+    qstr += ui->lineEditGrid_dx->text();
+    qstr += " ";
+    qstr += "4";    //ui->lineEdit_ncpu->text();
+    qstr += " ";
+//    qstr += "0";    // no need for random grid points
+//    qstr += " ";
+
+    if (ui->checkBoxImage->isChecked()) {
+        qstr += ui->lineEditThreshold->text();
+        qstr += " ";
+        qstr += tempfileName;
+    } else {
+        qstr += "0 dummy";
+    }
+    qstr += " ";
+    qstr += ui->lineEditVx->text();
+    qstr += " ";
+    qstr += ui->lineEditVy->text();
+    qstr += " ";
+    qstr += ui->lineEditVz->text();
+
+//    if (ui->checkBoxSubregion->isChecked()) {
+//        if (ui->radioButtonCube->isChecked()) {
+//            qstr += " C ";
+//        } else {
+            qstr += " S ";
+//        }
+        qstr += x0_str; //ui->lineEditX0->text();
+        qstr += " ";
+        qstr += y0_str; //ui->lineEditY0->text();
+        qstr += " ";
+        qstr += z0_str; //ui->lineEditZ0->text();
+        qstr += " ";
+        qstr += R_str;  //ui->lineEditRadius->text();
+//    }
+    // NOT always use close file
+//    if (ui->checkBox_use_close->isChecked()) {
+//        qstr += " ";
+//        qstr += closefileName;
+//    }
+
+    ui->labelCommand->setText(qstr);
+    if (qstr.size()>(int)sizeof(cmdstr)-1) {
+        printf("Failed to convert qstr->cmdstr since qstr didn't fit\n");
+        resultstr = "FAILED: cmdstr not big enough for the command";
+        ui->labelResult->setText(resultstr);
+        return -1;
+    }
+    strcpy(cmdstr, qstr.toLocal8Bit().constData());
+
+    res = system(cmdstr);
+    if (res == 0)
+        resultstr = "SUCCESS";
+    else if (res == 1)
+        resultstr = "FAILED: Command line error (1)";
+    else if (res == 2)
+        resultstr = "FAILED: Command line argument count error (2)";
+    else if (res == 3)
+        resultstr = "FAILED: Command line argument error (3)";
+    else if (res == 4)
+        resultstr = "FAILED: Allocate error: increase grid spacing";
+    else if (res == 5)
+        resultstr = "FAILED: indx out of range";
+    else if (res == 6)
+        resultstr = "FAILED: Open failure on close file";
+    else if (res == 7)
+        resultstr = "FAILED: Supplied close file has incorrect format";
+    else if (res == 8)
+        resultstr = "FAILED: Access error in closedata: kbytes > nmbytes";
+    else if (res == 9)
+        resultstr = "FAILED: Exceeded dimension of array imagedata";
+    else
+        resultstr = "WTF?";
+
+    ui->labelResult->setText(resultstr);
+    if (res != 0) return res;
+    if (ui->checkBoxImage->isChecked()) {
+        res = tiffer(numstr);
+    }
+//    if (res == 0) {
+//        tiff_ready = true;
+//    }
+//    if (ui->checkBoxImage->isChecked() && is_tiff && tiff_ready){
+//        ui->pushButtonMakeTiff->setEnabled(true);
+//    }
+    return res;
+}
+
+int MainWindow::tiffer(QString numstr) {
+    int res;
+    QString qstr, resultstr;
+    char cmdstr[2048];
+
+    qstr = QCoreApplication::applicationDirPath() + "/exec/maketiff ";
+    qstr += tempfileName;
+    qstr += " ";
+    qstr += outputBaseFileName + "_" + numstr + ".tif";   // tifffileName;
+    qstr += " 1";
+    if (qstr.size()>(int)sizeof(cmdstr)-1) {
+        printf("Failed to convert qstr->cmdstr since qstr didn't fit\n");
+        resultstr = "FAILED: cmdstr not big enough for the command";
+        ui->labelResultImage->setText(resultstr);
+        return -1;
+    }
+    strcpy(cmdstr, qstr.toLocal8Bit().constData());
+
+    res = system(cmdstr);
+    if (res == 0)
+        resultstr = "Image SUCCESS";
+    else if (res == 1)
+        resultstr = "Image FAILED: wrong number of arguments";
+    else if (res == 2)
+        resultstr = "Image FAILED: reading image data file";
+    else if (res == 3)
+        resultstr = "Image FAILED: writing tiff file";
+    ui->labelResultImage->setText(resultstr);
+    return res;
+}
+
 void MainWindow::batch_analyser()
 {
 	int res;
@@ -144,48 +320,24 @@ void MainWindow::batch_analyser()
             isite++;
             QTableWidgetItem* item = ui->tableWidget->item(isite-1,0);
             if (!item || item->text().isEmpty()) break;
-            QString x0_str = ui->tableWidget->item(isite-1,1)->text();
-            QString y0_str = ui->tableWidget->item(isite-1,2)->text();
-            QString z0_str = ui->tableWidget->item(isite-1,3)->text();
-            QString R_str = ui->tableWidget->item(isite-1,4)->text();
+            x0_str = ui->tableWidget->item(isite-1,1)->text();
+            y0_str = ui->tableWidget->item(isite-1,2)->text();
+            z0_str = ui->tableWidget->item(isite-1,3)->text();
+            R_str = ui->tableWidget->item(isite-1,4)->text();
             QString numstr = QString("%1").arg(isite, 2, 10, QChar('0'));
             if (irun == 0) {
                 outfile_str = outputBaseFileName + "_";
+                if (ui->checkBoxDistance->isChecked()) {
+                    int res = distancer(numstr);
+                    if (res != 0) return;
+                }
             } else {
                 outfile_str = outputBaseFileName + "_sub_";
+
                 // Crop the full network to give a spherical subregion network
                 subregionFileName = "subregion_" + numstr + ".am";
-                qstr = QCoreApplication::applicationDirPath() + "/exec/am_block ";
-                qstr += inputFileName;
-                qstr += " ";
-                qstr += subregionFileName;
-                qstr += " ";
-                qstr += x0_str;
-                qstr += " ";
-                qstr += y0_str;
-                qstr += " ";
-                qstr += z0_str;
-                qstr += " ";
-                qstr += R_str;
-                qstr += " 0 0";
-                if (qstr.size()>(int)sizeof(cmdstr)-1) {
-                    printf("Failed to convert qstr->cmdstr since qstr didn't fit\n");
-                    resultstr = "FAILED: cmdstr not big enough for the command";
-                    ui->labelResult->setText(resultstr);
-                    return;
-                }
-
-                ui->labelCommand->setText(qstr);
-                strcpy(cmdstr, qstr.toLocal8Bit().constData());
-                res = system(cmdstr);
-
-                if (res == 0) {
-                    resultstr = "SUCCESS";
-                } else {
-                    resultstr = "am_block failed to crop for site: " + numstr;
-                    ui->labelResult->setText(resultstr);
-                    return;
-                }
+                int res = blocker(numstr);
+                if (res != 0) return;
             }
             outfile_str += numstr;
             outfile_str += ".out";
@@ -229,6 +381,7 @@ void MainWindow::batch_analyser()
             qstr += " ";
             qstr += ui->lineEdit_dlen->text();
 
+            ui->labelCommand->setText(qstr);
             if (qstr.size()>(int)sizeof(cmdstr)-1) {
                 printf("Failed to convert qstr->cmdstr since qstr didn't fit\n");
                 resultstr = "FAILED: cmdstr not big enough for the command";
@@ -236,7 +389,6 @@ void MainWindow::batch_analyser()
                 return;
             }
 
-            ui->labelCommand->setText(qstr);
             strcpy(cmdstr, qstr.toLocal8Bit().constData());
             res = system(cmdstr);
 
