@@ -14,7 +14,7 @@ struct voxel_str {
 	int nbrs;
 	int nbr[MAXNBRS];
 	double diameter;
-	int vertex_num;
+	int vertex_num; 
 };
 typedef voxel_str VOXEL;
 

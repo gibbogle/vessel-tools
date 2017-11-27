@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Analysing conduit network</string>
+   <string>Batch analysis of conduit network</string>
   </property>
   <widget class="QWidget" name="centralWidget">
    <widget class="QPushButton" name="pushButtonInputFile">
@@ -506,7 +506,7 @@
    <widget class="QTableWidget" name="tableWidget">
     <property name="geometry">
      <rect>
-      <x>480</x>
+      <x>470</x>
       <y>170</y>
       <width>256</width>
       <height>291</height>
@@ -629,7 +629,7 @@
    <widget class="QLabel" name="label_sites">
     <property name="geometry">
      <rect>
-      <x>590</x>
+      <x>600</x>
       <y>150</y>
       <width>31</width>
       <height>16</height>

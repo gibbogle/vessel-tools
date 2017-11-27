@@ -1674,38 +1674,52 @@ int deloop()
 //-----------------------------------------------------------------------------------------------------
 int createVertexList()
 {
-	int k, ie, i, npts, iv, iv0, iv1, nt;
+	int k, ie, i, npts, iv, iv0, iv1, kp;
 //	float *dsum;
 //	int *nsum;
 	VOXEL *pv;
 	EDGE *pe;
 
-	// Count vertices
+
+	// Count vertices and points
 	nv = 0;
+	np = 0;
 	for (k=1; k<=nlit; k++) {
 		pv = &Vlist[k];
+		if (pv->nbrs == 2) np++;
 		if (pv->nbrs == 1 || pv->nbrs > 2) nv++;
 	}
 	printf("counted vertices: %d\n",nv);
 	vertexList = (VERTEX *)malloc(nv*sizeof(VERTEX));		// this will hold voxel number corresponding to vertex number
-	nt = 0;
+	// Assign first pt sequence numbers to the vertices
+	kp = 0;
 	for (k=1; k<=nlit; k++) {
 		pv = &Vlist[k];
 		if (pv->nbrs == 1 || pv->nbrs > 2) {
-			pv->vertex_num = nt;
-			vertexList[nt].voxel_index = k;
-			nt++;
+			pv->vertex_num = kp;
+			vertexList[kp].voxel_index = k;
+			kp++;
 		}
 	}
 	printf("set vertex voxel indexes\n");
 
-	// Assign vertex numbers to edges
+	// Now assign pt numbers to the other lit voxels  NOT NEEDED
+	//for (k=1; k<=nlit; k++) {
+	//	pv = &Vlist[k];
+	//	if (pv->nbrs == 2) {
+	//		pv->kp = kp;
+	//		kp++;
+	//	}
+	//}
+	//printf("kp: %d  np: %d\n",kp,np);
+
+	// Set edge vert[] to their kp sequence numbers
 	for (ie=0;ie<ne;ie++) {
 		pe = &edgeList[ie];
 		npts = pe->npts;
 		iv0 = Vlist[pe->pt[0]].vertex_num;
 		pe->vert[0] = iv0;
-		iv1 = Vlist[pe->pt[npts-1]].vertex_num;
+		int iv1 = Vlist[pe->pt[npts-1]].vertex_num;
 		pe->vert[1] = iv1;
 	}
 

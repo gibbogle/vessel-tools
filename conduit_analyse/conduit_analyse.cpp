@@ -277,9 +277,6 @@ int CreateDistributions(NETWORK *net)
 	return 0;
 } 
 
-
-
-
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
 float distance(NETWORK *net, int k1, int k2)
@@ -434,7 +431,7 @@ int ReadAmiraFile(char *amFile, NETWORK *net)
 	net->vertex = (VERTEX *)malloc(net->nv*sizeof(VERTEX));
 	net->edgeList = (EDGE *)malloc(net->ne*sizeof(EDGE));
 	net->point = (POINT *)malloc(net->np*sizeof(POINT));
-	printf("Allocated arrays: %d %d %d\n",net->np,net->nv,net->ne);
+	printf("Allocated arrays: np: %d nv: %d ne: %d\n",net->np,net->nv,net->ne);
 
 	// Initialize
 	for (i=0; i<net->ne; i++) {
@@ -499,23 +496,24 @@ int ReadAmiraFile(char *amFile, NETWORK *net)
 				for (i=0;i<net->ne;i++) {
 					edge = net->edgeList[i];
 					float len = 0;
-					for (k=0;k<edge.npts;k++) {
+					for (int kk=0;kk<edge.npts;kk++) {
 						if (fgets(line, STR_LEN, fpam) == NULL) {
 							printf("ERROR reading section @4\n");
 							return 1;
 						}
-						if (k > 0 && k<edge.npts-1) {
+						if (kk > 0 && kk<edge.npts-1) {
 							sscanf(line,"%f %f %f",&net->point[kp].x,&net->point[kp].y,&net->point[kp].z);
-							net->edgeList[i].pt[k] = kp;
-							net->edgeList[i].pt_used[k] = kp;
+							net->edgeList[i].pt[kk] = kp;
+							net->edgeList[i].pt_used[kk] = kp;
 							kp++;
 						}
-						if (k > 0) {
-							len = len + distance(net,net->edgeList[i].pt[k-1],net->edgeList[i].pt[k]);
+						if (kk > 0) {
+							len = len + distance(net,net->edgeList[i].pt[kk-1],net->edgeList[i].pt[kk]);
 						}
 					}
 					net->edgeList[i].length_um = len;
 				}
+				printf("Got edge points, made lengths, kp: %d\n",kp);
 			} else if (k == 5) {
 				for (i=0;i<net->ne;i++) {
 					edge = net->edgeList[i];
