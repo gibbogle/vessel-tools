@@ -29,6 +29,7 @@
 #define NBOX 800
 
 bool FRC_fix = true;
+bool METHOD2 = false;
 
 /*
 // If the number of neighbours is not 2, the voxel is a vertex.
@@ -125,13 +126,15 @@ EDGE *edgeList;
 NETWORK *net;
 VERTEX *vertexList;
 float *avediameter;
-int nlit, ne, np, nv, nused;
+int nlit, ne, np, nv, ne_used;
 int lendist[100];
 int diamdist[100];
 float ddiam = 0.5;
 bool fixed_diam_flag = false;
 bool use_object;
 float FIXED_DIAMETER = 0;
+float max_diameter;
+bool use_max_diameter;
 float vsize[3];	// in um
 float min_end_len = 5;
 float len_limit = 2;
@@ -140,6 +143,8 @@ int nzerodiameters;
 FILE *fperr, *fpout;
 
 int WriteAmiraFile(char *outFile, char *vessFile, char *skelFile, float *origin_shift);
+int getPointDiameters();
+void freeEdgeList();
 
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
@@ -369,6 +374,7 @@ int CreateDistributions()
 	if (use_object) {
 	printf("Compute diameter distributions\n");
 	fprintf(fpout,"Compute diameter distributions\n");
+	if (use_max_diameter) fprintf(fpout,"\nUSING maximum diameter: %f\n\n",max_diameter);
 	nptstot = 0;
 	nptsusedtot = 0;
 	// Diameters
@@ -382,9 +388,6 @@ int CreateDistributions()
 	lsum = 0;
 	for (ie=0; ie<ne; ie++) {
 		edge = edgeList[ie];
-//		if (!edge.used) continue;
-//		printf("ie: %d npts: %d\n",ie,edge.npts);
-//		fprintf(fperr,"ie: %d npts: %d npts_used: %d\n",ie,edge.npts,edge.npts_used);
 		fflush(fperr);
 		nptstot += edge.npts;
 		/*
@@ -439,9 +442,11 @@ int CreateDistributions()
 		}
 		ad = 2*sqrt(vol/(PI*lsum));	// segment diameter
 		*/
-		lsum += edge.length_um;
 		ad = edge.segavediam;
-		volume += edge.length_um*PI*(ad/2)*(ad/2);
+		if (!edge.used) continue;
+		lsum += edge.length_um;
+//		volume += edge.length_um*PI*(ad/2)*(ad/2);
+		volume += edge.volume;
 		ave_seg_diam += ad;
 		if (ad < 0.001) {
 			printf("Zero segment diameter: edge: %d ad: %f\n",ie,ad);
@@ -479,6 +484,8 @@ int CreateDistributions()
 	ave_len = 0;
 	for (ie=0; ie<ne; ie++) {
 		edge = edgeList[ie];
+		ad = edge.segavediam;
+		if (!edge.used) continue;
 //		if (!edge.used) continue;
 		len = edge.length_um;
 		k = int(len/dlen + 0.5);	// was k = int(len/dlen)
@@ -702,7 +709,7 @@ int getDiameters(void)
 			for (k=0; k<npts; k++) {
 				kp1 = edge->pt[k];
 				pv = &Vlist[kp1];
-				pv->diameter = d;
+				pv->diameter = FIXED_DIAMETER;
 			}
 		}
 		return 0;
@@ -710,27 +717,38 @@ int getDiameters(void)
 
 	for (i=0; i<100; i++)
 		diamdist[i] = 0;
-	for (k=1; k<np; k++) {
-		Vlist[k].diameter = 0;
+	if (!METHOD2) {
+		for (k=1; k<np; k++) {
+			Vlist[k].diameter = 0;
+		}
 	}
+	ne_used = 0;
 	for (ie=0;ie<ne;ie++) {
 		edge = &edgeList[ie];
 		npts = edge->npts;
+//		printf("ie: %d npts: %d\n",ie,npts);
 		if (npts == 2) {
 			kp0 = edge->pt[0];
 			kp1 = edge->pt[1];
-			for (i=0; i<3; i++) {
-				p0[i] = vsize[i]*(Vlist[kp0].initial_pos[i] + 0.5);		// Note: these pos are not guaranteed to fall within the object image
-				p1[i] = vsize[i]*(Vlist[kp1].initial_pos[i] + 0.5);
-				p2[i] = 2*p1[i] - p0[i];
+//			printf("kp0% %d kp1: %d diams: %f %f\n",kp0,kp1,Vlist[kp0].diameter,Vlist[kp1].diameter);
+			len = dist_um(Vlist[kp0].initial_pos,Vlist[kp1].initial_pos);
+			if (METHOD2) {
+				d = 0.5*(Vlist[kp0].diameter + Vlist[kp1].diameter);
+			} else {
+				for (i=0; i<3; i++) {
+					p0[i] = vsize[i]*(Vlist[kp0].initial_pos[i] + 0.5);		// Note: these pos are not guaranteed to fall within the object image
+					p1[i] = vsize[i]*(Vlist[kp1].initial_pos[i] + 0.5);
+					p2[i] = 2*p1[i] - p0[i];
+				}
+				EstimateDiameter(p0,p1,p2,&r2_ave,&r2_min,&zero);
+				if (zero) {
+					printf("getDiameters: got a zero for ie: %d  npts=2: %d %d\n",ie,kp0,kp2);
+					exit(1);
+				}
+				d = 2*sqrt(r2_ave);
 			}
-			EstimateDiameter(p0,p1,p2,&r2_ave,&r2_min,&zero);
-			if (zero) {
-				printf("getDiameters: got a zero for ie: %d  npts=2: %d %d\n",ie,kp0,kp2);
-				exit(1);
-			}
-			d = 2*sqrt(r2_ave);
-		} else {
+			area = PI*pow(d/2,2);
+		} else {	// sum volumes and lengths of pieces, average area = vol/len
 			dave = 0;
 			vol = 0;
 			len = 0;
@@ -738,28 +756,30 @@ int getDiameters(void)
 				kp0 = edge->pt[k-1];
 				kp1 = edge->pt[k];
 				kp2 = edge->pt[k+1];
-				// Basic check for insideness
-				pv = &Vlist[kp1];
-				if (V3D(pv->pos[0],pv->pos[1],pv->pos[2]) == 0) {
-					printf("In getDiameters: edge: %d voxel: %d is not inside the object\n",ie,kp1);
-					exit(1);
-				}
-				for (i=0; i<3; i++) {
-					p0[i] = vsize[i]*(Vlist[kp0].initial_pos[i] + 0.5);		// Note: these pos are guaranteed to fall within the object image
-					p1[i] = vsize[i]*(Vlist[kp1].initial_pos[i] + 0.5);
-					p2[i] = vsize[i]*(Vlist[kp2].initial_pos[i] + 0.5);
-				}
-				// This estimates the average and minimum diameter at the point p1, centreline p0 -> p2
-				EstimateDiameter(p0,p1,p2,&r2_ave,&r2_min,&zero);
-				if (zero) {
-					printf("getDiameters: got a zero for ie: %d  %d %d %d\n",ie,kp0,kp1,kp2);
-					exit(1);
-				}
-//				d = 2*sqrt(r2_ave);
-//				Vlist[kp1].diameter = d;
-//				dave += d;
-	//			fprintf(fpout,"%6d %f\n",kp1,Vlist[kp1].diameter);
 				dlen = dist_um(Vlist[kp0].initial_pos,Vlist[kp1].initial_pos);
+//				printf("kp0,kp1: %d %d diams: %f %f\n",kp0,kp1,Vlist[kp0].diameter,Vlist[kp1].diameter);
+				if (METHOD2) {
+					r2_ave = 0.5*(pow(Vlist[kp0].diameter/2,2) + pow(Vlist[kp1].diameter/2,2));
+				} else {
+					// Basic check for insideness
+					pv = &Vlist[kp1];
+					if (V3D(pv->pos[0],pv->pos[1],pv->pos[2]) == 0) {
+						printf("In getDiameters: edge: %d voxel: %d is not inside the object\n",ie,kp1);
+						exit(1);
+					}
+					for (i=0; i<3; i++) {
+						p0[i] = vsize[i]*(Vlist[kp0].initial_pos[i] + 0.5);		// Note: these pos are guaranteed to fall within the object image
+						p1[i] = vsize[i]*(Vlist[kp1].initial_pos[i] + 0.5);
+						p2[i] = vsize[i]*(Vlist[kp2].initial_pos[i] + 0.5);
+					}
+					// This estimates the average and minimum diameter at the point p1, centreline p0 -> p2
+					EstimateDiameter(p0,p1,p2,&r2_ave,&r2_min,&zero);
+					if (zero) {
+						printf("getDiameters: got a zero for ie: %d  %d %d %d\n",ie,kp0,kp1,kp2);
+						exit(1);
+					}
+				}
+
 				if (k == 1) {
 					dvol = PI*dlen*r2_ave;
 				} else {
@@ -768,6 +788,9 @@ int getDiameters(void)
 				if (k == npts-2) {	// need to add the last piece
 					dlenx = dist_um(Vlist[kp1].initial_pos,Vlist[kp2].initial_pos);
 					dlen += dlenx;
+					if (METHOD2) {
+						r2_ave = 0.5*(pow(Vlist[kp1].diameter/2,2) + pow(Vlist[kp2].diameter/2,2));
+					}
 					dvol += PI*dlenx*r2_ave;
 				}
 				vol += dvol;
@@ -783,19 +806,32 @@ int getDiameters(void)
 			d = 2*sqrt(area/PI);
 		}
 		edge->segavediam = d;
-		for (k=0; k<npts; k++) {
-			kp1 = edge->pt[k];
-			pv = &Vlist[kp1];
-			pv->diameter = d;
+		if (d == 0) {
+			printf("Error: d = 0: ie: %d\n",ie);
+			exit(1);
+		}
+		if (use_max_diameter && d > max_diameter) {
+			edge->used = false;
+		} else {
+			ne_used++;
+			edge->used = true;
+			edge->volume = area*len;
+			if (!METHOD2) {
+				for (k=0; k<npts; k++) {
+					kp1 = edge->pt[k];
+					pv = &Vlist[kp1];
+					pv->diameter = d;
+				}
+			}
 		}
 		//pv = &Vlist[edge->pt[0]];
 		//pv->diameter = MAX(d,pv->diameter);
 		//pv = &Vlist[edge->pt[npts-1]];
 		//pv->diameter = MAX(d,pv->diameter);
-		int n = d/ddiam + 0.5;	// needs to be length weighted
-		n = MAX(n,1);
-		n = MIN(n,100);
-		diamdist[n-1]++;	
+		//int n = d/ddiam + 0.5;	// needs to be length weighted
+		//n = MAX(n,1);
+		//n = MIN(n,100);
+		//diamdist[n-1]++;	
 	}
 	//printf("n  diam count\n");
 	//fprintf(fpout,"n  diam count\n");
@@ -831,6 +867,7 @@ int createVlist()
 					Vlist[k].initial_pos[0] = x;
 					Vlist[k].initial_pos[1] = y;
 					Vlist[k].initial_pos[2] = z;
+					Vlist[k].diameter = 0;
 				}
 			}
 		}
@@ -998,7 +1035,7 @@ int createVlist()
 int traceSegments()
 {
 	int k0, ib, k, kp, nsegvoxels, nsegs, nloops, nends, nshow=0;
-	int segvoxel[100];
+	int segvoxel[200];
 	float len;
 	VOXEL *pv, *pv0, *pv1;
 	EDGE *pe;
@@ -1074,8 +1111,8 @@ int traceSegments()
 						for (int i=0; i<pe->npts; i++)
 							pe->pt[i] = segvoxel[i];
 						pe->length_um = len;
-						Vlist[k0].diameter = 0;
-						Vlist[k].diameter = 0;
+//						Vlist[k0].diameter = 0;
+//						Vlist[k].diameter = 0;
 
 						nsegs++;
 					}
@@ -1129,10 +1166,14 @@ int traceSegments()
 						for (int i=0; i<pe->npts; i++)
 							pe->pt[i] = segvoxel[i];
 						pe->length_um = len;
-						Vlist[k0].diameter = 0;
-						Vlist[k].diameter = 0;
+//						Vlist[k0].diameter = 0;
+//						Vlist[k].diameter = 0;
 
 						nsegs++;
+					} else {	// remove these voxels
+						for (int i=1; i<nsegvoxels; i++) {
+							Vlist[segvoxel[i]].nbrs == 0;
+						}
 					}
 					break;
 				} else if (pv->nbrs == 0) {
@@ -1171,6 +1212,7 @@ int traceSegments()
 	printf("nloops: %d\n",nloops);
 	fprintf(fpout,"nsegs: %d\n",nsegs);
 	fprintf(fpout,"nloops: %d\n",nloops);
+	printf("did traceSegments\n");
 //	fprintf(fpout,"length distribution\n");
 //	for (int i=0; i<100; i++) {
 //		printf("%d %f\n",i,lendist[i]/float(nsegs));
@@ -1398,7 +1440,7 @@ void group(int kvlist1[],int n1, int kvlist2[], int *n2)
 }
 
 //-----------------------------------------------------------------------------------------------------
-// Count # of vertices in every 3x3x3 cube
+// Count # of vertices in every 3x3x3 cube, coalesce vertices
 //-----------------------------------------------------------------------------------------------------
 int vertexDensity2(int noffsets)
 {
@@ -1587,14 +1629,15 @@ int deloop()
 {
 	int k, k0, i, i1, i2, k1, k2, j, kj1, kdrop, nbrs, x0, y0, z0, x, y, z;
 	int xmin, xmax, ymin, ymax, zmin, zmax;
-	int nnear, nearlist[20];
+	int nnear, nearlist[20], ndropped;
 	int nr = 3;		// the searched cube has side = 2*nr+1
 	float d1, d2;
 	bool triangle;
 	VOXEL *pv, *pv0, *pv1, *pv2, *pvdrop;
 
-	// Triangles
-	printf("deloop: removing small triangles\n");
+	// Tiny triangles
+	ndropped = 0;
+	printf("deloop: removing tiny triangles\n");
 	for (k0=1; k0<=nlit; k0++) {
 		pv0 = &Vlist[k0];
 		nbrs = pv0->nbrs;
@@ -1665,7 +1708,9 @@ int deloop()
 		dropnbr(kdrop,pv0);
 		// drop nbr k0 from kdrop nbr[]
 		dropnbr(k0,pvdrop);
+		ndropped++;
 	}
+	printf("dropped %d links to break small triangles\n",ndropped);
 	return 0;
 }
 
@@ -1741,10 +1786,10 @@ int main(int argc, char**argv)
 	int cmgui_flag, diam_flag;
 	float origin_shift[3] = {0, 0, 0};
 
-	if (argc != 11) {
-		printf("Usage: topo2 skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z fixed_diam_flag fixed_diam len_limit min_end_len\n");
+	if (argc != 12) {
+		printf("Usage: topo2 skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z fixed_diam_flag fixed_diam len_limit min_end_len max_diam\n");
 		fperr = fopen("topo2_error.log","w");
-		fprintf(fperr,"Usage: topo2 skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z fixed_diam_flag fixed_diam len_limit min_end_len\n");
+		fprintf(fperr,"Usage: topo2 skel_tiff object_tiff output_file voxelsize_x voxelsize_y voxelsize_z fixed_diam_flag fixed_diam len_limit min_end_len max_diam\n");
 		fprintf(fperr,"Submitted command line: argc: %d\n",argc);
 		for (int i=0; i<argc; i++) {
 			fprintf(fperr,"argv: %d: %s\n",i,argv[i]);
@@ -1770,12 +1815,14 @@ int main(int argc, char**argv)
 	sscanf(argv[4],"%f",&voxelsize_x);
 	sscanf(argv[5],"%f",&voxelsize_y);
 	sscanf(argv[6],"%f",&voxelsize_z);
-	sscanf(argv[7],"%f",&diam_flag);
+	sscanf(argv[7],"%d",&diam_flag);
 	sscanf(argv[8],"%f",&FIXED_DIAMETER);
 	sscanf(argv[9],"%f",&len_limit);
 	sscanf(argv[10],"%f",&min_end_len);
+	sscanf(argv[11],"%f",&max_diameter);
 
 	fixed_diam_flag = (diam_flag == 1);
+	use_max_diameter = (max_diameter > 0);
 	vsize[0] = voxelsize_x;
 	vsize[1] = voxelsize_y;
 	vsize[2] = voxelsize_z;
@@ -1848,18 +1895,18 @@ int main(int argc, char**argv)
 	pskel = (unsigned char *)(imskel->GetBufferPointer());
 
 	if (use_object) {
-		// Read original vessel file (binary)
+		// Read original object file (binary)
 		FileReaderType::Pointer reader = FileReaderType::New();
 		reader->SetFileName(vessFile);
 		try
 		{
-			printf("Reading input vessel file: %s\n",vessFile);
+			printf("Reading input object file: %s\n",vessFile);
 			reader->Update();
 		}
 		catch (itk::ExceptionObject &e)
 		{
 			std::cout << e << std::endl;
-			fprintf(fperr,"Read error on vessel file\n");
+			fprintf(fperr,"Read error on object file\n");
 			fclose(fperr);
 			return 3;	// Read error on input file
 		}
@@ -1871,20 +1918,27 @@ int main(int argc, char**argv)
 		int d = im->GetLargestPossibleRegion().GetSize()[2];
 
 		if (w != width || h != height || d != depth) {
-			printf("Error: skeleton and vessel files differ in size\n");
-			fprintf(fperr,"Error: skeleton and vessel files differ in size\n");
+			printf("Error: skeleton and object files differ in size\n");
+			fprintf(fperr,"Error: skeleton and object files differ in size\n");
 			fclose(fperr);
 			return 4;
 		}
 
 		p = (unsigned char *)(im->GetBufferPointer());
+		int nlit_obj = 0;
+		for (long long i=0; i<width*height*depth; i++) {
+			if (p[i] > 0) nlit_obj++;
+		}
+		// nlit_obj = number of lit voxels in the object image
+		printf("Number of lit object voxels: %d\n",nlit_obj);
+		fprintf(fpout,"Number of lit object voxels: %d\n",nlit_obj);
 	}
 
 	nlit = 0;
 	for (long long i=0; i<width*height*depth; i++) {
 		if (pskel[i] > 0) nlit++;
 	}
-	// nlit = number of lit voxels
+	// nlit = number of lit voxels in the skeleton image
 	np = nlit;
 	net->np = nlit;
 
@@ -1892,7 +1946,7 @@ int main(int argc, char**argv)
 	net->point = (VOXEL *)malloc((nlit+1)*sizeof(VOXEL));
 	Vlist = net->point;
 
-	printf("Number of lit voxels: %d\n",nlit);
+	printf("Number of lit skeleton voxels: %d\n",nlit);
 
 	printf("Creating the lit voxel index list\n");
 	err = createVlist();
@@ -1902,6 +1956,34 @@ int main(int argc, char**argv)
 		return 5;
 	} else {
 		printf("Created Vlist\n");
+	}
+	if (METHOD2) {
+		err = deloop();
+		if (err != 0) {
+			printf("Error in deloop (method2)\n");
+			fprintf(fperr,"Error in deloop (method2)\n");
+			return 7;
+		} else {
+			printf("Eliminated small triangular loops\n");
+		}
+		err = traceSegments();
+		if (err != 0) {
+			printf("Error in traceSegments (method2)\n");
+			fprintf(fperr,"Error in traceSegments (method2)\n");
+			return 8;
+		} else {
+			printf("Traced segments (method2): ne: %d\n",ne);
+		}
+		printf("Did traceSegments\n");
+		err = getPointDiameters();
+		if (err != 0) {
+			printf("Error in getPointDiameters\n");
+			fprintf(fperr,"Error in getPointDiameters\n");
+			return 9;
+		} else {
+			printf("Estimated point diameters\n");
+		}
+		freeEdgeList();
 	}
 
 	err = vertexDensity2(noffsets);
@@ -1938,14 +2020,14 @@ int main(int argc, char**argv)
 		fprintf(fperr,"Error in getDiameters\n");
 		return 9;
 	} else {
-		printf("Estimated segment lengths and average diamaters\n");
+		printf("Estimated segment lengths and average diameters\n");
 	}
 
 	printf("Create vertex list\n");
 	createVertexList();
 	printf("Created vertex list\n");
 
-	nused = 0;
+	int nused = 0;
 	for (int k=1; k<=nlit; k++) {
 		if (Vlist[k].nbrs > 0) nused++;
 	}
@@ -2003,10 +2085,9 @@ int main(int argc, char**argv)
 //-----------------------------------------------------------------------------------------------------
 int WriteAmiraFile(char *amOutFile, char *vessFile, char *skelFile, float *origin_shift)
 {
-	int i, k, j, ie, iv, npts, npts_used;
+	int k, j, ie, iv, npts, npts_used;
 	int *pos;
 	VOXEL *pv;
-	EDGE *pe;
 
 	printf("\nWriteAmiraFile: %s\n",amOutFile);
 	fprintf(fpout,"\nWriteAmiraFile: %s\n",amOutFile);
@@ -2014,9 +2095,9 @@ int WriteAmiraFile(char *amOutFile, char *vessFile, char *skelFile, float *origi
 
 	npts = 0;
 //	npts_used = 0;
-	for (i=0;i<net->ne;i++) {
+	for (ie=0;ie<net->ne;ie++) {
 //		if (!edgeList[i].used) continue;
-		npts += edgeList[i].npts;
+		npts += edgeList[ie].npts;
 //		npts_used += edgeList[i].npts_used;
 	}
 	npts_used = npts;
@@ -2026,7 +2107,7 @@ int WriteAmiraFile(char *amOutFile, char *vessFile, char *skelFile, float *origi
 	fprintf(fpam,"# Created by topo2.exe from: %s and %s\n",vessFile,skelFile);
 	fprintf(fpam,"\n");
 	fprintf(fpam,"define VERTEX %d\n",nv);
-	fprintf(fpam,"define EDGE %d\n",ne);
+	fprintf(fpam,"define EDGE %d\n",ne_used);		// ne -> ne_used
 	fprintf(fpam,"define POINT %d\n",npts);
 	fprintf(fpam,"\n");
 	fprintf(fpam,"Parameters {\n");
@@ -2049,20 +2130,23 @@ int WriteAmiraFile(char *amOutFile, char *vessFile, char *skelFile, float *origi
 	}
 	fprintf(fpam,"\n@2\n");
 	for (ie=0;ie<ne;ie++) {
+		if (!edgeList[ie].used) continue;
 		fprintf(fpam,"%d %d\n",edgeList[ie].vert[0],edgeList[ie].vert[1]);
 		if (edgeList[ie].vert[0]== edgeList[ie].vert[1]) {
 			fprintf(fperr,"Error: WriteAmiraFile: repeated vertices: i: %d  %d\n",ie,edgeList[ie].vert[0]);
 		}
 	}
 	fprintf(fpam,"\n@3\n");
-	for (i=0;i<ne;i++) {
-		fprintf(fpam,"%d\n",edgeList[i].npts);
+	for (ie=0;ie<ne;ie++) {
+		if (!edgeList[ie].used) continue;
+		fprintf(fpam,"%d\n",edgeList[ie].npts);
 //		fprintf(fpam,"%d\n",edgeList[i].npts_used);
 	}
 	fprintf(fpam,"\n@4\n");
-	for (i=0;i<ne;i++) {
-		for (k=0;k<edgeList[i].npts;k++) {
-			j = edgeList[i].pt[k];
+	for (ie=0;ie<ne;ie++) {
+		if (!edgeList[ie].used) continue;
+		for (k=0;k<edgeList[ie].npts;k++) {
+			j = edgeList[ie].pt[k];
 			pv = &Vlist[j];
 			fprintf(fpam,"%6.1f %6.1f %6.1f\n",
 				vsize[0]*pv->pos[0] - origin_shift[0],
@@ -2072,24 +2156,210 @@ int WriteAmiraFile(char *amOutFile, char *vessFile, char *skelFile, float *origi
 	}
 	fprintf(fpam,"\n@5\n");
 	double diam;
-	for (i=0;i<ne;i++) {
-		if (use_object) {
-//			diam = avediameter[j];
-			diam = edgeList[i].segavediam;
+	for (ie=0;ie<ne;ie++) {
+		if (!edgeList[ie].used) continue;
+		if (!use_object || fixed_diam_flag) {
+			diam = FIXED_DIAMETER;
+		} else {
+			diam = edgeList[ie].segavediam;
 			if (diam < 1.0) {
-//				printf("d < 1.0: edge: %d npts: %d pt: %d %d  %f\n",i,edgeList[i].npts,k,j,diam);
-				fprintf(fperr,"d < 1.0: edge: %d npts: %d pt: %d %d  %f\n",i,edgeList[i].npts,k,j,diam);
+				fprintf(fperr,"d < 1.0: edge: %d npts: %d pt: %d %d  %f\n",ie,edgeList[ie].npts,k,j,diam);
 				diam = 1.0;
 			}
-		} else {
-			diam = FIXED_DIAMETER;
 		}
-		for (k=0;k<edgeList[i].npts;k++) {
-//			j = edgeList[i].pt[k];
-//			fprintf(fpam,"%6.2f\n",avediameter[j]);
+		for (k=0;k<edgeList[ie].npts;k++) {
 			fprintf(fpam,"%6.2f\n",diam);
 		}
 	}
 	fclose(fpam);
+	return 0;
+}
+
+void freeEdgeList()
+{
+	EDGE *pe;
+	for (int ie=0; ie<ne; ie++) {
+		pe = &edgeList[ie];
+		free(pe->pt);
+	}
+	free(edgeList);
+}
+
+// This uses the traced segments to determine point diameters in a sequential procedure.
+// First, diameters are estimated (in the usual way with getDiameter()) for interior points on each edge.
+// Then other points are filled in by an iterative procedure.
+int getPointDiameters()
+{
+	EDGE *pe;
+	VOXEL *pv;
+	int npin, npts, ie, k, kp0, kp1, kp2, i, kdiam, kdiam2, n2, nsum;
+	double p1[3], p2[3], p0[3];
+	double r2_ave, r2_min, dpave, dpsum, deave, desum, dave, dsum, len, dlen, lensum, area, dvol, volsum, d;
+	bool zero;
+
+	printf("getPointDiameters: nlit: %d\n",nlit);
+	npin = 0;
+	for (k=1; k<=nlit; k++) {
+		if (Vlist[k].nbrs > 0) {
+			npin++;
+			Vlist[k].diameter = 0;
+		}
+	}
+	printf("excluding short ends: npin: %d\n",npin);
+	kdiam = 0;
+	n2 = 0;
+	dpsum = 0;
+	lensum = 0;
+	volsum = 0;
+	for (ie=0; ie<ne; ie++) {
+		pe = &edgeList[ie];
+		npts = pe->npts;
+		desum = 0;
+		len = 0;
+		if (npts < 3) {
+			n2++;
+			kp0 = pe->pt[0];
+			kp1 = pe->pt[1];
+			len = dist_um(Vlist[kp0].initial_pos,Vlist[kp1].initial_pos);
+			continue;
+		}
+		for (k=1;k<npts-1;k++) {
+			kp0 = pe->pt[k-1];
+			kp1 = pe->pt[k];
+			kp2 = pe->pt[k+1];
+			// Basic check for insideness
+			pv = &Vlist[kp1];
+			if (V3D(pv->pos[0],pv->pos[1],pv->pos[2]) == 0) {
+				printf("In getDiameters: edge: %d voxel: %d is not inside the object\n",ie,kp1);
+				exit(1);
+			}
+			for (i=0; i<3; i++) {
+				p0[i] = vsize[i]*(Vlist[kp0].initial_pos[i] + 0.5);		// Note: these pos are guaranteed to fall within the object image
+				p1[i] = vsize[i]*(Vlist[kp1].initial_pos[i] + 0.5);
+				p2[i] = vsize[i]*(Vlist[kp2].initial_pos[i] + 0.5);
+			}
+			// This estimates the average and minimum diameter at the point p1, centreline p0 -> p2
+			EstimateDiameter(p0,p1,p2,&r2_ave,&r2_min,&zero);
+			if (zero) {
+				printf("getPointDiameters: got a zero for ie: %d  %d %d %d\n",ie,kp0,kp1,kp2);
+				exit(1);
+			}
+			pv->diameter = 2*sqrt(r2_ave);
+			desum += pv->diameter;
+			dpsum += pv->diameter;
+			kdiam++;
+			dlen = dist_um(Vlist[kp0].initial_pos,Vlist[kp1].initial_pos);
+			len += dlen;
+			if (k == npts-2) {
+				len += dist_um(Vlist[kp1].initial_pos,Vlist[kp2].initial_pos);
+			}
+		}
+		deave = desum/(npts-2);
+		area = PI*pow(deave/2,2);
+		dvol = area*len;
+		volsum += dvol;
+		lensum += len;
+	}
+	dpave = dpsum/kdiam;
+	printf("Stage 1: pt diam for %d out of %d points, average: %f\n",kdiam,npin,dpave);
+	fprintf(fpout,"Stage 1: pt diam for %d out of %d points, average: %f\n",kdiam,npin,dpave);
+	printf("approx total vol (from ave edge diam and len): %f\n",volsum);
+	fprintf(fpout,"BAD approx total vol (from ave edge diam and len): %f\n",volsum);
+
+
+// Now need to fill in missing pts
+	for (int iter=0; iter<20; iter++) {
+		kdiam2 = 0;
+		for (k=1; k<=nlit; k++) {
+			pv = &Vlist[k];
+			if (pv->nbrs == 0 || pv->diameter > 0) continue;
+			dsum = 0;
+			int nsum = 0;
+			for (i=0; i<pv->nbrs; i++) {
+				int kk = pv->nbr[i];
+				if (Vlist[kk].diameter > 0) {
+					nsum++;
+					dsum += Vlist[kk].diameter;
+				}
+			}
+			if (nsum > 0) {
+				kdiam2++;
+				pv->diameter = dsum/nsum;
+				dpsum += pv->diameter;
+			}
+		}
+		kdiam += kdiam2;
+		printf("Stage 2: iteration: %d filled in %d pt diams\n",iter,kdiam2);
+		printf("missing diams at %d pts\n",npin-kdiam);
+		if (kdiam2 == 0) break;
+	}
+// Stage 3: check edges
+	kdiam2 = 0;
+	for (ie=0; ie<ne; ie++) {
+		pe = &edgeList[ie];
+		npts = pe->npts;
+		desum = 0;
+		if (npts == 2) {
+			kp0 = pe->pt[0];
+			kp1 = pe->pt[1];
+			if (Vlist[kp0].diameter == 0 && Vlist[kp1].diameter == 0) {
+				for (i=0; i<3; i++) {
+					p0[i] = vsize[i]*(Vlist[kp0].initial_pos[i] + 0.5);		// Note: these pos are not guaranteed to fall within the object image
+					p1[i] = vsize[i]*(Vlist[kp1].initial_pos[i] + 0.5);
+					p2[i] = 2*p1[i] - p0[i];
+				}
+				EstimateDiameter(p0,p1,p2,&r2_ave,&r2_min,&zero);
+				if (zero) {
+					printf("getPointDiameters: got a zero for ie: %d  npts=2: %d %d\n",ie,kp0,kp2);
+					exit(1);
+				}
+				d = 2*sqrt(r2_ave);
+				Vlist[kp0].diameter = d;
+				Vlist[kp1].diameter = d;
+				dpsum += 2*pv->diameter;
+				kdiam2 += 2;
+			} else if (Vlist[kp0].diameter > 0 && Vlist[kp1].diameter == 0) {
+				Vlist[kp1].diameter = Vlist[kp0].diameter;
+				kdiam2++;
+			} else if (Vlist[kp1].diameter > 0 && Vlist[kp0].diameter == 0) {
+				Vlist[kp0].diameter = Vlist[kp1].diameter;
+				kdiam2++;
+			}
+		} else {
+			if (Vlist[pe->pt[0]].diameter == 0) {
+				kdiam2++;
+				Vlist[pe->pt[0]].diameter = Vlist[pe->pt[1]].diameter;
+				dpsum += Vlist[pe->pt[0]].diameter;
+			}
+			if (Vlist[pe->pt[npts-1]].diameter == 0) {
+				kdiam2++;
+				Vlist[pe->pt[npts-1]].diameter = Vlist[pe->pt[npts-2]].diameter;
+				dpsum += Vlist[pe->pt[npts-1]].diameter;
+			}
+		}
+	}
+	kdiam += kdiam2;
+	printf("Stage 3: filled in %d pt diams\n",kdiam2);
+	printf("missing diams at %d pts\n",npin-kdiam);
+
+// Are there pts not on an edge?
+	int nzero = 0;
+	for (ie=0; ie<ne; ie++) {
+		pe = &edgeList[ie];
+		npts = pe->npts;
+		for (i=0; i<npts; i++) {
+			k = pe->pt[i];
+			if (Vlist[k].diameter == 0) nzero++;
+		}
+	}
+	printf("zero diam pts on edges: %d\n",nzero);
+// Are there zero diam pts somewhere?
+	nzero = 0;
+	for (k=1; k<=nlit; k++) {
+		if (Vlist[k].nbrs == 0) continue;
+		if (Vlist[k].diameter == 0) nzero++;
+	}
+	printf("zero diam pts: %d\n",nzero);
+	printf("Average pt diameter: %f\n",dpsum/npin);
 	return 0;
 }

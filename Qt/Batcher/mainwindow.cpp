@@ -5,6 +5,8 @@
 #include <QTextStream>
 #include <QDebug>
 
+#define PI 3.14157
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -43,6 +45,11 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->textEdit->moveCursor(QTextCursor::Start);
 }
 
+MainWindow::~MainWindow()
+{
+    delete ui;
+}
+
 void MainWindow:: populateTable() {
     ui->tableWidget->clear();
     QFile sitefile(ui->labelSiteFile->text());
@@ -71,11 +78,6 @@ void MainWindow::processLine(QString aline) {
     }
 
     row++;
-}
-
-MainWindow::~MainWindow()
-{
-    delete ui;
 }
 
 void MainWindow::inputFileSelecter()
@@ -289,13 +291,64 @@ int MainWindow::tiffer(QString numstr) {
     return res;
 }
 
+// To extract relevant results from the conduit_analyse output file, and write them to a summary result file.
+// Need to read each line, split it into QStrings, compare the first one to each of those in a list of
+int MainWindow::reader(QString ca_outputfile)
+{
+    QFile inputFile(ca_outputfile);
+    values.clear();
+    if (inputFile.open(QIODevice::ReadOnly))
+    {
+        ui->labelResult->setText("");
+        QTextStream in(&inputFile);
+        while (!in.atEnd())
+        {
+            QString line = in.readLine();
+            line = line.simplified();
+            QStringList parts = line.split(" ");    //,QString::SkipEmptyParts
+            for (int i=0; i<variableNames.size(); i++) {
+                if (parts[0].compare(variableNames.at(i)) == 0) {
+                    QString str = ui->labelResult->text() + " " + parts[0];
+                    ui->labelResult->setText(str);
+                    values << parts[1];
+                }
+            }
+        }
+        inputFile.close();
+    }
+    return 0;
+}
+
 void MainWindow::batch_analyser()
 {
 	int res;
     char cmdstr[2048];
     QString limitmodestr, limitvaluestr, qstr, resultstr;
     QString outfile_str;
+    double R, Vsphere, vol_factor, tot_len, ave_vess_len, tot_vess_vol;
+    double vert_per_mm3, vess_per_mm3, vol_fraction, len_per_mm3;
+    int nvess, nvert;
 
+    variableNames.clear();
+    calcNames.clear();
+    variableNames << "Vertices:" << "Points:" << "Vessels:" << "ltot:" << "Ave_pt_diam:" << "Ave_vessel_diam:" << "Ave_wgt_vessel_diam:" << "Ave_vessel_len:" << "Vessel_volume:";
+    calcNames << "total_len" << "vess_per_mm3" << "vol_fraction" << "len_per_mm3" << "vert_per_mm3";
+
+    QString summaryFileName = outputBaseFileName + "_summary.out";
+    QFile sumfile(summaryFileName);
+    if (!sumfile.open(QIODevice::ReadWrite)) {
+        ui->labelResult->setText("Open failed on summary file");
+        return;
+    }
+    QTextStream stream(&sumfile);
+    stream << "site_name ";
+    for (int i=0; i<variableNames.size(); i++) {
+        stream << variableNames.at(i) + " ";
+    }
+    for (int i=0; i<calcNames.size(); i++) {
+        stream << calcNames.at(i) + " ";
+    }
+    stream << endl;
     if (ui->radioButton_no_limit->isChecked()) {
         limitmodestr = "0";
         limitvaluestr = "0";
@@ -324,6 +377,9 @@ void MainWindow::batch_analyser()
             y0_str = ui->tableWidget->item(isite-1,2)->text();
             z0_str = ui->tableWidget->item(isite-1,3)->text();
             R_str = ui->tableWidget->item(isite-1,4)->text();
+            R = R_str.toDouble();
+            Vsphere = (4./3.)*PI*pow(R,3);
+            vol_factor = 1.0e9/Vsphere;
             QString numstr = QString("%1").arg(isite, 2, 10, QChar('0'));
             if (irun == 0) {
                 outfile_str = outputBaseFileName + "_";
@@ -392,9 +448,33 @@ void MainWindow::batch_analyser()
             strcpy(cmdstr, qstr.toLocal8Bit().constData());
             res = system(cmdstr);
 
-            if (res == 0)
+            if (res == 0) {
                 resultstr = "SUCCESS";
-            else if (res == 1)
+                ui->labelResult->setText(resultstr);
+                if (irun == 1) {
+                    reader(outfile_str);
+                    // This returns the parameter values in values.
+                    stream << ui->tableWidget->item(isite-1,0)->text() + " ";
+                    for (int i=0; i<values.size(); i++) {
+                        stream << values.at(i) + " ";
+                    }
+                    nvert = values.at(0).toInt();
+                    nvess = values.at(3).toInt();
+                    ave_vess_len = values.at(7).toDouble();
+                    tot_vess_vol = values.at(8).toDouble();
+                    tot_len = nvess*ave_vess_len;
+                    vess_per_mm3 = nvess*vol_factor;
+                    vol_fraction = tot_vess_vol/Vsphere;
+                    len_per_mm3 = tot_len*vol_factor;
+                    vert_per_mm3 = nvert*vol_factor;
+                    stream << QString::number(tot_len) + " ";
+                    stream << QString::number(vess_per_mm3) + " ";
+                    stream << QString::number(vol_fraction) + " ";
+                    stream << QString::number(len_per_mm3) + " ";
+                    stream << QString::number(vert_per_mm3) + " ";
+                    stream << endl;
+                }
+            } else if (res == 1)
                 resultstr = "FAILED: wrong number of arguments";
             else if (res == 2)
                 resultstr = "FAILED: read error on input file";
@@ -408,5 +488,6 @@ void MainWindow::batch_analyser()
             if (res != 0) return;
         }
     }
+    sumfile.close();
 }
 

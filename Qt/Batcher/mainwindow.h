@@ -34,6 +34,7 @@ public slots:
     int blocker(QString numstr);
     int distancer(QString numstr);
     int tiffer(QString numstr);
+    int reader(QString ca_outputfile);
 
 private:
     Ui::MainWindow *ui;
@@ -45,6 +46,9 @@ public:
     QString subregionFileName;
     QString tempfileName;
     QStringList headers;
+    QStringList variableNames;
+    QStringList calcNames;
+    QStringList values;
     QString x0_str, y0_str, z0_str, R_str;
 };
 

@@ -25,10 +25,11 @@ struct edge_str
 //	int npts_used;
 	int *pt;
 //	int *pt_used;
-	float segavediam;
+	double segavediam;
+	double volume;
 //	double segmindiam;
 	float length_um;	// voxel-voxel length
-//	bool used;
+	bool used;
 //	bool ok;
 };
 typedef edge_str EDGE;

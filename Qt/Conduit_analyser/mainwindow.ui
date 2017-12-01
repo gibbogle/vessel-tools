@@ -2,6 +2,9 @@
 <ui version="4.0">
  <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
+  <property name="enabled">
+   <bool>true</bool>
+  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -145,6 +148,9 @@
     </property>
    </widget>
    <widget class="QCheckBox" name="checkBox_join">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
     <property name="geometry">
      <rect>
       <x>310</x>
@@ -308,7 +314,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>200</string>
+      <string>30</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -392,7 +398,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>2</string>
+      <string>4</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -408,7 +414,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>5000</string>
+      <string>1000</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -521,7 +527,7 @@
      <string>length</string>
     </property>
     <attribute name="buttonGroup">
-     <string notr="true">buttonGroup_limits</string>
+     <string>buttonGroup_limits</string>
     </attribute>
    </widget>
    <widget class="QLineEdit" name="lineEdit_len_limit">
@@ -556,7 +562,7 @@
      <string>length/diameter</string>
     </property>
     <attribute name="buttonGroup">
-     <string notr="true">buttonGroup_limits</string>
+     <string>buttonGroup_limits</string>
     </attribute>
    </widget>
    <widget class="QRadioButton" name="radioButton_no_limit">
@@ -575,7 +581,7 @@
      <bool>true</bool>
     </property>
     <attribute name="buttonGroup">
-     <string notr="true">buttonGroup_limits</string>
+     <string>buttonGroup_limits</string>
     </attribute>
    </widget>
    <widget class="QLabel" name="label_limits">
@@ -700,7 +706,7 @@
      <x>0</x>
      <y>0</y>
      <width>1370</width>
-     <height>21</height>
+     <height>18</height>
     </rect>
    </property>
   </widget>

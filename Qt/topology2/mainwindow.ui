@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1250</width>
-    <height>529</height>
+    <height>632</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -43,8 +43,8 @@
    <widget class="QPushButton" name="pushButtonCompute">
     <property name="geometry">
      <rect>
-      <x>180</x>
-      <y>320</y>
+      <x>150</x>
+      <y>450</y>
       <width>75</width>
       <height>23</height>
      </rect>
@@ -56,8 +56,8 @@
    <widget class="QLabel" name="label">
     <property name="geometry">
      <rect>
-      <x>20</x>
-      <y>460</y>
+      <x>10</x>
+      <y>550</y>
       <width>41</width>
       <height>16</height>
      </rect>
@@ -69,8 +69,8 @@
    <widget class="QLabel" name="labelResult">
     <property name="geometry">
      <rect>
-      <x>60</x>
-      <y>460</y>
+      <x>50</x>
+      <y>550</y>
       <width>1181</width>
       <height>16</height>
      </rect>
@@ -85,7 +85,7 @@
       <x>460</x>
       <y>90</y>
       <width>781</width>
-      <height>361</height>
+      <height>431</height>
      </rect>
     </property>
    </widget>
@@ -286,9 +286,9 @@
    <widget class="QLineEdit" name="lineEditLenlimit">
     <property name="geometry">
      <rect>
-      <x>120</x>
+      <x>110</x>
       <y>230</y>
-      <width>21</width>
+      <width>31</width>
       <height>20</height>
      </rect>
     </property>
@@ -331,9 +331,9 @@
    <widget class="QLineEdit" name="lineEditMinEndLen">
     <property name="geometry">
      <rect>
-      <x>120</x>
+      <x>110</x>
       <y>260</y>
-      <width>21</width>
+      <width>31</width>
       <height>20</height>
      </rect>
     </property>
@@ -357,6 +357,35 @@
      <string>Minimum allowed dead-end length (um)</string>
     </property>
    </widget>
+   <widget class="QLineEdit" name="lineEditMaxDiameter">
+    <property name="geometry">
+     <rect>
+      <x>110</x>
+      <y>300</y>
+      <width>31</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>0</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_max_diameter">
+    <property name="geometry">
+     <rect>
+      <x>150</x>
+      <y>300</y>
+      <width>121</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Maximum diameter (um)</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
@@ -364,7 +393,7 @@
      <x>0</x>
      <y>0</y>
      <width>1250</width>
-     <height>21</height>
+     <height>18</height>
     </rect>
    </property>
   </widget>

@@ -100,6 +100,8 @@ void MainWindow::topology2()
     qstr += ui->lineEditLenlimit->text();
     qstr += " ";
     qstr += ui->lineEditMinEndLen->text();
+    qstr += " ";
+    qstr += ui->lineEditMaxDiameter->text();
 
     if (qstr.size()>(int)sizeof(cmdstr)-1) {
 		printf("Failed to convert qstr->cmdstr since qstr didn't fit\n");

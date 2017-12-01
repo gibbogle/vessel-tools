@@ -243,16 +243,18 @@ int CreateDistributions(NETWORK *net)
 	ave_pt_diam /= ndtot;
 	ave_seg_diam /= nsegdtot;
 	ave_lseg_diam /= lsegdtot;
-	fprintf(fpout,"Total vertices: %d  points: %d\n",net->nv,net->np);
-	fprintf(fpout,"Vessels: %d ltot: %d\n",net->ne,int(ltot));
-	printf("\nAverage pt diameter: %6.2f vessel diameter: %6.2f length-weighted: %6.2f\n",
-		ave_pt_diam, ave_seg_diam, ave_lseg_diam);
-	fprintf(fpout,"\nAverage pt diameter: %6.2f vessel diameter: %6.2f length-weighted vessel diameter: %6.2f\n",
-		ave_pt_diam, ave_seg_diam, ave_lseg_diam);
+	fprintf(fpout,"Vertices: %d\n",net->nv);
+	fprintf(fpout,"Points: %d\n",net->np);
+	fprintf(fpout,"Vessels: %d\n",net->ne);
+	fprintf(fpout,"ltot: %d\n",int(ltot));	// count of vessels used, excluding those dropped
+	printf("Average pt diameter: %6.2f vessel diameter: %6.2f length-weighted: %6.2f\n",ave_pt_diam, ave_seg_diam, ave_lseg_diam);
+	fprintf(fpout,"Ave_pt_diam: %6.2f\n",ave_pt_diam);
+	fprintf(fpout,"Ave_vessel_diam: %6.2f\n",ave_seg_diam);
+	fprintf(fpout,"Ave_wgt_vessel_diam: %6.2f\n",ave_lseg_diam);
 	printf("Average vessel length: %6.1f\n",ave_len/ltot);
-	fprintf(fpout,"Average vessel length: %6.1f\n",ave_len/ltot);
-	printf("Volume: %10.0f um3\n\n",volume);
-	fprintf(fpout,"Volume: %10.0f um3\n\n",volume);
+	fprintf(fpout,"Ave_vessel_len: %6.1f\n",ave_len/ltot);
+	printf("Vessel_volume: %10.0f um3\n\n",volume);
+	fprintf(fpout,"Vessel_volume: %10.0f um3\n\n",volume);
 
 	for (k=NBOX-1; k>=0; k--) {
 		if (segadbox[k] > 0) break;

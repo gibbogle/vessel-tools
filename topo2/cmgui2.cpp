@@ -3,7 +3,7 @@
 
 #include "network2.h"
 
-extern bool use_object;
+extern bool use_object, fixed_diam_flag;
 extern float FIXED_DIAMETER;
 extern float vsize[3];
 extern FILE *fperr, *fpout;
@@ -132,6 +132,7 @@ int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[])
 	int kelem = 0;
 	for (ie=0; ie<net->ne; ie++) {
 		edge = net->edgeList[ie];
+		if (!edge.used) continue;
 		npts = edge.npts;
 		//printf("edge: %d npts: %d ",ie,npts);
 		//for (i=0; i<npts; i++)
@@ -200,10 +201,10 @@ int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[])
 				vsize[0]*net->point[k].pos[0] - origin_shift[0],
 				vsize[1]*net->point[k].pos[1] - origin_shift[1],
 				vsize[2]*net->point[k].pos[2] - origin_shift[2]);
-			if (use_object)
-				fprintf(exnode, "%6.2f\n", net->point[k].diameter/2);
-			else
+			if (fixed_diam_flag || !use_object)
 				fprintf(exnode, "%6.2f\n", FIXED_DIAMETER/2);
+			else
+				fprintf(exnode, "%6.2f\n", net->point[k].diameter/2);
 		}
 	}
 	printf("wrote node data\n");
