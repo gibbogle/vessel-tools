@@ -938,7 +938,7 @@ double GetRadius2(double p1[3], double v[3])
 // separation between p0 and p2 to provide a reasonable estimate of the 
 // centreline direction vector N[].
 //-----------------------------------------------------------------------------------------------------
-int EstimateDiameter(double p0[3], double p1[3], double p2[3], double *r2ave, double *r2min)
+int EstimateDiameter(double p0[3], double p1[3], double p2[3], double *r2ave, double *r2min, bool *zero)
 {
 	int i;
 	double N[3], sum, dp, r2, r2sum;
@@ -1002,10 +1002,12 @@ int EstimateDiameter(double p0[3], double p1[3], double p2[3], double *r2ave, do
 	}
 	*/
 	nrays = 32;
+	*zero = false;
 	for (i=0;i<nrays;i++) {
 		angle = (2*PI*i)/nrays;
 		Rotate(v0,N,angle,v);
 		r2 = GetRadius2(p1,v);
+		if (r2 == 0) *zero = true;
 //		if (r2 <= RMIN*RMIN) {
 //			break;
 //		}
@@ -1112,6 +1114,7 @@ double getDiameter(int kp0, int kp1, int kp2)
 	double p1[3], p2[3], p0[3];
 	double r2_ave, r2_min, diam;
 	double dlim = 50.0;
+	bool zero;
 
 	for (i=0; i<3; i++) {
 		p0[i] = vsize[i]*(voxel[kp0].pos[i] + 0.5);		// Note: centres of voxel cubes
@@ -1119,7 +1122,7 @@ double getDiameter(int kp0, int kp1, int kp2)
 		p2[i] = vsize[i]*(voxel[kp2].pos[i] + 0.5);
 	}
 	// This estimates the average and minimum diameter at the point p1, centreline p0 -> p2
-	EstimateDiameter(p0,p1,p2,&r2_ave,&r2_min);
+	EstimateDiameter(p0,p1,p2,&r2_ave,&r2_min,&zero);
 	diam = 2*sqrt(r2_ave);
 	if (calib_param != 0) {
 		//factor = 1.0 + calib_param*diam/dlim;
@@ -1464,7 +1467,7 @@ int CreateDistributions()
 	int segadbox[NBOX];
 	double lsegadbox[NBOX];
 	double ad, len, ddiam, dlen, ltot, lsum, dsum, dvol, vol, r2, r2prev, lsegdtot;
-	double ave_len, volume, d95;
+	double tot_len, volume, d95;
 	double ave_pt_diam, ave_seg_diam;
 	int ie, ip, k, ka, kp, kpprev, ndpts, nlpts, ndtot, nsegdtot, nptstot, nptsusedtot;
 	EDGE edge;
@@ -1544,6 +1547,7 @@ int CreateDistributions()
 			if (lsum == 0) return 1;
 		}
 		ad = 2*sqrt(vol/(PI*lsum));	// segment diameter
+		edgeList[ie].segavediam = ad;
 		ave_seg_diam += ad;
 		if (ad < 0.001) {
 			printf("Zero segment diameter: edge: %d ad: %f\n",ie,ad);
@@ -1576,7 +1580,7 @@ int CreateDistributions()
 	// Lengths
 	dlen = 1;
 	ltot = 0;
-	ave_len = 0;
+	tot_len = 0;
 	for (ie=0; ie<ne; ie++) {
 		edge = edgeList[ie];
 		if (!edge.used) continue;
@@ -1589,7 +1593,7 @@ int CreateDistributions()
 			continue;
 		}
 		lvbox[k]++;
-		ave_len += len;
+		tot_len += len;
 		ltot++;
 	}
 	ave_pt_diam /= ndtot;
@@ -1598,8 +1602,10 @@ int CreateDistributions()
 	fprintf(fpout,"Vessels: %d ltot: %d\n",ne,int(ltot));
 	printf("Average pt diameter: %6.2f vessel diameter: %6.2f\n",ave_pt_diam, ave_seg_diam);
 	fprintf(fpout,"Average pt diameter: %6.2f vessel diameter: %6.2f\n",ave_pt_diam, ave_seg_diam);
-	printf("Average vessel length: %6.1f\n",ave_len/ltot);
-	fprintf(fpout,"Average vessel length: %6.1f\n",ave_len/ltot);
+	printf("Average vessel length: %6.1f\n",tot_len/ltot);
+	fprintf(fpout,"Average vessel length: %6.1f\n",tot_len/ltot);
+	printf("Total vessel length: %6.1f\n",tot_len);
+	fprintf(fpout,"Total vessel length: %6.1f\n",tot_len);
 	printf("Total vessel volume: %10.0f\n\n",volume);
 	fprintf(fpout,"Total vessel volume: %10.0f\n\n",volume);
 
@@ -2230,8 +2236,6 @@ int deloop(int iter)
 	bool dup;
 	bool NEW_dup_delete = true;		// try this!
 
-	printf("deloop: iter: %d\n",iter);
-	printf("deloop: iter: %d\n",iter);
 	printf("deloop: iter: %d\n",iter);
 	fprintf(fperr,"deloop: iter: %d\n",iter);
 
@@ -3411,6 +3415,8 @@ int TraceSkeleton(int n_prune_cycles)
 	err = checker();
 	if (err != 0) return 1;
 
+//	printf("DROP deloop FOR TESTING!!!!!!!!!!!!!!!!!!!!\n");
+//	fprintf(fpout,"DROP deloop FOR TESTING!!!!!!!!!!!!!!!!!!!!\n");
 	printf("Do deloop\n");
 	for (iter=0; iter<3; iter++) {
 		nloops = deloop(iter);
@@ -3467,7 +3473,7 @@ int FixDiameters()
 {
 	EDGE *edge;
 	int ie, k, kp0, kp1, kp, npts, n0, n1, ipass, nzero, iv, err;
-	double d0, d1, diam, d2ave, dave, vsum, dmax, dmin;
+	double d0, d1, diam, d2ave, dave, vsum, dmax, dmin, d;
 	double len, len0, len1, lsum;
 	bool done;
 	double alpha = 0.3;
@@ -3658,17 +3664,35 @@ int FixDiameters()
 			if (!edge->used) continue;
 			n1++;
 			npts = edge->npts;
-			if (iv == edge->vert[0]) {
-				kp = edgeList[ie].pt[1];
-			} else if (iv == edge->vert[1]) {
-				kp = edgeList[ie].pt[npts-2];
+			if (npts == 2) {
+				double p0[3],p1[3],p2[3],r2_ave,r2_min;
+				bool zero;
+//				printf("FixDiameters: npts = 2\n");
+//				fprintf(fpout,"FixDiameters: npts = 2\n");
+				int kp0 = edgeList[ie].pt[0];
+				int kp2 = edgeList[ie].pt[npts-1];
+				for (int i=0; i<3; i++) {
+					p0[i] = vsize[i]*(voxel[kp0].pos[i] + 0.5);		// Note: centres of voxel cubes
+					p2[i] = vsize[i]*(voxel[kp2].pos[i] + 0.5);
+					p1[i] = 0.5*(p0[i] + p2[i]);
+				}
+				// This estimates the average and minimum diameter at the point p1, centreline p0 -> p2
+				EstimateDiameter(p0,p0,p2,&r2_ave,&r2_min,&zero);
+				d = 2*sqrt(r2_ave);
 			} else {
-				printf("Error: FixDiameters: iv: %d vert: %d %d\n",iv,edge->vert[0],edge->vert[1]);
-				return 1;
+				if (iv == edge->vert[0]) {
+					kp = edgeList[ie].pt[1];
+				} else if (iv == edge->vert[1]) {
+					kp = edgeList[ie].pt[npts-2];
+				} else {
+					printf("Error: FixDiameters: iv: %d vert: %d %d\n",iv,edge->vert[0],edge->vert[1]);
+					return 1;
+				}
+				d = avediameter[kp];
+				if (d < dmin) dmin = d;
+				if (d > dmax) dmax = d;
 			}
-			if (avediameter[kp] < dmin) dmin = avediameter[kp];
-			if (avediameter[kp] > dmax) dmax = avediameter[kp];
-			dave += avediameter[kp];
+			dave += d;
 		}
 		dave /= n1;
 //		if (dave == 0) continue;
@@ -3706,6 +3730,7 @@ int checkDiameter()
 	int v0[]={1332,744,57};
 	int v1[]={1330,744,57};
 	int v2[]={1334,744,57};
+	bool zero;
 
 	for (dx=-2; dx<=2; dx++) {
 		for (dy=-2; dy<=2; dy++) {
@@ -3724,13 +3749,36 @@ int checkDiameter()
 		p2[i] = vsize[i]*(v2[i] + 0.5);
 	}
 	// This estimates the average and minimum diameter at the point p1, centreline p0 -> p2
-	EstimateDiameter(p0,p1,p2,&r2_ave,&r2_min);
+	EstimateDiameter(p0,p1,p2,&r2_ave,&r2_min,&zero);
 	diam = 2*sqrt(r2_ave);
 	if (calib_param != 0) {
 		diam *= calib_param;
 	}
 	fprintf(fpout,"diam: %f\n",diam);
 	return 0;
+}
+
+//-----------------------------------------------------------------------------------------------------
+// To compare topo with topo2, trying to track down where the volume difference arises.
+// Show edges with diameters in a range.
+//-----------------------------------------------------------------------------------------------------
+void showEdges()
+{
+	fprintf(fpout,"showEdges: with segavediam in the range 14 - 15\n");
+	EDGE *pe;
+	for (int ie=0; ie<ne; ie++) {
+		pe = &edgeList[ie];
+		double ad = pe->segavediam;
+		if (ad > 14 && ad < 15) {
+			int iv0 = pe->vert[0];
+			int iv1 = pe->vert[1];
+			fprintf(fpout,"ie: %d vert: %d %d ad: %f\n",ie,iv0,iv1,ad);
+			VERTEX *pv0 = &vertex[iv0];
+			VERTEX *pv1 = &vertex[iv1];
+			fprintf(fpout,"pos: %d %d %d   %d %d %d\n",pv0->pos[0],pv0->pos[1],pv0->pos[2],
+				pv1->pos[0],pv1->pos[1],pv1->pos[2]);
+		}
+	}
 }
 
 //-----------------------------------------------------------------------------------------------------
@@ -3918,6 +3966,8 @@ int main(int argc, char**argv)
 	}
 	printf("did simplify\n");
 	fprintf(fpout,"did simplify\n");
+//	printf("DROP simplify for TESTING\n");
+//	fprintf(fpout,"DROP simplify for TESTING\n");
 
 	// Prune again
 	for (int i=0; i<n_prune_cycles; i++) {
@@ -3992,6 +4042,8 @@ int main(int argc, char**argv)
 		fclose(fperr);
 		return 9;
 	}
+
+//	showEdges();
 
 	if (squeeze) {
 		err = WriteCmguiData();
