@@ -28,84 +28,8 @@
 #define PI 3.14159
 #define NBOX 800
 
-bool FRC_fix = true;
+bool FRC_fix = false;
 bool METHOD2 = false;
-
-/*
-// If the number of neighbours is not 2, the voxel is a vertex.
-// nbrs = 1 => an unconnected vessel end
-// nbrs > 2 => a vertex with nbrs links
-struct voxel_str {
-	int pos[3];
-	int initial_pos[3];
-	int nbrs;
-	int nbr[MAXNBRS];
-	double diameter;
-//	int nid[MAXNBRS];
-//	int ivert;
-};
-typedef voxel_str VOXEL;
-
-
-struct vec_str
-{
-	int dx, dy, dz;
-};
-typedef vec_str VEC;
-
-struct vecset_str
-{
-	VEC vector[8];
-};
-typedef vecset_str VECSET;
-
-struct xyz_str
-{
-	double x, y, z;
-};
-typedef xyz_str XYZ;
-
-struct vertex_str
-{
-	int ivox;	// index into the voxel list voxel[]
-	int ivisit;	// index into the visit list visited[] (-1 if not visited yet)
-	int pos[3];
-	int nlinks;
-	int nlinks_used;
-	int nfollowed;
-	bool *followed;
-	int *edge;
-	int pt[10];
-	bool used;
-};
-typedef vertex_str VERTEX;
-
-struct edge_str
-{
-	int vert[2];
-	int npts;
-//	int npts_used;
-	int *pt;
-//	int *pt_used;
-	double segavediam;
-//	double segmindiam;
-	double length_um;	// voxel-voxel length
-//	bool used;
-//	bool ok;
-};
-typedef edge_str EDGE;
-
-struct loosend_str
-{
-	int iedge;			// edge
-	int iend;			// free end (0, 1)
-	double dir[3];
-	double len;
-	double dave;
-	int joined;
-};
-typedef loosend_str LOOSEND;
-*/
 
 struct xyz_str
 {
@@ -1680,64 +1604,111 @@ int vertexDensity2(int noffsets)
 {
 	int kv, kv0, x, y, z, n1, n2, nc, offset, ndropped, kmid, err;
 	int nx, ny, nz, ix, iy, iz, xx, yy, zz;
+	int nvt;
+	int nvt_max = 10000;
 	int *count;
 	int kvlist1[27], kvlist2[27];
 	int offsetx[4] = {0, 1, 0, 0};
 	int offsety[4] = {0, 0, 1, 0};
 	int offsetz[4] = {0, 0, 0, 1};
 	VOXEL *pv, *pv0;
+	bool random_vertex = false;
 
-	printf("\nvertexDensity2: noffsets: %d\n",noffsets);
-	fprintf(fpout,"\nvertexDensity2: noffsets: %d\n",noffsets);
-	nx = width/3-1;
-	ny = height/3-1;
-	nz = depth/3-1;
-	for (offset=0; offset<noffsets; offset++) {
-		printf("\noffset: %d\n",offset);
-		fprintf(fpout,"\noffset: %d\n",offset);
-	nc = 3*3*3;
-	count = (int *)malloc(nc*sizeof(int));
-	for (int i=0;i<nc;i++) 
-		count[i] = 0;
-	ndropped = 0;
-	for (ix=0;ix<nx;ix++) {
-		for (iy=0;iy<ny;iy++) {
-			for (iz=0;iz<nz;iz++) {
-				n1 = 0;
-				for (x=3*ix; x<3*(ix+1); x++) {
-					for (y=3*iy; y<3*(iy+1); y++) {
-						for (z=3*iz; z<3*(iz+1); z++) {
-							xx = x + offsetx[offset];
-							yy = y + offsety[offset];
-							zz = z + offsetz[offset];
-							kv = Vindex(xx,yy,zz);
-							if (kv == 0) continue;
-							pv = &Vlist[kv];
-							if (pv->nbrs > 0) {		// try adding all lit voxels to the list.  Need to use nbrs to avoid vertices dropped in coalesce
-								kvlist1[n1] = kv;
-								n1++;
-							}
+	if (random_vertex) {	// randomly select a vertices as foci for coalescence - doesn't work well, creates short segments
+		printf("\nvertexDensity2: random vertex selection: nvt_max: %d\n",nvt_max);
+		nc = 3*3*3;
+		count = (int *)malloc(nc*sizeof(int));
+		for (int i=0;i<nc;i++) count[i] = 0;
+		ndropped = 0;
+		nvt = 0;
+		for (;;) {
+			if (nvt > nvt_max) break;
+			double R = (double)rand() / (double)(RAND_MAX+1);
+			kv0 = R*nlit;
+			pv = &Vlist[kv0];
+			if (pv->nbrs != 3) continue;
+			nvt++;
+			ix = pv->pos[0];
+			iy = pv->pos[1];
+			iz = pv->pos[2];
+			n1 = 0;
+			for (x=MAX(ix-1,0); x <= MIN(width-1,ix+1); x++) {
+				for (y=MAX(iy-1,0); y <= MIN(height-1,iy+1); y++) {
+					for (z=MAX(iz-1,0); z <= MIN(depth-1,iz+1); z++) {
+						kv = Vindex(x,y,z);
+						if (kv == 0) continue;
+						pv = &Vlist[kv];
+						if (pv->nbrs > 0) {		// try adding all lit voxels to the list.  Need to use nbrs to avoid vertices dropped in coalesce
+							kvlist1[n1] = kv;
+							n1++;
 						}
 					}
 				}
-				count[n1]++;
-				//if (n1 == 8) {
-				//	fprintf(fpout,"big count: %d  ix,iy,iz: %d %d %d\n",n1,ix,iy,iz);
-				//}
-				// At this point, we know that there are n lit voxels in the 3x3x3 cube, with indices stored in kvlist[]
-				if (n1 > 1) {
-					// Need to select those that are connected, and the collapse voxel location
-					group(kvlist1,n1,kvlist2,&n2);
-					selectMidVoxel(kvlist2,n2,&kmid);
-					err = coalesce(kvlist2,n2,kmid);
-					if (err != 0) return 1;
-					ndropped += n2-1;
+			}
+			count[n1]++;
+			if (n1 > 1) {
+				// Need to select those that are connected, and the collapse voxel location
+				group(kvlist1,n1,kvlist2,&n2);
+				selectMidVoxel(kvlist2,n2,&kmid);
+				err = coalesce(kvlist2,n2,kmid);
+				if (err != 0) return 1;
+				ndropped += n2-1;
+			}
+		}
+		free(count);
+		printf("Dropped points: %d\n",ndropped);
+	} else {
+		printf("\nvertexDensity2: noffsets: %d\n",noffsets);
+		fprintf(fpout,"\nvertexDensity2: noffsets: %d\n",noffsets);
+		nx = width/3-1;
+		ny = height/3-1;
+		nz = depth/3-1;
+		for (offset=0; offset<noffsets; offset++) {
+			printf("\noffset: %d\n",offset);
+			fprintf(fpout,"\noffset: %d\n",offset);
+			nc = 3*3*3;
+			count = (int *)malloc(nc*sizeof(int));
+			for (int i=0;i<nc;i++) count[i] = 0;
+			ndropped = 0;
+			for (ix=0;ix<nx;ix++) {
+				for (iy=0;iy<ny;iy++) {
+					for (iz=0;iz<nz;iz++) {
+						n1 = 0;
+						for (x=3*ix; x<3*(ix+1); x++) {
+							for (y=3*iy; y<3*(iy+1); y++) {
+								for (z=3*iz; z<3*(iz+1); z++) {
+									xx = x + offsetx[offset];
+									yy = y + offsety[offset];
+									zz = z + offsetz[offset];
+									kv = Vindex(xx,yy,zz);
+									if (kv == 0) continue;
+									pv = &Vlist[kv];
+									if (pv->nbrs > 0) {		// try adding all lit voxels to the list.  Need to use nbrs to avoid vertices dropped in coalesce
+										kvlist1[n1] = kv;
+										n1++;
+									}
+								}
+							}
+						}
+						count[n1]++;
+						//if (n1 == 8) {
+						//	fprintf(fpout,"big count: %d  ix,iy,iz: %d %d %d\n",n1,ix,iy,iz);
+						//}
+						// At this point, we know that there are n lit voxels in the 3x3x3 cube, with indices stored in kvlist[]
+						if (n1 > 1) {
+							// Need to select those that are connected, and the collapse voxel location
+							group(kvlist1,n1,kvlist2,&n2);
+							selectMidVoxel(kvlist2,n2,&kmid);
+							err = coalesce(kvlist2,n2,kmid);
+							if (err != 0) return 1;
+							ndropped += n2-1;
+						}
+					}
 				}
 			}
 		}
-	}
-	free(count);
-	printf("Dropped points: %d\n",ndropped);
+		free(count);
+		printf("Dropped points: %d\n",ndropped);
 	}	// end of offset loop
 	return 0;
 }
@@ -2673,17 +2644,6 @@ int main(int argc, char**argv)
 	} else {
 		printf("Wrote AMIRA file\n");
 	}
-
-	/*
-	count = 0;
-	for (long long i=0; i<width*height*depth; i++) {
-		if (p[i] > 0) count++;
-	}
-	volume = count*vsize[0]*vsize[1]*vsize[2];
-
-	fprintf(fpout,"lit voxel count: %d\n",count);
-	}
-	*/
 
 	if (use_pt_diameters) 
 		err = CreateDistributions_topo();		// scaling for voxelsize now done in the distance calculations
