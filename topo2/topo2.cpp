@@ -815,9 +815,11 @@ int getDiameters_topo(void)
 		avediameter[k] = 0;
 //		Vlist[k].diameter = 0;
 	}
+	ne_used = 0;
 	for (ie=0;ie<ne;ie++) {
 		edge = &edgeList[ie];
 		if (!edge->used) continue;
+		ne_used++;
 		npts = edge->npts;
 		for (k=1;k<npts-1;k++) {
 			kp0 = edge->pt[k-1];
