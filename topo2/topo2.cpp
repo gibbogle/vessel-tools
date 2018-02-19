@@ -2628,6 +2628,20 @@ int main(int argc, char**argv)
 	}
 	printf("Number of skeleton voxels used: %d\n",nused);
 
+	if (use_pt_diameters) 
+		err = CreateDistributions_topo();		// scaling for voxelsize now done in the distance calculations
+	else
+		err = CreateDistributions();		// scaling for voxelsize now done in the distance calculations
+	if (err != 0) {
+		printf("Error: CreateDistributions\n");
+		fprintf(fperr,"Error: CreateDistributions\n");
+		fclose(fperr);
+		return 12;
+	} else {
+		printf("Created distributions of length and diameter\n");
+	}
+
+
 	if (cmgui_flag == 1) {
 		err = WriteCmguiData(output_basename,net,origin_shift);
 		if (err != 0) {
@@ -2647,6 +2661,7 @@ int main(int argc, char**argv)
 		printf("Wrote AMIRA file\n");
 	}
 
+/* Moved above
 	if (use_pt_diameters) 
 		err = CreateDistributions_topo();		// scaling for voxelsize now done in the distance calculations
 	else
@@ -2659,6 +2674,7 @@ int main(int argc, char**argv)
 	} else {
 		printf("Created distributions of length and diameter\n");
 	}
+*/
 
 //	showEdges();
 
