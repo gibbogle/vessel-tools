@@ -19,7 +19,7 @@
 int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[]);
 
 #define STR_LEN 128
-#define MAX_LINKS 8
+#define MAX_LINKS 15
 #define NB 10
 #define NX NB
 #define NY NB
@@ -274,7 +274,10 @@ int CreateDistributions(NETWORK *net)
 	fprintf(fpout,"   um    number  fraction\n");
 	for (k=0; k<nlpts; k++) {
 		fprintf(fpout,"%6.2f %8d %9.5f\n",k*dlen,lvbox[k],lvbox[k]/ltot);
+		fflush(fpout);
 	}
+	fprintf(fpout,"Computed distributions\n");
+	fflush(fpout);
 	return 0;
 } 
 
@@ -866,6 +869,8 @@ void makeFibreList(NETWORK *net)
 	float Angbin[NANGS], dang;
 	int nvbin, nangbin;
 
+//	fprintf(fpout,"makeFibreList\n");
+	fflush(fpout);
 	dang = 180./NANGS;
 	make26directions();
 	nfibres = net->ne;
@@ -934,9 +939,10 @@ void makeFibreList(NETWORK *net)
 	DY = (ymax-ymin)/NY+1;
 	DZ = (zmax-zmin)/NZ+1;
 
-	printf("X: %f %f  DX: %f\n",xmin,xmax,DX);
-	printf("Y: %f %f  DY: %f\n",ymin,ymax,DY);
-	printf("Z: %f %f  DZ: %f\n",zmin,zmax,DZ);
+	fprintf(fpout,"X: %f %f  DX: %f\n",xmin,xmax,DX);
+	fprintf(fpout,"Y: %f %f  DY: %f\n",ymin,ymax,DY);
+	fprintf(fpout,"Z: %f %f  DZ: %f\n",zmin,zmax,DZ);
+	fflush(fpout);
 
 	MAXBLOCK = (50*nfibres)/(NX*NY*NZ*2);
 	printf("MAXBLOCK: %d\n",MAXBLOCK);
@@ -965,12 +971,14 @@ void makeFibreList(NETWORK *net)
 		fprintf(fpout,"%4.1f %10.4f %10.4f %10.4f\n",i*deltaL,Lbin[i]/nfibres,Lbin_scaled[i]/nfibres,Lbin_limit[i]/nf_limit);
 	}
 	*/
-	fflush(fpout);
 
 	// This code is to determine, for each fibre, for each end, the list of connected fibres.
 	nvbin = 0;
 	for (k=0; k<nfibres; k++) {
-		if (k%10000 == 0) printf("fibre: %d\n",k);
+//		if (k%10000 == 0) {
+//			fprintf(fpout,"fibre: %d\n",k);
+//			fflush(fpout);
+//		}
 		kv[0] = fibre[k].kv[0];
 		nlinks[0] = 0;
 		kv[1] = fibre[k].kv[1];
@@ -990,8 +998,9 @@ void makeFibreList(NETWORK *net)
 				fibre[k].link[0][nlinks[0]] = kk;
 				nlinks[0]++;
 				if (nlinks[0] > MAX_LINKS) {
-					printf("Error: nlinks[0]: %d\n",nlinks[0]);
-					exit(1);
+					fprintf(fpout,"Error: nlinks[0]: %d\n",nlinks[0]);
+					fflush(fpout);
+					exit(10);
 				}
 			}
 		}
@@ -1009,8 +1018,9 @@ void makeFibreList(NETWORK *net)
 				fibre[k].link[1][nlinks[1]] = kk;
 				nlinks[1]++;
 				if (nlinks[1] > MAX_LINKS) {
-					printf("Error: nlinks[1]: %d\n",nlinks[1]);
-					exit(1);
+					fprintf(fpout,"Error: nlinks[1]: %d\n",nlinks[1]);
+					fflush(fpout);
+					exit(10);
 				}
 			}
 		}
@@ -1025,6 +1035,8 @@ void makeFibreList(NETWORK *net)
 			NBbin[nlinks[1]+1]++;
 		}
 	}
+//	fprintf(fpout,"completed connected fibres\n");
+//	fflush(fpout);
 
 /*
 	nvbin = 0;
@@ -1939,9 +1951,10 @@ int main(int argc, char **argv)
 	if (err != 0) return 4;
 
 	makeFibreList(NP0);
-	printf("did makeFibreList\n");
+	fprintf(fpout,"did makeFibreList\n");
 	ndead = NumberOfDeadends(NP0);
 	fprintf(fpout,"Number of fibres, deadends in the network: %d  %d\n",nfibres,ndead);
+	fflush(fpout);
 
 	if (do_connect) {
 		char add_str[13];
