@@ -96,11 +96,10 @@ int jumpy = 0;
 
 using namespace std;
 
-//std::seed_seq seq;
-//std::mt19937 gen(seq);
 seed_seq seq;
 mt19937 gen(seq);
 
+uniform_real_distribution<double> uni_dist( 0.0, 1.0 ) ;
 
 //-----------------------------------------------------------------------------------------------------
 // This assumes that edge dimensions (average diameter and length) have already been computed.
@@ -1238,8 +1237,9 @@ int next_fibre(int ifib1, int *jdir)
 		psum += p[ilink];
 	}
 //	std::uniform_int_distribution<double> dist( 0, psum ) ;
-	uniform_real_distribution<double> dist( 0, psum ) ;
-	double R = dist(gen);
+//	uniform_real_distribution<double> dist( 0, psum ) ;
+	double R = uni_dist(gen);
+	R *= psum;
 	psum = 0;
 	for (ilink=0; ilink<nlinks; ilink++) {
 		psum += p[ilink];
@@ -1360,7 +1360,6 @@ void traverse(NETWORK *net, int nsteps, double *tpt, double *res_d2sum, double *
     normal_distribution<double> norm_dist( 0.0, 1.0 ) ;
 	
 //	std::uniform_real_distribution<double> uni_dist( 0.0, 1.0 ) ;
-	uniform_real_distribution<double> uni_dist( 0.0, 1.0 ) ;
 	double d, d2sum=0;
 	int np = 0;
 	for (k=0; k<1000000; k++) {
