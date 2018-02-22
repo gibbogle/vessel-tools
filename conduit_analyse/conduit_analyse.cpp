@@ -19,7 +19,7 @@
 int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[]);
 
 #define STR_LEN 128
-#define MAX_LINKS 15
+#define MAX_LINKS 16
 #define NB 10
 #define NX NB
 #define NY NB
@@ -865,7 +865,7 @@ void makeFibreList(NETWORK *net)
 	float L_actual_sum=0, L_direct_sum=0;
 	float deltaL = 1.0;
 	float v[3], dotsum[26];
-	float Lmin, Lmax, Lsum, Lbin[NBINS+1], NBbin[10], Lbin_scaled[NBINS+1], Lbin_limit[NBINS+1];
+	float Lmin, Lmax, Lsum, Lbin[NBINS+1], NBbin[MAX_LINKS], Lbin_scaled[NBINS+1], Lbin_limit[NBINS+1];
 	float Angbin[NANGS], dang;
 	int nvbin, nangbin;
 
@@ -1168,9 +1168,9 @@ void makeFibreList(NETWORK *net)
 	fprintf(fpout,"\nNumber of vertices: %d\n",nvbin/2);
 	fprintf(fpout,"Length of fibre/vertex: %f\n",Lsum/net->nv);
 	fprintf(fpout,"Distribution of fibres/vertex:\n");
-	for (i=0; i<10; i++) {
+	for (i=0; i<MAX_LINKS; i++) {
 		printf("%2d %8.5f\n",i,float(NBbin[i])/nvbin);
-		fprintf(fpout,"%2d %8.5f\n",i,float(NBbin[i])/nvbin);
+		fprintf(fpout,"%2d %12.4e\n",i,float(NBbin[i])/nvbin);
 	}
 
 	// Now set up near fibres
