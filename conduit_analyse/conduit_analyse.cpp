@@ -846,7 +846,10 @@ void setupBlockLists(NETWORK *net)
 	if (maxcount > MAXBLOCK) {
 		printf("Error: MAXBLOCK exceeded\n");
 		printf("MAXBLOCK: %d\n",MAXBLOCK);
-		exit(1);
+		fprintf(fpout,"Error: MAXBLOCK exceeded\n");
+		fprintf(fpout,"MAXBLOCK: %d\n",MAXBLOCK);
+		fflush(fpout);
+		exit(5);
 	}
 }
 
@@ -870,7 +873,7 @@ void makeFibreList(NETWORK *net)
 	int nvbin, nangbin;
 
 //	fprintf(fpout,"makeFibreList\n");
-	fflush(fpout);
+//	fflush(fpout);
 	dang = 180./NANGS;
 	make26directions();
 	nfibres = net->ne;
@@ -939,15 +942,19 @@ void makeFibreList(NETWORK *net)
 	DY = (ymax-ymin)/NY+1;
 	DZ = (zmax-zmin)/NZ+1;
 
-	fprintf(fpout,"X: %f %f  DX: %f\n",xmin,xmax,DX);
-	fprintf(fpout,"Y: %f %f  DY: %f\n",ymin,ymax,DY);
-	fprintf(fpout,"Z: %f %f  DZ: %f\n",zmin,zmax,DZ);
+	fprintf(fpout,"\nDimension ranges and grid spacings\n");
+	fprintf(fpout,"X: %f %f  NX: %d DX: %f\n",xmin,xmax,NX,DX);
+	fprintf(fpout,"Y: %f %f  NY: %d DY: %f\n",ymin,ymax,NY,DY);
+	fprintf(fpout,"Z: %f %f  NZ: %d DZ: %f\n",zmin,zmax,NZ,DZ);
 	fflush(fpout);
 
 	MAXBLOCK = (50*nfibres)/(NX*NY*NZ*2);
+	MAXBLOCK = max(MAXBLOCK,200);
 	printf("MAXBLOCK: %d\n",MAXBLOCK);
 	blocks = (int *)malloc(NX*NY*NZ*2*MAXBLOCK*sizeof(int));
 	setupBlockLists(net);
+//	fprintf(fpout,"did setupBlockLists\n");
+//	fflush(fpout);
 
 	printf("\nShrinkage compensation factor: %6.2f\n\n",shrink_factor);
 	printf("Average L_actual: %6.2f  scaled: %6.2f\n",L_actual_sum/nfibres,shrink_factor*L_actual_sum/nfibres);
@@ -1095,7 +1102,8 @@ void makeFibreList(NETWORK *net)
 	}
 
 */
-	printf("set up nlinks\n");
+//	fprintf(fpout,"set up nlinks\n");
+//	fflush(fpout);
 
 	if (centre.x==0 || centre.y==0 || centre.z==0) {
 		// Get centre
@@ -1196,6 +1204,8 @@ void makeFibreList(NETWORK *net)
 			double d = distance(net, k1, k2);
 		}
 	}
+//	fprintf(fpout,"did makeFibreList\n");
+//	fflush(fpout);
 	return;
 }
 
@@ -1830,7 +1840,7 @@ int main(int argc, char **argv)
 		printf("       ddiam       = bin size for diameter distribution\n");
 		printf("       dlen        = bin size for length distribution\n");
 		printf("\n");
-		fpout = fopen("conduit_analyse_error.log","w");
+		fpout = fopen("\conduit_analyse_error.log","w");
 		fprintf(fpout,"To perform joining and trimming of dead ends:\n");
 		fprintf(fpout,"Usage: conduit_analyse input_amfile output_file sfactor max_len\n");
 		fprintf(fpout,"       sfactor     = shrinkage compensation factor e.g. 1.25\n");
@@ -1951,7 +1961,6 @@ int main(int argc, char **argv)
 	if (err != 0) return 4;
 
 	makeFibreList(NP0);
-	fprintf(fpout,"did makeFibreList\n");
 	ndead = NumberOfDeadends(NP0);
 	fprintf(fpout,"Number of fibres, deadends in the network: %d  %d\n",nfibres,ndead);
 	fflush(fpout);

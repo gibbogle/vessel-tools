@@ -129,7 +129,8 @@ int MainWindow::blocker(QString numstr)
     qstr = QCoreApplication::applicationDirPath() + "/exec/am_block ";
     qstr += inputFileName;
     qstr += " ";
-    qstr += "subregion_" + numstr + ".am";
+//    qstr += "subregion_" + numstr + ".am";
+    qstr += subregionFileName;
 
     qstr += " ";
     qstr += x0_str;
@@ -391,7 +392,8 @@ void MainWindow::batch_analyser()
                 outfile_str = outputBaseFileName + "_sub_";
 
                 // Crop the full network to give a spherical subregion network
-                subregionFileName = "subregion_" + numstr + ".am";
+//                subregionFileName = "subregion_" + numstr + ".am";
+                subregionFileName = outfile_str + numstr + ".am";
                 int res = blocker(numstr);
                 if (res != 0) return;
             }
