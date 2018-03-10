@@ -1,0 +1,5 @@
+@echo off
+set QTDIR="C:\Qt64\4.8.1"
+set QMAKESPEC="win32-msvc2010"
+set PATH=%PATH%;"C:\Qt64\4.8.1\bin"
+echo Successfully set all Qt Env variables.
