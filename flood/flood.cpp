@@ -4,7 +4,7 @@
 
 #include <cstdio>
 #include <vector>
-
+/*
 #include <algorithm>
 #include <math.h>
 #include <string.h>
@@ -12,7 +12,7 @@
 #include <sstream>
 #include <assert.h>
 #include <ctime>
-
+*/
 #include "itkImage.h"
 #include "itkImageFileReader.h"
 #include "itkImageFileWriter.h"
@@ -153,6 +153,9 @@ int main(int argc, char**argv)
 		printf("Usage: fill input_tiff filled_tiff seedfile\n");
 		return 0;
 	}
+
+	printf("This program is currently using hard-coded seed locations\n");
+	return 1;
 
 	printf("Input image stack file: %s\n",argv[1]);
 	printf("Output image stack file: %s\n",argv[2]);

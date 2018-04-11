@@ -1,0 +1,13 @@
+Converter_16-8bit information
+
+This program converts a 16-bit grayscale 3D TIFF image to 8-bit.
+
+Data in the 16-bit file is stored in Nb bits, where Nb <= 16
+
+A 16-bit value val16 is converted to 8-bit thus: val8 = val16*255/vmax16,
+where vmax16 = 2^Nb - 1
+
+After conversion, 8-bit values less than the threshold value are set to 0
+(this is to clean up the background, if required)
+
+

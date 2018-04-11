@@ -4,7 +4,7 @@
 
 #include <cstdio>
 #include <vector>
-
+/*
 #include <algorithm>
 #include <math.h>
 #include <string.h>
@@ -12,7 +12,7 @@
 #include <sstream>
 #include <assert.h>
 #include <ctime>
-
+*/
 #include "itkImage.h"
 #include "itkImageFileReader.h"
 #include "itkImageFileWriter.h"

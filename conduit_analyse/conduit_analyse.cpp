@@ -827,15 +827,18 @@ void setupBlockLists(NETWORK *net)
 		B(counter[ix][iy][iz],1,ix,iy,iz) = 1;	// end 2
 		counter[ix][iy][iz]++;
 	}
+	fprintf(fpout,"setupBlockLists\n");
 	int maxcount = 0;
 	for (ix=0;ix<NX;ix++) {
 		for (iy=0;iy<NY;iy++) {
 			for (iz=0;iz<NZ;iz++) {
+//				fprintf(fpout,"ix,iy,iz,counter: %3d %3d %3d %6d\n",ix,iy,iz,counter[ix][iy][iz]);
 				maxcount = MAX(maxcount,counter[ix][iy][iz]);
 			}
 		}
 	}
 	printf("Max block count: %d\n",maxcount);
+	fprintf(fpout,"Max block count: %d\n",maxcount);
 	//for (ix=0;ix<NX;ix++) {
 	//	for (iy=0;iy<NY;iy++) {
 	//		for (iz=0;iz<NZ;iz++) {
@@ -886,7 +889,7 @@ void makeFibreList(NETWORK *net)
 		Lbin_scaled[i] = 0;
 		Lbin_limit[i] = 0;
 	}
-	for (i=0; i<10; i++)
+	for (i=0; i<MAX_LINKS; i++)
 		NBbin[i] = 0;
 	
 	fibre = (FIBRE *)malloc(nfibres*sizeof(FIBRE));
@@ -1177,7 +1180,7 @@ void makeFibreList(NETWORK *net)
 	fprintf(fpout,"Length of fibre/vertex: %f\n",Lsum/net->nv);
 	fprintf(fpout,"Distribution of fibres/vertex:\n");
 	for (i=0; i<MAX_LINKS; i++) {
-		printf("%2d %8.5f\n",i,float(NBbin[i])/nvbin);
+		printf("%2d %d %8.5f\n",i,NBbin[i],float(NBbin[i])/nvbin);
 		fprintf(fpout,"%2d %12.4e\n",i,float(NBbin[i])/nvbin);
 	}
 
@@ -1207,6 +1210,32 @@ void makeFibreList(NETWORK *net)
 //	fprintf(fpout,"did makeFibreList\n");
 //	fflush(fpout);
 	return;
+}
+
+//-----------------------------------------------------------------------------------------------------
+// Determine possible fibre-fibre jumps
+//-----------------------------------------------------------------------------------------------------
+int SetupJumps(NETWORK *net)
+{
+	int kv[2];
+	for (int k=0; k<nfibres; k++) {
+		if (k%10000 == 0) printf("fibre: %d\n",k);
+		kv[0] = fibre[k].kv[0];
+		kv[1] = fibre[k].kv[1];
+		// Look at end 1 first
+		int kend = 0;
+		int k1 = fibre[k].pt[kend];
+		POINT p1 = net->point[k1];
+		int ix = (p1.x - xmin)/DX;
+		int iy = (p1.y - ymin)/DY;
+		int iz = (p1.z - zmin)/DZ;
+		// Look at all fibre ends in this block
+		for (int j=0; j<counter[ix][iy][iz]; j++) {
+			int kk = B(j,0,ix,iy,iz);
+			if (kk == k) continue;
+		}
+	}
+	return 0;
 }
 
 //-----------------------------------------------------------------------------------------------------
@@ -1561,11 +1590,11 @@ void connect(NETWORK *NP1)
 	for (i=0; i<nfibres_temp; i++) {
 		nd = 0;
 		for (k=0; k<2; k++) {
-			if (fibre[i].nlinks[k] == 0) {
-				k1 = fibre[i].pt[0];
-				k2 = fibre[i].pt[1];
-				len = distance(NP1, k1, k2);
-				//if (len <= min_len) {	// Here short deadends were dropped, now they are left to make possible connections
+			if (fibre[i].nlinks[k] == 0) {		// no connected fibres at this end k
+				k1 = fibre[i].pt[0];			// index of end point of one vertex of the fibre
+				k2 = fibre[i].pt[1];			// index of end point of other vertex of the fibre
+				len = distance(NP1, k1, k2);	// distance between vertices
+				//if (len <= min_len) {		// Here short deadends were dropped, but this makes a bad .am file
 				//	NP1->edgeList[i].used = false;
 				//	nshort++;
 				//	nd = 0;
@@ -1575,26 +1604,41 @@ void connect(NETWORK *NP1)
 				nd++;
 			}
 		}
-		if (nd == 0) continue;
+		if (nd == 0) continue;	// not a deadend
 
 		if (!do_join) continue;
 
 		joined = false;
-		for (kdead=0; kdead<nd; kdead++) {
+		for (kdead=0; kdead<nd; kdead++) {		// Probably nd always = 1, kdead = 0, unless there are fibres disconnected at both ends
 			ntdead++;
-			kv1 = fibre[i].kv[deadend[kdead]];
-			pt1 = fibre[i].pt[deadend[kdead]];
-			if (deadend[kdead] == 0) {
-				kv0 = fibre[i].kv[1];
-				pt0 = fibre[i].pt[1];
-			} else {
-				kv0 = fibre[i].kv[0];
-				pt0 = fibre[i].pt[0];
-			}
+			kv1 = fibre[i].kv[deadend[kdead]];		// vertex index of the deadend vertex
+			pt1 = fibre[i].pt[deadend[kdead]];		// this is the pt index of the deadend vertex
+			//if (deadend[kdead] == 0) {
+			//	kv0 = fibre[i].kv[1];				// vertex index of the other vertex, used to get p0 and then v[]
+			//	pt0 = fibre[i].pt[1];				// this is the pt index of the other vertex (NOT USED)
+			//} else {
+			//	kv0 = fibre[i].kv[0];
+			//	pt0 = fibre[i].pt[0];				// ditto (NOT USED)
+			//}
+			//p0 = NP1->vertex[kv0].point;
+			int npts = NP1->edgeList[i].npts;
 			if (ntdead%100 == 0)
-				printf("fibre: %d nlinks: %d %d  kv0, kv1: %d %d  ntdead: %d\n",i,fibre[i].nlinks[0],fibre[i].nlinks[1],kv0,kv1,ntdead);
-			p0 = NP1->vertex[kv0].point;
+				printf("fibre: %d npts: %d len: %4.1f nlinks: %d %d  kv0, kv1: %d %d  ntdead: %d\n",i,npts,len,fibre[i].nlinks[0],fibre[i].nlinks[1],kv0,kv1,ntdead);
+			// To estimate v[], unit vector in the direction of the deadend fibre, now use pts separated by 2 pts, if possible
+			if (deadend[kdead] == 0) {
+				if (npts >= 4)
+					pt0 = NP1->edgeList[i].pt[3];
+				else
+					pt0 = NP1->edgeList[i].pt[npts-1];
+			} else {
+				if (npts >= 4)
+					pt0 = NP1->edgeList[i].pt[npts-4];
+				else
+					pt0 = NP1->edgeList[i].pt[0];
+			}
+			p0 = NP1->point[pt0];
 			p1 = NP1->vertex[kv1].point;
+			// Checked that this is the same as using pt0, pt1.  No need for kv0
 			v[0] = p1.x - p0.x;
 			v[1] = p1.y - p0.y;
 			v[2] = p1.z - p0.z;
@@ -1610,6 +1654,7 @@ void connect(NETWORK *NP1)
 	//		printf("normalised v: %f %f %f\n",v[0],v[1],v[2]);
 			kmax = -1;
 			valuemax = 0;
+			double dwmax, cosamax;
 			for (kv=0; kv<NP1->nv; kv++) {
 				if (kv == kv1) continue;
 				q = NP1->vertex[kv].point;
@@ -1621,7 +1666,7 @@ void connect(NETWORK *NP1)
 					dw += w[k]*w[k];
 				}
 				dw = sqrt(dw);	// distance to the vertex
-				if (dw > max_len) continue;
+				if (dw > max_len) continue;		// no added fibres longer than max_len
 				cosa = 0;
 				for (k=0; k<3; k++) {
 					cosa += v[k]*w[k];
@@ -1629,15 +1674,22 @@ void connect(NETWORK *NP1)
 				if (cosa < 0) continue;
 				cosa /= dw;
 				value = (a + cosa)/dw;
-				if (value > valuemax) {
+				// value = (0.5 + cos(theta))/dw
+				// where theta = angle between v[] and w[], dw = length of w[]
+				// 
+				double valuethreshold = 0.1;
+				if (value > valuemax && value > valuethreshold) {
 					kmax = kv;
 					valuemax = value;
+					dwmax = dw;
+					cosamax = cosa;
 	//				printf("\ncosa,d,valuemax: %f %f %f\n",cosa,dw,valuemax);
 				}
 			}
 			if (kmax < 0) {
 //				printf("No suitable vertex for: %d\n",kv1);
 			} else {
+//				fprintf(fpout,"adding fibre to deadend: dw: %4.1f cosa: %5.3f valuemax: %f\n",dwmax,cosamax,valuemax);
 				joined = true;
 				join[njoins].kv[0] = kv1;
 				join[njoins].kv[1] = kmax;
@@ -1981,6 +2033,19 @@ int main(int argc, char **argv)
 		fprintf(fpout,"\noutput_amfile: %s\n",output_amfile);
 		err = WriteAmiraFile(output_amfile,input_amfile,NP0,origin_shift);
 		if (err != 0) return 3;
+
+		fprintf(fpout,"/nRecompute distributions with connected network\n");
+		for (int i=0;i<NP0->ne;i++) {
+			EDGE edge = NP0->edgeList[i];
+			double dave = 0;
+			for (int k=0;k<edge.npts;k++) {
+				int j = edge.pt[k];
+				dave += NP0->point[j].d;
+				NP0->edgeList[i].segavediam = dave/edge.npts;
+			}
+		}
+		err = CreateDistributions(NP0);
+		if (err != 0) return 4;
 		return 0;
 	}
 
@@ -1997,6 +2062,9 @@ int main(int argc, char **argv)
 	fprintf(fpout,"npow: %d\n",npow);
 	fprintf(fpout,"mean speed: %6.1f CV: %6.2f\n",mean_speed,CV); 
 
+	int nruns = 1;
+	for (int irun=0; irun<nruns; irun++) {
+		fprintf(fpout,"\n");
 	ndead = 0;
 	traverse(NP0,1000,tpt,res_d2sum,Cm);
 	printf("# of deadends encountered: %d\n",ndead);
@@ -2008,6 +2076,7 @@ int main(int argc, char **argv)
 		Cm1 = d2ave/(6*tpt[itpt]);		// this is with fixed time - actual t is used, not tmax
 		printf("t: %6.1f d2: %9.1f Cm: %6.2f\n",tpt[itpt],d2ave,Cm1);
 		fprintf(fpout,"t: %6.1f d2: %9.1f Cm: %6.2f\n",tpt[itpt],d2ave,Cm1);		// dropped Cm[itpt] - no difference now
+	}
 	}
 	if (save_paths) {
 //		fpout = fopen("path.dat","w");

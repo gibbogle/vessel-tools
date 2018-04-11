@@ -4,7 +4,7 @@
 
 #include <cstdio>
 #include <vector>
-
+/*
 #include <algorithm>
 #include <math.h>
 #include <string.h>
@@ -12,16 +12,17 @@
 #include <sstream>
 #include <assert.h>
 #include <ctime>
-
+*/
 #include "itkImage.h"
 #include "itkImageFileReader.h"
 #include "itkImageFileWriter.h"
-#include <itkDanielssonDistanceMapImageFilter.h>
 #include "itkSize.h"
+/*
+#include <itkDanielssonDistanceMapImageFilter.h>
 #include "itkThresholdImageFilter.h"
 #include "itkBinaryThresholdImageFilter.h"
 #include "itkMeanImageFilter.h"
-
+*/
 typedef itk::Image<unsigned char,3> ImageType;
 ImageType::Pointer im;
 int width, height, depth;
