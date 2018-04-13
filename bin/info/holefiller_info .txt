@@ -1,5 +1,0 @@
-Holefiller information
-
-This program fills small holes in the segmented vessel image that were left by the filler program.
-The ITK BinaryFillholeImageFilter fills holes that are not connected to the boundary of the image.
-

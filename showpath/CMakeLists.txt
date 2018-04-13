@@ -5,6 +5,8 @@ PROJECT(showpath)
 find_package(VTK REQUIRED)
 include(${VTK_USE_FILE})
 
+
+set(PROJECTNAME "showpath")
 ADD_EXECUTABLE(showpath showpath.cxx)
 
 if(VTK_LIBRARIES)
