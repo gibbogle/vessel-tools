@@ -12,7 +12,7 @@
 #define V3D(a,b,c)  p[(c)*imsize_xy+(b)*width+(a)]
 long long int width, height, depth, imsize_xy;
 unsigned char *p;
-#define MAXSIMPLE 10000000
+#define MAXSIMPLE 100000000
 short simpleList[3][MAXSIMPLE];
 int nsimple;
 

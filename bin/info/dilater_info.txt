@@ -1,0 +1,7 @@
+Info for dilater
+---------------
+
+This program dilates a 3D binary tiff image (input file).
+
+The dilating method uses a rolling ball, moving along the image boundary on the outside of the lit object.
+(The output tiff file is always compressed)
