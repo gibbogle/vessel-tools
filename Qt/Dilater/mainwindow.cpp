@@ -59,6 +59,8 @@ void MainWindow::dilater()
 	qstr += inputFileName;
 	qstr += " ";
     qstr += outputTiffFileName;
+    qstr += " ";
+    qstr += ui->lineEdit_ballradius->text();
 
 	if (qstr.size()>(int)sizeof(cmdstr)-1) {
 		printf("Failed to convert qstr->cmdstr since qstr didn't fit\n");

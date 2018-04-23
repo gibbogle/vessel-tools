@@ -52,17 +52,20 @@ int main(int argc, char**argv)
 {
 	int width, height, depth, xysize, err;
 	char *inputFile, *outputFile;
+	float ball_radius;
 	bool compressdata = true;
 
-	if (argc != 3) {
-		printf("Usage: dilate input_tiff output_tiff\n");
+	if (argc != 4) {
+		printf("Usage: dilate input_tiff output_tiff ball_radius\n");
 		return 0;
 	}
 	inputFile = argv[1];
 	outputFile = argv[2];
+	sscanf(argv[3],"%f",&ball_radius);
 	compressdata = true;
 	printf("Input image file: %s\n",inputFile);
 	printf("Output image file: %s\n",outputFile);
+	printf("Ball radius: %f\n",ball_radius);
 
 	typedef itk::ImageFileReader<ImageType> FileReaderType;
 	FileReaderType::Pointer reader = FileReaderType::New();
@@ -86,10 +89,10 @@ int main(int argc, char**argv)
 	xysize = width*height;
 	printf("Image dimensions: width, height, depth: %d %d %d\n",width,height,depth);
 
-	const unsigned int radiusValue = 2;
+//	const unsigned int radiusValue = 2;
 	typedef itk::FlatStructuringElement< 3 > StructuringElementType;
 	StructuringElementType::RadiusType radius;
-	radius.Fill( radiusValue );
+	radius.Fill( ball_radius );
 	StructuringElementType structuringElement = StructuringElementType::Ball( radius );
 
 	typedef itk::BinaryDilateImageFilter< ImageType, ImageType, StructuringElementType > BinaryDilateImageFilterType;

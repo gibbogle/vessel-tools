@@ -2,11 +2,11 @@ Info for eroder
 ---------------
 
 This program peels a layer from the outer boundary of a 3D binary tiff image (input file).
-It should be applied to a hull (close) file.  It generates two files:
+It should be applied to a hull (close) file.  It generates one or two files:
 (1) The resulting output tiff file
-(2) the corresponding output bin file (for use in the distancer program).
+(2) If the checkbox for "Create bin file" is ticked, the corresponding output bin file is created(for use in the distancer program).
 
 The thickness of the layer that is peeled off (in voxels) is the only other input required.
 The peeling method uses a rolling ball, moving along the image boundary on the inside of the lit object.
-The radius of the ball is half the supplied peel thickness.
+The peel thickness is twice the supplied ball radius.
 (The output tiff file is always compressed)

@@ -139,23 +139,34 @@ int main(int argc, char**argv)
 {
 	int width, height, depth, xysize, compress, err;
 	float peelsize;
-	char *inputFile, *hullFile, *binFile;
+	float ball_radius;
+	char *inputFile, *erodedFile, *binFile;
 	bool compressdata = true;
+	bool make_binFile;
 
-	if (argc != 6) {
-		printf("Usage: hull input_tiff hull_tiff data_file peel_thickness compress_data\n");
+	if (argc != 5 && argc != 6) {
+		printf("Usage: erode input_tiff eroded_tiff data_file ball_radius compress_data\n");
+		printf("or\n");
+		printf("Usage: erode input_tiff eroded_tiff ball_radius compress_data\n");
 		return 0;
 	}
 	inputFile = argv[1];
-	hullFile = argv[2];
-	binFile = argv[3];
-	sscanf(argv[4],"%f",&peelsize);
-	sscanf(argv[5],"%d",&compress);
+	erodedFile = argv[2];
+	if (argc == 6) {
+		make_binFile = true;
+		binFile = argv[3];
+		sscanf(argv[4],"%f",&ball_radius);
+		sscanf(argv[5],"%d",&compress);
+	} else {
+		make_binFile = false;
+		sscanf(argv[3],"%f",&ball_radius);
+		sscanf(argv[4],"%d",&compress);
+	}
 	compressdata = (compress == 1);
 	printf("Input image file: %s\n",inputFile);
-	printf("Hull image file: %s\n",hullFile);
-	printf("Hull binary data file: %s\n",binFile);
-	printf("peelsize: %f\n",peelsize);
+	printf("Eroded image file: %s\n",erodedFile);
+	if (make_binFile) printf("Hull binary data file: %s\n",binFile);
+	printf("Ball radius: %f\n",ball_radius);
 	printf("compressdata: %d\n",compressdata);
 
 	typedef itk::ImageFileReader<ImageType> FileReaderType;
@@ -219,10 +230,10 @@ int main(int argc, char**argv)
 	Scale->SetInput(BinClose->GetOutput());
 	Scale->SetScale(255.0);
 	*/
-	const unsigned int radiusValue = peelsize/2;
+//	const unsigned int radiusValue = peelsize/2;
 	typedef itk::FlatStructuringElement< 3 > StructuringElementType;
 	StructuringElementType::RadiusType radius;
-	radius.Fill( radiusValue );
+	radius.Fill( ball_radius );
 	StructuringElementType structuringElement = StructuringElementType::Ball( radius );
 
 	typedef itk::BinaryErodeImageFilter< ImageType, ImageType, StructuringElementType > BinaryErodeImageFilterType;
@@ -231,15 +242,20 @@ int main(int argc, char**argv)
 	erodeFilter->SetInput( reader->GetOutput() );
 	erodeFilter->SetKernel( structuringElement );
 
-	printf("Writing hull tiff\n");
-	err = ImWriter(erodeFilter->GetOutput(),hullFile);
+	printf("Writing eroded tiff\n");
+	err = ImWriter(erodeFilter->GetOutput(),erodedFile);
 	if (err != 0) {
-		printf("ImWriter error on hull file\n");
+		printf("ImWriter error on eroded file\n");
 		return 1;
 	}
-
-	printf("Writing close binary data file\n");
-	p = (unsigned char *)(erodeFilter->GetOutput()->GetBufferPointer());
-	err = BinImWriter(binFile,p,width,height,depth,compressdata);
+	if (make_binFile) {
+		printf("Writing close binary data file\n");
+		p = (unsigned char *)(erodeFilter->GetOutput()->GetBufferPointer());
+		err = BinImWriter(binFile,p,width,height,depth,compressdata);
+		if (err != 0) {
+			printf("BinImWriter error on binary file\n");
+			return 2;
+		}
+	}
 	return 0;
 }

@@ -68,9 +68,11 @@ void MainWindow::eroder()
 	qstr += " ";
     qstr += outputTiffFileName;
     qstr += " ";
-    qstr += outputBinFileName;
-    qstr += " ";
-    qstr += ui->lineEdit_peelsize->text();
+    if (ui->checkBox_createBinFile->isChecked()) {
+        qstr += outputBinFileName;
+        qstr += " ";
+    }
+    qstr += ui->lineEdit_ballradius->text();
     qstr += " 1";   // always compress
 
 	if (qstr.size()>(int)sizeof(cmdstr)-1) {
