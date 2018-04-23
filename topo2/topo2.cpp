@@ -4,7 +4,7 @@
 
 #include <cstdio>
 #include <vector>
-
+/*
 #include <algorithm>
 #include <math.h>
 #include <string.h>
@@ -12,7 +12,11 @@
 #include <sstream>
 #include <assert.h>
 #include <ctime>
+*/
+#if (defined (LINUX) || defined (__linux__))
+#include <libgen.h>
 
+#endif
 #include "itkImage.h"
 #include "itkImageFileReader.h"
 #include "itkImageFileWriter.h"
@@ -2375,10 +2379,17 @@ int main(int argc, char**argv)
 	}
 
 	outfilename = argv[3];
+
+#if (defined (_WIN32) || defined (_WIN64))
+    // windows code
 	_splitpath(outfilename,drive,dir,filename,ext);
 	strcpy(output_basename,drive);
 	strcat(output_basename,dir);
 	strcat(output_basename,filename);
+#elif (defined (LINUX) || defined (__linux__))
+    // linux code
+	strcpy(output_basename, basename(outfilename));
+#endif
 	sprintf(errfilename,"%s%s",output_basename,"_topo2.log");
 	fperr = fopen(errfilename,"w");
 
