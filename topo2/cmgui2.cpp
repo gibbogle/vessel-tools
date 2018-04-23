@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <vector>
+#include <malloc.h>
 
 #include "network2.h"
 
