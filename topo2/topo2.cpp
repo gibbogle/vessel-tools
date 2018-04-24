@@ -814,7 +814,8 @@ int getDiameters_topo(void)
 	EDGE *edge;
 
 	printf("getDiameters_topo\n");
-	fprintf(fpout,"getDiameters_topo\n");
+	fprintf(fpout,"getDiameters_topo: ne: %d  np: %d\n",ne,np);
+	fflush(fpout);
 	for (k=1; k<=np; k++) {
 		avediameter[k] = 0;
 //		Vlist[k].diameter = 0;
@@ -834,6 +835,8 @@ int getDiameters_topo(void)
 				return 1;
 			}
 			avediameter[kp1] = getDiameter(kp0,kp1,kp2);
+			fprintf(fpout,"ie,k,kp1: %d %d %d  avediameter: %f\n",ie,k,kp1,avediameter[kp1]);
+			fflush(fpout);
 //			Vlist[kp1].diameter = getDiameter(kp0,kp1,kp2);
 		}
 	}
@@ -1189,6 +1192,7 @@ int createVlist()
 	printf("Removed simple loops: %d and short ends: %d\n",nloops,nends);
 	fprintf(fpout,"Removed simple loops: %d and short ends: %d\n",nloops,nends);
 	avediameter = (float *)malloc((nlit+1)*sizeof(float));
+	fprintf(fpout,"Allocated avediameter: %d\n",nlit+1);
 	return 0;
 }
 
