@@ -1086,6 +1086,8 @@ int createVlist()
 		Vlist[k].nbrs = nbrs;
 	}
 
+	imskel = nullptr;
+
 	printf("Start cleanup\n");
 	fprintf(fpout,"Start cleanup\n");
 	// Do basic cleanup - remove simple loops and short ends
@@ -2634,9 +2636,10 @@ int main(int argc, char**argv)
 		printf("Traced segments\n");
 	}
 
-	fprintf(fpout,"Early exit\n");
+	fprintf(fpout,"Traced segments\n");
+//	fprintf(fpout,"Early exit\n");
 	fflush(fpout);
-	return 1;
+//	return 1;
 
 	if (use_pt_diameters) {
 		fprintf(fpout,"getDiameters_topo\n");
@@ -2647,8 +2650,12 @@ int main(int argc, char**argv)
 			fprintf(fperr,"Error in getDiameters_topo\n");
 			return 9;
 		}
-		fprintf(fpout,"fixDiameters_topo\n");
+
+		fprintf(fpout,"did getDiameters_topo, now fixDiameters_topo\n");
+		fprintf(fpout,"Early exit\n");
 		fflush(fpout);
+		return 1;
+
 		err = FixDiameters_topo();
 		if (err != 0) {
 			printf("Error: FixDiameters_topo\n");
