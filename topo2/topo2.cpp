@@ -344,8 +344,9 @@ int CreateDistributions_topo()
 			}
 			ka = int(ad/ddiam + 0.5);
 			if (ka >= NBOX) {
-				printf("Vessel too wide (point): d: %f k: %d\n",ad,ka);
-				fprintf(fperr,"Vessel too wide (point): d: %f k: %d\n",ad,ka);
+				printf("Vessel too wide (point): d: %f ka: %d\n",ad,ka);
+				fprintf(fperr,"Vessel too wide (point): d: %f ie,ip,kp,ka: %d %d %d %d\n",ad,ie,ip,kp,ka);
+				fflush(fperr);
 				continue;
 			}
 			adbox[ka]++;
@@ -402,6 +403,9 @@ int CreateDistributions_topo()
 	}
 	printf("Compute length distributions: lower limit = %6.1f um\n",len_limit);
 	fprintf(fperr,"Compute length distributions: lower limit = %6.1f um\n",len_limit);
+	fflush(fperr);
+	fprintf(fpout,"Compute length distributions: lower limit = %6.1f um\n",len_limit);
+	fflush(fpout);
 	// Lengths
 	dlen = 1;
 	ltot = 0;
@@ -415,6 +419,7 @@ int CreateDistributions_topo()
 		if (k >= NBOX) {
 			printf("Edge too long: ie: %d  k: %d len: %f  k: %d\n",ie,k,len);
 			fprintf(fperr,"Edge too long: ie: %d  k: %d len: %f  k: %d\n",ie,k,len);
+			fflush(fperr);
 			continue;
 		}
 		lvbox[k]++;
@@ -433,7 +438,7 @@ int CreateDistributions_topo()
 	fprintf(fpout,"Total vessel length: %6.1f\n",tot_len);
 	printf("Total vessel volume: %10.0f\n\n",volume);
 	fprintf(fpout,"Total vessel volume: %10.0f\n\n",volume);
-
+	fflush(fpout);
 	for (k=NBOX-1; k>=0; k--) {
 		if (segadbox[k] > 0) break;
 	}
@@ -443,6 +448,7 @@ int CreateDistributions_topo()
 	for (k=0; k<ndpts; k++) {
 		fprintf(fpout,"%6.2f %8d %9.5f  %8.0f %9.5f\n",k*ddiam,segadbox[k],segadbox[k]/float(nsegdtot),
 			lsegadbox[k],lsegadbox[k]/lsegdtot);
+		fflush(fpout);
 	}
 
 	for (k=NBOX-1; k>=0; k--) {
@@ -454,8 +460,11 @@ int CreateDistributions_topo()
 	for (k=0; k<nlpts; k++) {
 		fprintf(fpout,"%6.2f %8d %9.5f\n",k*dlen,lvbox[k],lvbox[k]/ltot);
 	}
+	fflush(fpout);
 	printf("nptstot: %d\n",nptstot);
 	printf("nptsusedtot: %d\n",nptsusedtot);
+	fprintf(fpout,"did CreateDistributions_topo\n");
+	fflush(fpout);
 	return 0;
 }
 
@@ -1235,8 +1244,8 @@ int traceSegments()
 		if (nsegs < nshow) {
 			printf("\nstart vertex: %d  nbrs: %d\n",k0,pv0->nbrs);
 		}
-		fprintf(fpout,"k0: %d nsegs: %d nbrs: %d\n",k0,nsegs,pv0->nbrs);
-		fflush(fpout);
+//		fprintf(fpout,"k0: %d nsegs: %d nbrs: %d\n",k0,nsegs,pv0->nbrs);
+//		fflush(fpout);
 		for (ib=0; ib<pv0->nbrs; ib++) {	// branch i
 			kp = k0;
 			pv1 = pv0;
