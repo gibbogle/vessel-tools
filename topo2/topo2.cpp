@@ -823,6 +823,10 @@ int getDiameters_topo(void)
 	ne_used = 0;
 	for (ie=0;ie<ne;ie++) {
 		edge = &edgeList[ie];
+		if (ie%1000 == 0) {
+			fprintf(fpout,"ie: %d\n",ie);
+			fflush(fpout);
+		}
 		if (!edge->used) continue;
 		ne_used++;
 		npts = edge->npts;
@@ -835,7 +839,7 @@ int getDiameters_topo(void)
 				return 1;
 			}
 			avediameter[kp1] = getDiameter(kp0,kp1,kp2);
-			if (ie >= 413920) {
+			if (ie >= 413000) {
 				fprintf(fpout,"ie,k,kp1: %d %d %d  avediameter: %f\n",ie,k,kp1,avediameter[kp1]);
 				fflush(fpout);
 			}
