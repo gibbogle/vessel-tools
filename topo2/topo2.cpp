@@ -1197,7 +1197,7 @@ int createVlist()
 int traceSegments()
 {
 	int k0, ib, k, kp, nsegvoxels, nsegs, nloops, nends, nshow=0;
-	int segvoxel[200];
+	int segvoxel[1000];	//[200];
 	float len;
 	VOXEL *pv, *pv0, *pv1;
 	EDGE *pe;
@@ -1223,6 +1223,8 @@ int traceSegments()
 		if (nsegs < nshow) {
 			printf("\nstart vertex: %d  nbrs: %d\n",k0,pv0->nbrs);
 		}
+		fprintf(fpout,"k0: %d nsegs: %d nbrs: %d\n",k0,nsegs,pv0->nbrs);
+		fflush(fpout);
 		for (ib=0; ib<pv0->nbrs; ib++) {	// branch i
 			kp = k0;
 			pv1 = pv0;
