@@ -1087,7 +1087,7 @@ int createVlist()
 	}
 
 //	imskel = nullptr;
-	imskel = ImageType::New();
+//	imskel = ImageType::New();
 
 	printf("Start cleanup\n");
 	fprintf(fpout,"Start cleanup\n");
@@ -2653,9 +2653,9 @@ int main(int argc, char**argv)
 		}
 
 		fprintf(fpout,"did getDiameters_topo, now fixDiameters_topo\n");
-		fprintf(fpout,"Early exit\n");
+//		fprintf(fpout,"Early exit\n");
 		fflush(fpout);
-		return 0;
+//		return 0;
 
 		err = FixDiameters_topo();
 		if (err != 0) {
@@ -2664,9 +2664,13 @@ int main(int argc, char**argv)
 			fclose(fperr);
 			return 12;
 		}
-		for (int k=1; k<nlit; k++) {
+		fprintf(fpout,"did FixDiameters_topo\n");
+		fflush(fpout);
+		for (int k=1; k<=nlit; k++) {
 			Vlist[k].diameter = avediameter[k];
 		}
+		fprintf(fpout,"Set Vlist diameters\n");
+		fflush(fpout);
 	} else {
 		err = getDiameters();	
 		if (err != 0) {
@@ -2677,7 +2681,9 @@ int main(int argc, char**argv)
 	}
 	printf("Estimated segment lengths and average diameters\n");
 	fprintf(fpout,"Estimated segment lengths and average diameters\n");
+	fprintf(fpout,"Early exit\n");
 	fflush(fpout);
+	return 1;
 
 	printf("Create vertex list\n");
 	fprintf(fpout,"Create vertex list\n");
