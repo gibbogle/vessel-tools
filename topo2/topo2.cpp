@@ -1205,6 +1205,7 @@ int traceSegments()
 
 	printf("\ntraceSegments\n");
 	fprintf(fpout,"\ntraceSegments\n");
+	fflush(fpout);
 	net->edgeList = (EDGE *)malloc(MAXEDGES*sizeof(EDGE));
 	edgeList = net->edgeList;
 
@@ -1371,12 +1372,14 @@ int traceSegments()
 				fprintf(fpout,"\n");
 			}
 		}
+		fflush(fpout);
 	}
 	printf("nsegs: %d\n",nsegs);
 	printf("nloops: %d\n",nloops);
 	fprintf(fpout,"nsegs: %d\n",nsegs);
 	fprintf(fpout,"nloops: %d\n",nloops);
 	printf("did traceSegments\n");
+	fflush(fpout);
 //	fprintf(fpout,"length distribution\n");
 //	for (int i=0; i<100; i++) {
 //		printf("%d %f\n",i,lendist[i]/float(nsegs));
@@ -2450,6 +2453,7 @@ int main(int argc, char**argv)
 		fprintf(fpout,"Accurate diameter estimation is impossible with fewer than 5 pixels per diameter\n\n");
 	}
 	fprintf(fpout,"Amira file: %s\n",amfilename);
+	fflush(fpout);
 
 	net = (NETWORK *)malloc(sizeof(NETWORK));
 
@@ -2480,6 +2484,7 @@ int main(int argc, char**argv)
 
 	printf("Image dimensions: width, height, depth: %lld %lld %lld\n",width,height,depth);
 	pskel = (unsigned char *)(imskel->GetBufferPointer());
+	fflush(fpout);
 
 	if (use_object) {
 		// Read original object file (binary)
@@ -2519,6 +2524,7 @@ int main(int argc, char**argv)
 		// nlit_obj = number of lit voxels in the object image
 		printf("Number of lit object voxels: %d\n",nlit_obj);
 		fprintf(fpout,"Number of lit object voxels: %d\n",nlit_obj);
+		fflush(fpout);
 	}
 
 	nlit = 0;
@@ -2536,6 +2542,7 @@ int main(int argc, char**argv)
 	printf("Number of lit skeleton voxels: %d\n",nlit);
 
 	printf("Creating the lit voxel index list\n");
+	fflush(fpout);
 	err = createVlist();
 	if (err != 0) {
 		printf("Error in createVlist\n");
@@ -2582,6 +2589,7 @@ int main(int argc, char**argv)
 	} else {
 		printf("Coalesced lit voxels\n");
 	}
+	fflush(fpout);
 
 //	fprintf(fpout,"DROP deloop for TESTING\n");
 	err = deloop();
@@ -2592,6 +2600,7 @@ int main(int argc, char**argv)
 	} else {
 		printf("Eliminated small triangular loops\n");
 	}
+	fflush(fpout);
 
 	err = traceSegments();
 	if (err != 0) {
@@ -2601,6 +2610,7 @@ int main(int argc, char**argv)
 	} else {
 		printf("Traced segments\n");
 	}
+	fflush(fpout);
 
 	if (use_pt_diameters) {
 		err = getDiameters_topo();
@@ -2628,16 +2638,19 @@ int main(int argc, char**argv)
 		}
 	}
 	printf("Estimated segment lengths and average diameters\n");
+	fflush(fpout);
 
 	printf("Create vertex list\n");
 	createVertexList();
 	printf("Created vertex list\n");
+	fflush(fpout);
 
 	int nused = 0;
 	for (int k=1; k<=nlit; k++) {
 		if (Vlist[k].nbrs > 0) nused++;
 	}
 	printf("Number of skeleton voxels used: %d\n",nused);
+	fflush(fpout);
 
 	if (use_pt_diameters) 
 		err = CreateDistributions_topo();		// scaling for voxelsize now done in the distance calculations
@@ -2651,6 +2664,7 @@ int main(int argc, char**argv)
 	} else {
 		printf("Created distributions of length and diameter\n");
 	}
+	fflush(fpout);
 
 
 	if (cmgui_flag == 1) {
@@ -2663,6 +2677,7 @@ int main(int argc, char**argv)
 			printf("Wrote CMGUI files\n");
 		}
 	}
+	fflush(fpout);
 	err = WriteAmiraFile(amfilename, vessFile, skelFile, origin_shift);
 	if (err != 0) {
 		printf("Error in WriteAmiraFile\n");
@@ -2671,6 +2686,7 @@ int main(int argc, char**argv)
 	} else {
 		printf("Wrote AMIRA file\n");
 	}
+	fflush(fpout);
 
 /* Moved above
 	if (use_pt_diameters) 
