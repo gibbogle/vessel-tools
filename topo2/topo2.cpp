@@ -2623,12 +2623,16 @@ int main(int argc, char**argv)
 	fflush(fpout);
 
 	if (use_pt_diameters) {
+		fprintf(fpout,"getDiameters_topo\n");
+		fflush(fpout);
 		err = getDiameters_topo();
 		if (err != 0) {
 			printf("Error in getDiameters_topo\n");
 			fprintf(fperr,"Error in getDiameters_topo\n");
 			return 9;
 		}
+		fprintf(fpout,"fixDiameters_topo\n");
+		fflush(fpout);
 		err = FixDiameters_topo();
 		if (err != 0) {
 			printf("Error: FixDiameters_topo\n");
@@ -2648,11 +2652,15 @@ int main(int argc, char**argv)
 		}
 	}
 	printf("Estimated segment lengths and average diameters\n");
+	fprintf(fpout,"Estimated segment lengths and average diameters\n");
 	fflush(fpout);
 
 	printf("Create vertex list\n");
+	fprintf(fpout,"Create vertex list\n");
+	fflush(fpout);
 	createVertexList();
 	printf("Created vertex list\n");
+	fprintf(fpout,"Created vertex list\n");
 	fflush(fpout);
 
 	int nused = 0;
@@ -2660,6 +2668,7 @@ int main(int argc, char**argv)
 		if (Vlist[k].nbrs > 0) nused++;
 	}
 	printf("Number of skeleton voxels used: %d\n",nused);
+	fprintf(fpout,"Number of skeleton voxels used: %d\n",nused);
 	fflush(fpout);
 
 	if (use_pt_diameters) 
