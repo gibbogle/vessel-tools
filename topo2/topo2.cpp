@@ -835,11 +835,15 @@ int getDiameters_topo(void)
 				return 1;
 			}
 			avediameter[kp1] = getDiameter(kp0,kp1,kp2);
-			fprintf(fpout,"ie,k,kp1: %d %d %d  avediameter: %f\n",ie,k,kp1,avediameter[kp1]);
-			fflush(fpout);
+			if (ie >= 413920) {
+				fprintf(fpout,"ie,k,kp1: %d %d %d  avediameter: %f\n",ie,k,kp1,avediameter[kp1]);
+				fflush(fpout);
+			}
 //			Vlist[kp1].diameter = getDiameter(kp0,kp1,kp2);
 		}
 	}
+	fprintf(fpout,"getDiameters_topo done\n");
+	fflush(fpout);
 	return 0;
 }
 
