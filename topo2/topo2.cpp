@@ -2633,7 +2633,10 @@ int main(int argc, char**argv)
 	} else {
 		printf("Traced segments\n");
 	}
+
+	fprintf(fpout,"Early exit\n");
 	fflush(fpout);
+	return 1;
 
 	if (use_pt_diameters) {
 		fprintf(fpout,"getDiameters_topo\n");
