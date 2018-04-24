@@ -1086,7 +1086,8 @@ int createVlist()
 		Vlist[k].nbrs = nbrs;
 	}
 
-	imskel = nullptr;
+//	imskel = nullptr;
+	imskel = ImageType::New();
 
 	printf("Start cleanup\n");
 	fprintf(fpout,"Start cleanup\n");
@@ -2654,7 +2655,7 @@ int main(int argc, char**argv)
 		fprintf(fpout,"did getDiameters_topo, now fixDiameters_topo\n");
 		fprintf(fpout,"Early exit\n");
 		fflush(fpout);
-		return 1;
+		return 0;
 
 		err = FixDiameters_topo();
 		if (err != 0) {
