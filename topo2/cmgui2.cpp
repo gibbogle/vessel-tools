@@ -137,7 +137,8 @@ int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[])
 		edge = net->edgeList[ie];
 		if (!edge.used) continue;
 		npts = edge.npts;
-		//printf("edge: %d npts: %d ",ie,npts);
+		fprintf(fpout,"edge: %d npts: %d ",ie,npts);
+		fflush(fpout);
 		//for (i=0; i<npts; i++)
 		//	printf("%d ",edge.pt[i]);
 		//printf("\n");
