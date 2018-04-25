@@ -319,10 +319,6 @@ int CreateDistributions_topo()
 	for (ie=0; ie<ne; ie++) {
 		edge = edgeList[ie];
 		if (!edge.used) continue;
-		if (ie%1000 == 0) {
-			fprintf(fpout,"ie: %d npts: %d\n",ie,edge.npts);
-			fflush(fpout);
-		}
 //		fprintf(fperr,"ie: %d npts: %d npts_used: %d\n",ie,edge.npts,edge.npts_used);
 		fflush(fperr);
 		nptstot += edge.npts;
@@ -839,10 +835,6 @@ int getDiameters_topo(void)
 	ne_used = 0;
 	for (ie=0;ie<ne;ie++) {
 		edge = &edgeList[ie];
-		if (ie%1000 == 0) {
-			fprintf(fpout,"ie: %d\n",ie);
-			fflush(fpout);
-		}
 		if (!edge->used) continue;
 		ne_used++;
 		npts = edge->npts;
@@ -855,11 +847,6 @@ int getDiameters_topo(void)
 				return 1;
 			}
 			avediameter[kp1] = getDiameter(kp0,kp1,kp2);
-			if (ie >= 413000) {
-				fprintf(fpout,"ie,k,kp1: %d %d %d  avediameter: %f\n",ie,k,kp1,avediameter[kp1]);
-				fflush(fpout);
-			}
-//			Vlist[kp1].diameter = getDiameter(kp0,kp1,kp2);
 		}
 	}
 	fprintf(fpout,"getDiameters_topo done\n");
@@ -2711,9 +2698,7 @@ int main(int argc, char**argv)
 		fflush(fpout);
 		err = CreateDistributions_topo();		// scaling for voxelsize now done in the distance calculations
 		fprintf(fpout,"did CreateDistributions_topo\n");
-		fprintf(fpout,"Early exit\n");
 		fflush(fpout);
-		return 1;
 	} else
 		err = CreateDistributions();		// scaling for voxelsize now done in the distance calculations
 	if (err != 0) {
