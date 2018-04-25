@@ -304,6 +304,8 @@ int CreateDistributions_topo()
 	}
 	printf("Compute diameter distributions\n");
 	fprintf(fperr,"Compute diameter distributions\n");
+	fprintf(fpout,"Compute diameter distributions\n");
+	fflush(fpout);
 	nptstot = 0;
 	nptsusedtot = 0;
 	// Diameters
@@ -317,7 +319,10 @@ int CreateDistributions_topo()
 	for (ie=0; ie<ne; ie++) {
 		edge = edgeList[ie];
 		if (!edge.used) continue;
-//		printf("ie: %d npts: %d\n",ie,edge.npts);
+		if (ie%1000 == 0) {
+			fprintf(fpout,"ie: %d npts: %d\n",ie,edge.npts);
+			fflush(fpout);
+		}
 //		fprintf(fperr,"ie: %d npts: %d npts_used: %d\n",ie,edge.npts,edge.npts_used);
 		fflush(fperr);
 		nptstot += edge.npts;
@@ -345,9 +350,11 @@ int CreateDistributions_topo()
 			ka = int(ad/ddiam + 0.5);
 			if (ka >= NBOX) {
 				printf("Vessel too wide (point): d: %f ka: %d\n",ad,ka);
-				fprintf(fperr,"Vessel too wide (point): d: %f ie,ip,kp,ka: %d %d %d %d\n",ad,ie,ip,kp,ka);
+				fprintf(fperr,"Vessel too wide (point): d: %f ie,ip,kp,ka: %d %d %d %d  npts: %d\n",ad,ie,ip,kp,ka,edge.npts);
 				fflush(fperr);
-				continue;
+				ka = NBOX-1;
+				ad  = ddiam*(NBOX-1);
+//				continue;
 			}
 			adbox[ka]++;
 			ndtot++;
