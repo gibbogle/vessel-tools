@@ -78,6 +78,23 @@ int getPointDiameters();
 void freeEdgeList();
 
 //-----------------------------------------------------------------------------------------------------
+// For Linux to create output_basename without extension
+//-----------------------------------------------------------------------------------------------------
+char *remove(char* mystr) {
+    char *retstr;
+    char *lastdot;
+    if (mystr == NULL)
+         return NULL;
+    if ((retstr = (char *)malloc (strlen (mystr) + 1)) == NULL)
+        return NULL;
+    strcpy (retstr, mystr);
+    lastdot = strrchr (retstr, '.');
+    if (lastdot != NULL)
+        *lastdot = '\0';
+    return retstr;
+}
+
+//-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
 #define crossProduct(a,b,c) \
 	(a)[0] = (b)[1] * (c)[2] - (c)[1] * (b)[2]; \
@@ -3052,16 +3069,3 @@ int getPointDiameters()
 	return 0;
 }
 
-char *remove(char* mystr) {
-    char *retstr;
-    char *lastdot;
-    if (mystr == NULL)
-         return NULL;
-    if ((retstr = (char *)malloc (strlen (mystr) + 1)) == NULL)
-        return NULL;
-    strcpy (retstr, mystr);
-    lastdot = strrchr (retstr, '.');
-    if (lastdot != NULL)
-        *lastdot = '\0';
-    return retstr;
-}
