@@ -2681,9 +2681,7 @@ int main(int argc, char**argv)
 	}
 	printf("Estimated segment lengths and average diameters\n");
 	fprintf(fpout,"Estimated segment lengths and average diameters\n");
-	fprintf(fpout,"Early exit\n");
 	fflush(fpout);
-	return 1;
 
 	printf("Create vertex list\n");
 	fprintf(fpout,"Create vertex list\n");
@@ -2699,7 +2697,9 @@ int main(int argc, char**argv)
 	}
 	printf("Number of skeleton voxels used: %d\n",nused);
 	fprintf(fpout,"Number of skeleton voxels used: %d\n",nused);
+	fprintf(fpout,"Early exit\n");
 	fflush(fpout);
+	return 1;
 
 	if (use_pt_diameters) 
 		err = CreateDistributions_topo();		// scaling for voxelsize now done in the distance calculations
