@@ -101,7 +101,7 @@ int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[])
 {
 	int k, ie, npts;
 	int deln, ndel, i, j, nj, kfrom, kto;
-	int jj[50];
+	int jj[500];
 	float diam;
 	EDGE edge;
 	bool *point_used;
@@ -142,11 +142,11 @@ int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[])
 		edge = net->edgeList[ie];
 		if (!edge.used) continue;
 		npts = edge.npts;
-		if (ie >= 3078) {
-			dbug = true;
-			fprintf(fpout,"edge: %d npts: %d\n",ie,npts);
-			fflush(fpout);
-		}
+		//if (ie >= 3078) {
+		//	dbug = true;
+		//	fprintf(fpout,"edge: %d npts: %d\n",ie,npts);
+		//	fflush(fpout);
+		//}
 		//for (i=0; i<npts; i++)
 		//	printf("%d ",edge.pt[i]);
 		//printf("\n");
