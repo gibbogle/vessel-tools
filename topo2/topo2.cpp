@@ -2697,7 +2697,7 @@ int main(int argc, char**argv)
 		fprintf(fpout,"CreateDistributions_topo\n");
 		fflush(fpout);
 		err = CreateDistributions_topo();		// scaling for voxelsize now done in the distance calculations
-		fprintf(fpout,"did CreateDistributions_topo\n");
+		fprintf(fpout,"did CreateDistributions_topo: err: %d\n",err);
 		fflush(fpout);
 	} else
 		err = CreateDistributions();		// scaling for voxelsize now done in the distance calculations
@@ -2708,6 +2708,8 @@ int main(int argc, char**argv)
 		return 12;
 	} else {
 		printf("Created distributions of length and diameter\n");
+		fprintf(fpout,"Created distributions of length and diameter\n");
+		fflush(fpout);
 	}
 	fflush(fpout);
 

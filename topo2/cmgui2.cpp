@@ -107,16 +107,16 @@ int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[])
 	FILE *exelem, *exnode, *dotcom;
 
 	printf("WriteCmguiData: %s %d %d\n",basename,net->ne,net->np);
-	fprintf(fperr,"WriteCmguiData: %s\n",basename);
-	fflush(fperr);
+	fprintf(fpout,"WriteCmguiData: %s %d %d\n",basename,net->ne,net->np);
+	fflush(fpout);
 	sprintf(dotcomname,"%s.com.txt",basename);
 	sprintf(exelemname,"%s.exelem",basename);
 	sprintf(exnodename,"%s.exnode",basename);
 	printf("exelem file: %s\n",exelemname);
 	printf("exnode file: %s\n",exnodename);
-	fprintf(fperr,"exelem file: %s\n",exelemname);
-	fprintf(fperr,"exnode file: %s\n",exnodename);
-	fflush(fperr);
+	fprintf(fpout,"exelem file: %s\n",exelemname);
+	fprintf(fpout,"exnode file: %s\n",exnodename);
+	fflush(fpout);
 	dotcom = fopen(dotcomname,"w");
 	exelem = fopen(exelemname,"w");
 	exnode = fopen(exnodename,"w");
@@ -124,6 +124,8 @@ int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[])
 	WriteExelemHeader(exelem);
 	WriteExnodeHeader(exnode);
 	printf("wrote headers: ne: %d np: %d\n",net->ne,net->np);
+	fprintf(fpout,"wrote headers: ne: %d np: %d\n",net->ne,net->np);
+	fflush(fpout);
 
 	point_used = (bool *)malloc(net->np*sizeof(bool));
 	for (k=0; k<=net->np; k++) {
@@ -189,26 +191,32 @@ int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[])
 				fprintf(exelem, "Element: %d 0 0\n", kelem);
 				fprintf(exelem, "  Nodes: %d %d\n", kfrom, kto);
 				fprintf(exelem, "  Scale factors: 1 1\n");
+				fflush(exelem);
 				kfrom = k;
 			}
 		}
 	}
 	printf("wrote elem data\n");
+	fprintf(fpout,"wrote elem data\n");
+	fflush(fpout);
 
 	for (k=1; k<=net->np; k++) {
 		if (point_used[k]) {
 			fprintf(exnode, "Node: %d\n", k);
-			fprintf(exnode, "%6.1f %6.1f %6.1f\n",
+			fprintf(exnode, "%7.1f %7.1f %7.1f\n",
 				vsize[0]*net->point[k].pos[0] - origin_shift[0],
 				vsize[1]*net->point[k].pos[1] - origin_shift[1],
 				vsize[2]*net->point[k].pos[2] - origin_shift[2]);
 			if (fixed_diam_flag || !use_object)
-				fprintf(exnode, "%6.2f\n", FIXED_DIAMETER/2);
+				fprintf(exnode, "%8.2f\n", FIXED_DIAMETER/2);
 			else
-				fprintf(exnode, "%6.2f\n", net->point[k].diameter/2);
+				fprintf(exnode, "%8.2f\n", net->point[k].diameter/2);
+			fflush(exnode);
 		}
 	}
 	printf("wrote node data\n");
+	fprintf(fpout,"wrote node data\n");
+	fflush(fpout);
 
 	fclose(dotcom);
 	fclose(exelem);
