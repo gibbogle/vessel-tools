@@ -108,6 +108,7 @@ int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[])
 	char exelemname[1024], exnodename[1024];
 	char dotcomname[1024];
 	FILE *exelem, *exnode, *dotcom;
+	bool dbug;
 
 	printf("WriteCmguiData: %s %d %d\n",basename,net->ne,net->np);
 	fprintf(fpout,"WriteCmguiData: %s %d %d\n",basename,net->ne,net->np);
@@ -135,13 +136,17 @@ int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[])
 		point_used[k] = false;
 	}
 
+	dbug = false;
 	int kelem = 0;
 	for (ie=0; ie<net->ne; ie++) {
 		edge = net->edgeList[ie];
 		if (!edge.used) continue;
 		npts = edge.npts;
-		fprintf(fpout,"edge: %d npts: %d ",ie,npts);
-		fflush(fpout);
+		if (ie >= 3078) {
+			dbug = true;
+			fprintf(fpout,"edge: %d npts: %d\n",ie,npts);
+			fflush(fpout);
+		}
 		//for (i=0; i<npts; i++)
 		//	printf("%d ",edge.pt[i]);
 		//printf("\n");
@@ -188,6 +193,10 @@ int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[])
 		kfrom = edge.pt[0];
 		for (i=0; i<nj; i++) {
 			k = edge.pt[jj[i]];
+			if (dbug) {
+				fprintf(fpout,"i,jj,k: %d %d %d kfrom: %d  kelem: %d\n",i,jj[i],k,kfrom,kelem);
+				fflush(fpout);
+			}
 			point_used[k] = true;
 			if (i > 0) {
 				kto = k;
