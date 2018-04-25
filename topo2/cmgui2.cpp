@@ -33,6 +33,7 @@ void write_com(FILE *dotcom, char *fileName)
     fprintf(dotcom, "gfx modify g_element vessels node_points coordinate coordinates local glyph sphere general size \"0*0*0\" centre 0,0,0 font default orientation vessel_radius scale_factors \"2*2*2\" select_on material gold selected_material default_selected\n");
     fprintf(dotcom, "gfx cre win 1\n");
     fprintf(dotcom, "gfx mod win 1 view perspective\n");
+	fflush(dotcom);
 }
 
 //-----------------------------------------------------------------------------------------------------
@@ -49,6 +50,7 @@ void WriteExnodeHeader(FILE *exnode)
     fprintf(exnode, "  z.  Value index=3, #Derivatives=0, #Versions=1\n");
     fprintf(exnode, " 2) vessel_radius, coordinate, rectangular cartesian, #Components=1\n");
     fprintf(exnode, "  1.  Value index=4, #Derivatives=0, #Versions=1\n");
+	fflush(exnode);
 }
 
 //-----------------------------------------------------------------------------------------------------
@@ -84,6 +86,7 @@ void WriteExelemHeader(FILE *exelem)
     fprintf(exelem, "       Value indices:     1\n       Scale factor indices:   1\n");
     fprintf(exelem, "      2.  #Values=1\n");
     fprintf(exelem, "       Value indices:     1\n       Scale factor indices:   2\n");
+	fflush(exelem);
 }
 
 //-----------------------------------------------------------------------------------------------------
