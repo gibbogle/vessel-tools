@@ -2385,6 +2385,7 @@ int main(int argc, char**argv)
 	char drive[32], dir[256],filename[256], ext[32];
 	char amfilename[256];
 	char output_basename[256], errfilename[256];
+	char *temp_name;
 	int noffsets = 1;
 	int cmgui_flag, diam_flag;
 	float origin_shift[3] = {0, 0, 0};
@@ -2412,6 +2413,8 @@ int main(int argc, char**argv)
 #elif (defined (LINUX) || defined (__linux__))
     // linux code
 	strcpy(output_basename, basename(outfilename));
+	temp_name = remove(output_basename);
+	strcpy(output_basename,temp_name);
 #endif
 	sprintf(errfilename,"%s%s",output_basename,"_topo2.log");
 	fperr = fopen(errfilename,"w");
@@ -3047,4 +3050,18 @@ int getPointDiameters()
 	printf("zero diam pts: %d\n",nzero);
 	printf("Average pt diameter: %f\n",dpsum/npin);
 	return 0;
+}
+
+char *remove(char* mystr) {
+    char *retstr;
+    char *lastdot;
+    if (mystr == NULL)
+         return NULL;
+    if ((retstr = (char *)malloc (strlen (mystr) + 1)) == NULL)
+        return NULL;
+    strcpy (retstr, mystr);
+    lastdot = strrchr (retstr, '.');
+    if (lastdot != NULL)
+        *lastdot = '\0';
+    return retstr;
 }
