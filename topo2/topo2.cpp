@@ -2697,13 +2697,17 @@ int main(int argc, char**argv)
 	}
 	printf("Number of skeleton voxels used: %d\n",nused);
 	fprintf(fpout,"Number of skeleton voxels used: %d\n",nused);
-	fprintf(fpout,"Early exit\n");
 	fflush(fpout);
-	return 1;
 
-	if (use_pt_diameters) 
+	if (use_pt_diameters) {
+		fprintf(fpout,"CreateDistributions_topo\n");
+		fflush(fpout);
 		err = CreateDistributions_topo();		// scaling for voxelsize now done in the distance calculations
-	else
+		fprintf(fpout,"did CreateDistributions_topo\n");
+		fprintf(fpout,"Early exit\n");
+		fflush(fpout);
+		return 1;
+	} else
 		err = CreateDistributions();		// scaling for voxelsize now done in the distance calculations
 	if (err != 0) {
 		printf("Error: CreateDistributions\n");
