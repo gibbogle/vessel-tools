@@ -1039,7 +1039,7 @@ int getDiameters(void)
 //-----------------------------------------------------------------------------------------------------
 int createVlist()
 {
-#define nblist 1000
+#define nblist 5000
 	int k, k0, kp, ke, kl, x, y, z, ib, ib1, ib2, i, len, n, nb, nloops, nends;
 	int blist[nblist];
 	int nbr_temp[30];
@@ -1098,7 +1098,7 @@ int createVlist()
 	}
 
 //	imskel = nullptr;
-//	imskel = ImageType::New();
+	imskel = ImageType::New();
 
 	printf("Start cleanup\n");
 	fprintf(fpout,"Start cleanup\n");
@@ -2500,22 +2500,24 @@ int main(int argc, char**argv)
 	typedef itk::ImageFileReader<ImageType> FileReaderType;
 
 	// Read skeleton file
-	FileReaderType::Pointer readerskel = FileReaderType::New();
-	readerskel->SetFileName(skelFile);
-	try
 	{
-		printf("Reading input skeleton file: %s\n",skelFile);
-		readerskel->Update();
-	}
-	catch (itk::ExceptionObject &e)
-	{
-		std::cout << e << std::endl;
-		fprintf(fperr,"Read error on skeleton file\n");
-		fclose(fperr);
-		return 2;	// Read error on input file
-	}
+		FileReaderType::Pointer readerskel = FileReaderType::New();
+		readerskel->SetFileName(skelFile);
+		try
+		{
+			printf("Reading input skeleton file: %s\n",skelFile);
+			readerskel->Update();
+		}
+		catch (itk::ExceptionObject &e)
+		{
+			std::cout << e << std::endl;
+			fprintf(fperr,"Read error on skeleton file\n");
+			fclose(fperr);
+			return 2;	// Read error on input file
+		}
 
-	imskel = readerskel->GetOutput();
+		imskel = readerskel->GetOutput();
+	}
 
 	width = imskel->GetLargestPossibleRegion().GetSize()[0];
 	height = imskel->GetLargestPossibleRegion().GetSize()[1];
