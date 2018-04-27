@@ -1109,7 +1109,7 @@ int createVlist()
 		pv0 = &Vlist[k0];
 		if (k0 == 5346350) printf("createVlist: k0: %d nbrs: %d\n",k0,pv0->nbrs);
 		if (pv0->nbrs < 3) continue;
-		dbug = (k0 == -1);
+		dbug = (k0 == 5346350);
 		if (dbug) {
 			printf("k0: %d  nbrs: %d  ", k0,pv0->nbrs);
 			for (i=0; i<pv0->nbrs; i++)
@@ -1126,7 +1126,6 @@ int createVlist()
 					pv = &Vlist[k];
 					if (dbug) {
 						printf("ib: %d k: %d  nbrs: %d\n",ib,k,pv->nbrs);
-						printf("Vlist[384].nbrs: %d\n",Vlist[1].nbrs);
 					}
 					if (len >= nblist) {
 						printf("createVlist: voxel k0: %d nbrs: %d ib: %d branch length len: %d exceeds nblist: %d\n",k0,pv0->nbrs,ib,len,nblist); 
