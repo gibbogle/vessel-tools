@@ -1128,7 +1128,7 @@ int createVlist()
 						printf("Vlist[384].nbrs: %d\n",Vlist[1].nbrs);
 					}
 					if (len >= nblist) {
-						printf("createVlist: branch length len: %d exceeds nblist: %d\n",len,nblist); 
+						printf("createVlist: voxel k0: %d nbrs: %d ib: %d branch length len: %d exceeds nblist: %d\n",k0,pv0->nbrs,ib,len,nblist); 
 						exit(1);
 					}
 					blist[len] = k;	// keep track of the branch voxels
