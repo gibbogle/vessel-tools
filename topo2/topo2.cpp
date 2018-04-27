@@ -1110,7 +1110,6 @@ int createVlist()
 		}
 		printf("\n");
 	}
-	exit(1);
 
 	printf("Start cleanup\n");
 	fprintf(fpout,"Start cleanup\n");
@@ -1123,6 +1122,16 @@ int createVlist()
 		if (pv0->nbrs < 3) continue;
 		dbug = (k0 == 5346350);
 		if (dbug) {
+			for (int i=0; i<ndbug; i++) {
+				k = kdbug[i];
+				printf("voxel: %d nbrs: %d\n",k,Vlist[k].nbrs);
+				for (int j=0; j<Vlist[k].nbrs; j++) {
+					printf("   %d %d",j,Vlist[k].nbr[j]);
+				}
+				printf("\n");
+			}
+			exit(1);
+
 			printf("k0: %d  nbrs: %d  ", k0,pv0->nbrs);
 			for (i=0; i<pv0->nbrs; i++)
 				printf("%d",pv0->nbr[i]);
