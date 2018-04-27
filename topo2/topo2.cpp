@@ -1107,6 +1107,7 @@ int createVlist()
 	nends = 0;
 	for (k0=1; k0<=nlit; k0++) {
 		pv0 = &Vlist[k0];
+		if (k0 == 5346350) printf("createVlist: k0: %d nbrs: %d\n",k0,pv0->nbrs);
 		if (pv0->nbrs < 3) continue;
 		dbug = (k0 == -1);
 		if (dbug) {
