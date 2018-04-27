@@ -1039,7 +1039,7 @@ int getDiameters(void)
 //-----------------------------------------------------------------------------------------------------
 int createVlist()
 {
-#define nblist 5000
+#define nblist 15000
 	int k, k0, kp, ke, kl, x, y, z, ib, ib1, ib2, i, len, n, nb, nloops, nends;
 	int blist[nblist];
 	int nbr_temp[30];
@@ -1128,7 +1128,7 @@ int createVlist()
 						printf("Vlist[384].nbrs: %d\n",Vlist[1].nbrs);
 					}
 					if (len >= nblist) {
-						printf("createVlist: branch length len: %d exceeds nblist\n",len); 
+						printf("createVlist: branch length len: %d exceeds nblist: %d\n",len,nblist); 
 						exit(1);
 					}
 					blist[len] = k;	// keep track of the branch voxels
