@@ -1045,6 +1045,8 @@ int createVlist()
 	int nbr_temp[30];
 	VOXEL *pv, *pv0;
 	bool repeat, dbug;
+	int ndbug = 6;
+	int kdbug[6] = {5346350, 5345611, 5344788, 5347081, 5347867, 5347082};
 
 	k = 0;
 	for (x=0;x<width; x++) {
@@ -1099,6 +1101,16 @@ int createVlist()
 
 //	imskel = nullptr;
 	imskel = ImageType::New();
+
+	for (int i=0; i<ndbug; i++) {
+		k = kdbug[i];
+		printf("voxel: %d nbrs: %d\n",k,Vlist[k].nbrs);
+		for (int j=0; j<Vlist[k].nbrs; j++) {
+			printf("   %d %d",j,Vlist[k].nbr[j]);
+		}
+		printf("\n");
+	}
+	exit(1);
 
 	printf("Start cleanup\n");
 	fprintf(fpout,"Start cleanup\n");
