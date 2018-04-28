@@ -1034,12 +1034,156 @@ int getDiameters(void)
 	return 0;
 }
 
+int	removeShortEnds()
+{
+#define nblist 1000
+	int k0, k, k1, nbrs, n, ib, i, nends;
+	int blist[nblist];
+	double endlen;
+	VOXEL *pv, *pv0;
+
+	nends = 0;
+	for (k0=1; k0<=nlit; k0++) {
+		pv = &Vlist[k0];
+		if (pv->nbrs != 1) continue;
+		n = 0;
+		blist[n] = k0;
+		n++;
+		// Check the length of this loose end
+		k = pv->nbr[0];
+		k1 = k0;
+		endlen = dist_um(pv->pos,Vlist[k].pos);
+		for(;;) {
+			pv = &Vlist[k];
+			nbrs = pv->nbrs;
+			if (nbrs > 2) break;	// reached a vertex
+			if (nbrs < 2) {
+				printf("removeShortEnds: error\n");
+				exit(1);
+			}
+			// Find the next neighbour on the segment
+			if (pv->nbr[0] == k1) {
+				k1 = k;
+				k = pv->nbr[1];
+			} else {
+				k1 = k;
+				k = pv->nbr[0];
+			}
+			endlen += dist_um(pv->pos,Vlist[k].pos);
+			blist[n] = k;
+			n++;
+		}
+		if (endlen < min_end_len) {
+			// Remove this short loose end
+			// First remove the voxels in the list, except for the last one
+			for (i=0; i<n-1; i++) {
+				k = blist[i];
+				pv = &Vlist[k];
+				pv->nbrs = 0;
+				Vindex(pv->pos[0],pv->pos[1],pv->pos[2]) = 0;
+			}
+			pv0 = &Vlist[blist[n-1]];	// This is the vertex pointer
+			k = blist[n-2];				// This is the last voxel on the loose end before the vertex
+			for (ib=0; ib<pv0->nbrs; ib++) {
+				if (pv0->nbr[i] == k) break;
+			}
+			// The loose end is on branch ib
+			// Now remove this branch from pv0->nbr[]
+			for (i=ib; i<pv0->nbrs-1; i++) {
+				pv0->nbr[i] = pv0->nbr[i+1];
+			}
+			pv0->nbrs--;
+			nends++;
+		}
+	}
+	return nends;
+}
 
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
 int createVlist()
 {
-#define nblist 10000
+#define nblist 1000
+	int k, k0, kp, ke, kl, x, y, z, ib, ib1, ib2, i, j, len, n, nb, nloops, nends;
+	int blist[nblist];
+	int nbr_temp[30];
+	VOXEL *pv, *pv0;
+	bool repeat, dbug;
+
+	k = 0;
+	for (x=0;x<width; x++) {
+		for (y=0;y<height; y++) {
+			for (z=0;z<depth; z++) {
+				if (V3Dskel(x,y,z) != 0) {
+					k++;
+					Vindex(x,y,z) = k;
+					Vlist[k].pos[0] = x;
+					Vlist[k].pos[1] = y;
+					Vlist[k].pos[2] = z;
+					Vlist[k].initial_pos[0] = x;
+					Vlist[k].initial_pos[1] = y;
+					Vlist[k].initial_pos[2] = z;
+					Vlist[k].diameter = 0;
+				}
+			}
+		}
+	}
+	// Find neighbour voxels
+	for (k=1; k<=nlit; k++) {
+		int xmin, xmax, ymin, ymax, zmin, zmax;
+		x = Vlist[k].pos[0]; 
+		y = Vlist[k].pos[1]; 
+		z = Vlist[k].pos[2]; 
+		xmin = MAX(0,x-1);
+		xmax = MIN(width-1,x+1);
+		ymin = MAX(0,y-1);
+		ymax = MIN(height-1,y+1);
+		zmin = MAX(0,z-1);
+		zmax = MIN(depth-1,z+1);
+		int nbrs = 0;
+		for (int xx=xmin; xx<=xmax; xx++) {
+			for (int yy=ymin; yy<=ymax; yy++) {
+				for (int zz=zmin; zz<=zmax; zz++) {
+					int kk = Vindex(xx,yy,zz);
+					if (kk == k) continue;
+					if (kk > 0) {
+						nbrs++;
+						if (nbrs > MAXNBRS) {
+							printf("Error: too many neighbours\n");
+							fprintf(fperr,"Error: too many neighbours\n");
+							return 1;
+						}
+						Vlist[k].nbr[nbrs-1] = kk;
+					}
+				}
+			}
+		}
+		Vlist[k].nbrs = nbrs;
+	}
+
+//	imskel = nullptr;
+	imskel = ImageType::New();
+
+	for (i=0; i<4; i++) {
+		nends = removeShortEnds();	
+		if (nends == 0) break;
+		printf("Removed short ends: %d\n",nends);
+		fprintf(fpout,"Removed short ends: %d\n",nends);
+		avediameter = (float *)malloc((nlit+1)*sizeof(float));
+		fprintf(fpout,"Allocated avediameter: %d\n",nlit+1);
+
+	}
+	exit(0);
+
+	return 0;
+}
+
+
+//-----------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------
+int createVlist1()
+{
+#define nblist 1000
 	int k, k0, kp, ke, kl, x, y, z, ib, ib1, ib2, i, j, len, n, nb, nloops, nends;
 	int blist[nblist];
 	int nbr_temp[30];
