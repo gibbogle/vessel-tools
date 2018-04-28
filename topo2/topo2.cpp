@@ -1062,7 +1062,10 @@ int	removeShortEnds()
 			nbrs = pv->nbrs;
 			if (nbrs > 2) break;	// reached a vertex
 			if (nbrs < 2) {
-				printf("k0: %d k: %d nbrs: %d\n",k0,k,nbrs);
+				printf("Error: k0: %d k: %d nbrs: %d\n",k0,k,nbrs);
+				for (i=0; i<n; i++) {
+					printf("%d %d\n",i,blist[i]);
+				}
 				exit(1);
 			}
 			// Find the next neighbour on the segment
