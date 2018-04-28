@@ -1049,17 +1049,21 @@ int	removeShortEnds()
 	for (k0=1; k0<=nlit; k0++) {
 		pv = &Vlist[k0];
 		if (pv->nbrs != 1) continue;
-		n = 1;
+//		printf("\nk0: %d nbrs: %d\n",k0,pv->nbrs);
+		n = 0;
 		blist[n] = k0;
+		n = 1;
 		// Check the length of this loose end
 		k = pv->nbr[0];
 		k1 = k0;
 		endlen = dist_um(pv->pos,Vlist[k].pos);
+//		printf("endlen: %f\n",endlen);
 		blist[n] = k;
 		n++;
 		for(;;) {
 			pv = &Vlist[k];
 			nbrs = pv->nbrs;
+//			printf("k: %d nbrs: %d\n",k,nbrs);
 			if (nbrs > 2) break;	// reached a vertex
 			if (nbrs < 2) {
 				printf("Error: k0: %d k: %d nbrs: %d\n",k0,k,nbrs);
@@ -1077,6 +1081,7 @@ int	removeShortEnds()
 				k = pv->nbr[0];
 			}
 			endlen += dist_um(pv->pos,Vlist[k].pos);
+//			printf("endlen: %f\n",endlen);
 			blist[n] = k;
 			n++;
 		}
@@ -1088,18 +1093,29 @@ int	removeShortEnds()
 				pv = &Vlist[k];
 				pv->nbrs = 0;
 				Vindex(pv->pos[0],pv->pos[1],pv->pos[2]) = 0;
+//				printf("removed: %d\n",k);
 			}
 			pv0 = &Vlist[blist[n-1]];	// This is the vertex pointer
 			k = blist[n-2];				// This is the last voxel on the loose end before the vertex
+//			printf("vertex is: %d last voxel: %d\n",blist[n-1],k);
+//			printf("nbr list: ");
+//			for (i=0; i<pv0->nbrs; i++)
+//				printf("  %d",pv0->nbr[i]);
+//			printf("\n");
 			for (ib=0; ib<pv0->nbrs; ib++) {
-				if (pv0->nbr[i] == k) break;
+				if (pv0->nbr[ib] == k) break;
 			}
 			// The loose end is on branch ib
 			// Now remove this branch from pv0->nbr[]
+//			printf("nbr to remove: ib: %d\n",ib);
 			for (i=ib; i<pv0->nbrs-1; i++) {
 				pv0->nbr[i] = pv0->nbr[i+1];
 			}
 			pv0->nbrs--;
+//			printf("new nbr list: ");
+//			for (i=0; i<pv0->nbrs; i++)
+//				printf("  %d",pv0->nbr[i]);
+//			printf("\n");
 			nends++;
 		}
 	}
