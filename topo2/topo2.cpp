@@ -1040,7 +1040,7 @@ int getDiameters(void)
 int createVlist()
 {
 #define nblist 100
-	int k, k0, kp, ke, kl, x, y, z, ib, ib1, ib2, i, len, n, nb, nloops, nends;
+	int k, k0, kp, ke, kl, x, y, z, ib, ib1, ib2, i, j, len, n, nb, nloops, nends;
 	int blist[nblist];
 	int nbr_temp[30];
 	VOXEL *pv, *pv0;
@@ -1102,10 +1102,10 @@ int createVlist()
 //	imskel = nullptr;
 	imskel = ImageType::New();
 
-	for (int i=0; i<ndbug; i++) {
+	for (i=0; i<ndbug; i++) {
 		k = kdbug[i];
 		printf("voxel: %d nbrs: %d\n",k,Vlist[k].nbrs);
-		for (int j=0; j<Vlist[k].nbrs; j++) {
+		for (j=0; j<Vlist[k].nbrs; j++) {
 			printf("   %d %d",j,Vlist[k].nbr[j]);
 		}
 		printf("\n");
@@ -1123,10 +1123,10 @@ int createVlist()
 		dbug = (k0 == 5346350);
 		if (dbug) {
 
-			for (int i=0; i<ndbug; i++) {
+			for (i=0; i<ndbug; i++) {
 				k = kdbug[i];
 				printf("voxel: %d nbrs: %d\n",k,Vlist[k].nbrs);
-				for (int j=0; j<Vlist[k].nbrs; j++) {
+				for (j=0; j<Vlist[k].nbrs; j++) {
 					printf("   %d %d",j,Vlist[k].nbr[j]);
 				}
 				printf("\n");
