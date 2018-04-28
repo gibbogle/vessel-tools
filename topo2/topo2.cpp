@@ -1034,6 +1034,8 @@ int getDiameters(void)
 	return 0;
 }
 
+//-----------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------
 int	removeShortEnds()
 {
 #define nblist 1000
@@ -1042,23 +1044,25 @@ int	removeShortEnds()
 	double endlen;
 	VOXEL *pv, *pv0;
 
+	printf("removeShortEnds\n");
 	nends = 0;
 	for (k0=1; k0<=nlit; k0++) {
 		pv = &Vlist[k0];
 		if (pv->nbrs != 1) continue;
-		n = 0;
+		n = 1;
 		blist[n] = k0;
-		n++;
 		// Check the length of this loose end
 		k = pv->nbr[0];
 		k1 = k0;
 		endlen = dist_um(pv->pos,Vlist[k].pos);
+		blist[n] = k;
+		n++;
 		for(;;) {
 			pv = &Vlist[k];
 			nbrs = pv->nbrs;
 			if (nbrs > 2) break;	// reached a vertex
 			if (nbrs < 2) {
-				printf("removeShortEnds: error\n");
+				printf("k0: %d k: %d nbrs: %d\n",k0,k,nbrs);
 				exit(1);
 			}
 			// Find the next neighbour on the segment
