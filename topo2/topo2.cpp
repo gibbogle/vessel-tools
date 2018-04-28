@@ -1039,7 +1039,7 @@ int getDiameters(void)
 //-----------------------------------------------------------------------------------------------------
 int createVlist()
 {
-#define nblist 15000
+#define nblist 100
 	int k, k0, kp, ke, kl, x, y, z, ib, ib1, ib2, i, len, n, nb, nloops, nends;
 	int blist[nblist];
 	int nbr_temp[30];
@@ -1122,6 +1122,7 @@ int createVlist()
 		if (pv0->nbrs < 3) continue;
 		dbug = (k0 == 5346350);
 		if (dbug) {
+
 			for (int i=0; i<ndbug; i++) {
 				k = kdbug[i];
 				printf("voxel: %d nbrs: %d\n",k,Vlist[k].nbrs);
@@ -1130,7 +1131,6 @@ int createVlist()
 				}
 				printf("\n");
 			}
-			exit(1);
 
 			printf("k0: %d  nbrs: %d  ", k0,pv0->nbrs);
 			for (i=0; i<pv0->nbrs; i++)
@@ -1143,7 +1143,7 @@ int createVlist()
 				kp = k0;
 				k = pv0->nbr[ib];
 				len = 0;
-				for (;;) {
+				for (;;) {	// traverse the branch
 					pv = &Vlist[k];
 					if (dbug) {
 						printf("ib: %d k: %d  nbrs: %d\n",ib,k,pv->nbrs);
@@ -1172,7 +1172,7 @@ int createVlist()
 							for (i=0; i<len-1; i++) {
 								if (i >= nblist) exit(1);
 								kl = blist[i];
-//								printf("remove kl: %d\n",kl);
+								if (dbug) printf("remove kl: %d\n",kl);
 								pv = &Vlist[kl];
 								pv->nbrs = 0;
 								Vindex(pv->pos[0],pv->pos[1],pv->pos[2]) = 0;
@@ -1211,7 +1211,8 @@ int createVlist()
 						if (dbug) printf("next nbr: %d\n",k);
 					} else if (pv->nbrs == 1) {
 						// We have completed an end segment, from k0 to k
-						if (len < min_end_len) {	
+						if (len < min_end_len) {
+							if (dbug) printf("Removing short loose end\n");
 							// a short end, to be removed
 							// Note: when an end is removed, because pv0->nbr[] has changed we must exit this vertex
 							nends++;
@@ -1219,7 +1220,7 @@ int createVlist()
 							for (i=0; i<len; i++) {
 								if (i >= nblist) exit(1);
 								ke = blist[i];
-//								printf("remove ke: %d\n",ke);
+								if (dbug) printf("remove ke: %d, set nbrs = 0\n",ke);
 								pv = &Vlist[ke];
 								pv->nbrs = 0;
 								Vindex(pv->pos[0],pv->pos[1],pv->pos[2]) = 0;
@@ -1229,6 +1230,12 @@ int createVlist()
 								pv0->nbr[i] = pv0->nbr[i+1];
 							}
 							pv0->nbrs--;
+							if (dbug) {
+								printf("removed branch from pv0, now pv0->nbrs = %d\n",pv0->nbrs);
+								for (int i=0; i<pv0->nbrs; i++) {
+									printf("i: %d %d\n",i,pv0->nbr[i]);
+								}
+							}
 						}
 						break;
 					} else if (pv->nbrs == 0) {
@@ -1237,7 +1244,8 @@ int createVlist()
 						return 1;
 					}
 				}
-				if (repeat) continue;
+//				if (repeat) continue;
+				if (repeat) break;
 			}
 		} while (repeat);
 	}
