@@ -1039,7 +1039,7 @@ int getDiameters(void)
 //-----------------------------------------------------------------------------------------------------
 int createVlist()
 {
-#define nblist 100
+#define nblist 10000
 	int k, k0, kp, ke, kl, x, y, z, ib, ib1, ib2, i, j, len, n, nb, nloops, nends;
 	int blist[nblist];
 	int nbr_temp[30];
