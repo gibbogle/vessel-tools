@@ -437,8 +437,8 @@ int CreateDistributions_topo()
 		k = int(len/dlen + 0.5);	// was k = int(len/dlen)
 		if (len <= len_limit) continue;
 		if (k >= NBOX) {
-			printf("Edge too long: ie: %d  k: %d len: %f  k: %d\n",ie,k,len);
-			fprintf(fperr,"Edge too long: ie: %d  k: %d len: %f  k: %d\n",ie,k,len);
+			printf("Edge too long: ie: %d  k: %d len: %f\n",ie,k,len);
+			fprintf(fperr,"Edge too long: ie: %d  k: %d len: %f\n",ie,k,len);
 			fflush(fperr);
 			continue;
 		}
@@ -1049,7 +1049,7 @@ int	removeShortEnds()
 	for (k0=1; k0<=nlit; k0++) {
 		pv = &Vlist[k0];
 		if (pv->nbrs != 1) continue;
-		printf("\nk0: %d nbrs: %d\n",k0,pv->nbrs);
+//		printf("\nk0: %d nbrs: %d\n",k0,pv->nbrs);
 		n = 0;
 		blist[n] = k0;
 		n = 1;
@@ -1057,13 +1057,13 @@ int	removeShortEnds()
 		k = pv->nbr[0];
 		k1 = k0;
 		endlen = dist_um(pv->pos,Vlist[k].pos);
-		printf("endlen: %f\n",endlen);
+//		printf("endlen: %f\n",endlen);
 		blist[n] = k;
 		n++;
 		for(;;) {
 			pv = &Vlist[k];
 			nbrs = pv->nbrs;
-			printf("k: %d nbrs: %d\n",k,nbrs);
+//			printf("k: %d nbrs: %d\n",k,nbrs);
 			if (nbrs > 2) break;	// reached a vertex
 			if (nbrs < 2) {
 				printf("Error: k0: %d k: %d nbrs: %d\n",k0,k,nbrs);
@@ -1081,7 +1081,7 @@ int	removeShortEnds()
 				k = pv->nbr[0];
 			}
 			endlen += dist_um(pv->pos,Vlist[k].pos);
-			printf("endlen: %f\n",endlen);
+//			printf("endlen: %f\n",endlen);
 			blist[n] = k;
 			n++;
 		}
@@ -1093,7 +1093,7 @@ int	removeShortEnds()
 				pv = &Vlist[k];
 				pv->nbrs = 0;
 				Vindex(pv->pos[0],pv->pos[1],pv->pos[2]) = 0;
-				printf("removed: %d\n",k);
+//				printf("removed: %d\n",k);
 			}
 			pv0 = &Vlist[blist[n-1]];	// This is the vertex pointer
 			k = blist[n-2];				// This is the last voxel on the loose end before the vertex
@@ -1124,6 +1124,88 @@ int	removeShortEnds()
 
 //-----------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------
+int	removeLoops()
+{
+#define nblist 1000
+	int k0, k, k1, kb, nbrs, nbrs0, n, ib, i, nloops;
+	int blist[nblist];
+	int nbr[30];
+	VOXEL *pv, *pv0;
+
+	printf("removeLoops\n");
+	nloops = 0;
+	for (k0=1; k0<=nlit; k0++) {
+		pv0 = &Vlist[k0];
+		nbrs0 = pv0->nbrs;
+		if (nbrs0 < 3) continue;
+//		printf("\nk0: %d nbrs: %d\n",k0,nbrs0);
+		for (ib=0; ib<nbrs0; ib++) {
+			n = 0;
+			k1 = k0;
+			k = pv0->nbr[ib];
+			blist[n] = k;
+			n++;
+			for(;;) {
+				pv = &Vlist[k];
+				nbrs = pv->nbrs;
+	//			printf("k: %d nbrs: %d\n",k,nbrs);
+				if (nbrs > 2) break;	// reached a vertex
+				if (nbrs < 2) break;	// a loose end
+				// Find the next neighbour on the segment
+				if (pv->nbr[0] == k1) {
+					k1 = k;
+					k = pv->nbr[1];
+				} else {
+					k1 = k;
+					k = pv->nbr[0];
+				}
+				blist[n] = k;
+				n++;
+			}
+			if (nbrs < 2) continue;
+			if (k == k0) {  // Loops back to starting vertex
+				n--;	// ignore last blist, which is k0
+//				printf("nbrs0: %d nbrs: %d\n",nbrs0,nbrs);
+				// Need to remove the voxels at blist[0] and blist[n-1] from the nbr[] for k0,
+				// then remove the voxels 0 .. n-1
+//				printf("n: %d ends of loop: %d %d\n",n,blist[0],blist[n-1]);
+				// First fix the nbr list at k0
+				kb = 0;
+				for (ib=0; ib<nbrs0; ib++) {
+					if (pv0->nbr[ib] != blist[0] && pv0->nbr[ib] != blist[n-1]) {
+						nbr[kb] = pv0->nbr[ib];
+						kb++;
+					}
+				}
+				pv0->nbrs = kb;
+				for (ib=0; ib<kb; ib++) {
+					pv0->nbr[ib] = nbr[ib];
+				}
+
+				// Remove the voxels in the blist
+				for (i=0; i<n; i++) {
+					k = blist[i];
+					pv = &Vlist[k];
+					pv->nbrs = 0;
+					Vindex(pv->pos[0],pv->pos[1],pv->pos[2]) = 0;
+	//				printf("removed: %d\n",k);
+				}
+//				printf("k0: %d new nbrs0: %d\n",k0,pv0->nbrs);
+
+	//			printf("new nbr list: ");
+	//			for (i=0; i<pv0->nbrs; i++)
+	//				printf("  %d",pv0->nbr[i]);
+	//			printf("\n");
+				nloops++;
+				break;	// remove at most one loop per vertex
+			}
+		}
+	}
+	return nloops;
+}
+
+//-----------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------
 int createVlist()
 {
 #define nblist 1000
@@ -1133,6 +1215,7 @@ int createVlist()
 	VOXEL *pv, *pv0;
 	bool repeat, dbug;
 
+	printf("createVlist\n");
 	k = 0;
 	for (x=0;x<width; x++) {
 		for (y=0;y<height; y++) {
@@ -1151,8 +1234,10 @@ int createVlist()
 			}
 		}
 	}
+	printf("Create nbr lists\n");
 	// Find neighbour voxels
 	for (k=1; k<=nlit; k++) {
+//		if (k%1000 == 0) printf("k: %d\n",k);
 		int xmin, xmax, ymin, ymax, zmin, zmax;
 		x = Vlist[k].pos[0]; 
 		y = Vlist[k].pos[1]; 
@@ -1189,14 +1274,16 @@ int createVlist()
 
 	for (i=0; i<4; i++) {
 		nends = removeShortEnds();	
-		if (nends == 0) break;
 		printf("Removed short ends: %d\n",nends);
 		fprintf(fpout,"Removed short ends: %d\n",nends);
-		avediameter = (float *)malloc((nlit+1)*sizeof(float));
-		fprintf(fpout,"Allocated avediameter: %d\n",nlit+1);
-
+		nloops = removeLoops();	
+		printf("Removed loops: %d\n",nloops);
+		fprintf(fpout,"Removed loops: %d\n",nloops);
+		if (nends == 0 && nloops == 0) break;
 	}
-	exit(0);
+
+	avediameter = (float *)malloc((nlit+1)*sizeof(float));
+	fprintf(fpout,"Allocated avediameter: %d\n",nlit+1);
 
 	return 0;
 }
@@ -2724,6 +2811,32 @@ int main(int argc, char**argv)
 	pskel = (unsigned char *)(imskel->GetBufferPointer());
 	fflush(fpout);
 
+	nlit = 0;
+	for (long long i=0; i<width*height*depth; i++) {
+		if (pskel[i] > 0) nlit++;
+	}
+	// nlit = number of lit voxels in the skeleton image
+	np = nlit;
+	net->np = nlit;
+
+	pindex = (int *)malloc(width*height*depth*sizeof(int));		// maps location (i,j,k) to a skeleton lit voxel index (k>0) or 0 (unlit)
+	net->point = (VOXEL *)malloc((nlit+1)*sizeof(VOXEL));
+	Vlist = net->point;
+
+	printf("Number of lit skeleton voxels: %d\n",nlit);
+
+	printf("Creating the lit voxel index list\n");
+	fflush(fpout);
+	err = createVlist();
+	if (err != 0) {
+		printf("Error in createVlist\n");
+		fprintf(fperr,"Error in createVlist\n");
+		return 5;
+	} else {
+		printf("Created Vlist\n");
+	}
+
+
 	if (use_object) {
 		// Read original object file (binary)
 		FileReaderType::Pointer reader = FileReaderType::New();
@@ -2765,30 +2878,6 @@ int main(int argc, char**argv)
 		fflush(fpout);
 	}
 
-	nlit = 0;
-	for (long long i=0; i<width*height*depth; i++) {
-		if (pskel[i] > 0) nlit++;
-	}
-	// nlit = number of lit voxels in the skeleton image
-	np = nlit;
-	net->np = nlit;
-
-	pindex = (int *)malloc(width*height*depth*sizeof(int));		// maps location (i,j,k) to a lit voxel index (>0) or 0 (unlit)
-	net->point = (VOXEL *)malloc((nlit+1)*sizeof(VOXEL));
-	Vlist = net->point;
-
-	printf("Number of lit skeleton voxels: %d\n",nlit);
-
-	printf("Creating the lit voxel index list\n");
-	fflush(fpout);
-	err = createVlist();
-	if (err != 0) {
-		printf("Error in createVlist\n");
-		fprintf(fperr,"Error in createVlist\n");
-		return 5;
-	} else {
-		printf("Created Vlist\n");
-	}
 	if (METHOD2) {
 		err = deloop();
 		if (err != 0) {
