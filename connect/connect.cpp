@@ -812,7 +812,7 @@ int main(int argc, char**argv)
     // linux code
 	strcpy(outputPath, basename(infile));
 	temp_name = remove(outputPath);
-	strcpy(outputPth,temp_name);
+	strcpy(outputPath,temp_name);
 #endif
 	sprintf(errorFile,"%s%s%s",outputPath,filename,"_connect.log");
 	printf("Error file: %s\n",errorFile);
