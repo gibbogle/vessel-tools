@@ -78,6 +78,23 @@ struct bigObject {
 
 FILE *fp, *fpout;
 
+//-----------------------------------------------------------------------------------------------------
+// For Linux to create output_basename without extension
+//-----------------------------------------------------------------------------------------------------
+char *remove(char* mystr) {
+    char *retstr;
+    char *lastdot;
+    if (mystr == NULL)
+         return NULL;
+    if ((retstr = (char *)malloc (strlen (mystr) + 1)) == NULL)
+        return NULL;
+    strcpy (retstr, mystr);
+    lastdot = strrchr (retstr, '.');
+    if (lastdot != NULL)
+        *lastdot = '\0';
+    return retstr;
+}
+
 //------------------------------------------------------------------------------------------------
 //------------------------------------------------------------------------------------------------
 bool by_nvoxels ( const bigObject &a, const bigObject &b )
@@ -759,6 +776,7 @@ int main(int argc, char**argv)
 	char numstr[2];
 	char drive[32], dir[128],filename[64], ext[32];
 	char errorFile[128], outputFile[128], outputPath[128];
+	char *temp_name;
 	FILE *fperr;
 
 	if (argc != 4) {
@@ -781,9 +799,21 @@ int main(int argc, char**argv)
 
 	infile = argv[1];
 	baseName = argv[2]; 
+//	_splitpath(infile,drive,dir,filename,ext);
+//	strcpy(outputPath,drive);
+//	strcat(outputPath,dir);
+#if (defined (_WIN32) || defined (_WIN64))
+    // windows code
 	_splitpath(infile,drive,dir,filename,ext);
 	strcpy(outputPath,drive);
 	strcat(outputPath,dir);
+//	strcat(output_basename,filename);
+#elif (defined (LINUX) || defined (__linux__))
+    // linux code
+	strcpy(outputPath, basename(infile));
+	temp_name = remove(outputPath);
+	strcpy(outputPth,temp_name);
+#endif
 	sprintf(errorFile,"%s%s%s",outputPath,filename,"_connect.log");
 	printf("Error file: %s\n",errorFile);
 	sprintf(outputFile,"%s%s%s",outputPath,filename,"_connect.out");
