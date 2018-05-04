@@ -36,7 +36,7 @@ unsigned short *p_16;
 int main(int argc, char**argv)
 {
 	int x, y, z, nbits, thresh;
-	int width, height, depth, xysize;
+	long long width, height, depth, xysize;
 	bool use_compression = true;
 
 	if (argc != 5) {

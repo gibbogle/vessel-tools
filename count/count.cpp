@@ -7,7 +7,7 @@ unsigned char *p;
 int main( int argc, char* argv[] )
 {
 	char *imagefile;
-	int width, height, depth, count;
+	long long width, height, depth, count;
 
 	if( argc != 2 )
 	{
@@ -32,7 +32,7 @@ int main( int argc, char* argv[] )
 	depth = im->GetLargestPossibleRegion().GetSize()[2];
 	p = (unsigned char *)(im->GetBufferPointer());
 	count = 0;
-	for (int i=0; i<width*height*depth; i++) {
+	for (long long i=0; i<width*height*depth; i++) {
 		if (p[i] != 0) count++;
 	}
 	printf("Lit voxel count: %d\n",count);

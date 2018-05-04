@@ -168,7 +168,7 @@ void ImageWidget::getFrame(int z)
 //	height = itkImage3->GetLargestPossibleRegion().GetSize()[1];
 //	depth = itkImage3->GetLargestPossibleRegion().GetSize()[2];
     xysize = imageWidth*imageHeight;
-    printf("Image dimensions: width, height, depth: %d %d %d\n",imageWidth,imageHeight,imageDepth);
+    printf("Image dimensions: width, height, depth: %ld %ld %ld\n",imageWidth,imageHeight,imageDepth);
 	p3 = (unsigned char *)(itkImage3->GetBufferPointer());
 	// create image itkImage2 that is the selected frame of itkImage3
     if (!itkImage2) itkImage2 = ImageType2::New();
@@ -216,7 +216,7 @@ void ImageWidget::openWithITK()
 			reader3->SetFileName(fileName.toAscii().data());
 			reader3->Update();
 			itkImage3 = reader3->GetOutput();
-            printf("got itkImage3\n");
+			printf("got itkImage3: buffer p: %p\n",itkImage3->GetBufferPointer());
         } else {
             printf("read itkImage2\n");
             reader2 = ReaderType2::New();
@@ -229,8 +229,16 @@ void ImageWidget::openWithITK()
             imageWidth = itkImage3->GetLargestPossibleRegion().GetSize()[0];
             imageHeight = itkImage3->GetLargestPossibleRegion().GetSize()[1];
             imageDepth = itkImage3->GetLargestPossibleRegion().GetSize()[2];
-            getFrame(0);
+ 			// TESTING
+			long long size = imageWidth*imageHeight*imageDepth;
+			unsigned char *p = itkImage3->GetBufferPointer();
+			printf("itkImage3 buffer: %p size: %lld\n",p,size);
+			//for (long long i=0; i<size; i++) {
+			//	p[i] = 128;
+			//}
+			getFrame(0);
             printf("got frame\n");
+
         } else {
             imageWidth = itkImage2->GetLargestPossibleRegion().GetSize()[0];
             imageHeight = itkImage2->GetLargestPossibleRegion().GetSize()[1];
@@ -275,15 +283,21 @@ unsigned char * ImageWidget::getBuffer() {
 
 void ImageWidget::subtractImage(unsigned char * psub) {
     unsigned char *p = getBuffer();
-    for (int i=0; i<imageWidth*imageHeight*imageDepth; i++) {
+	int maxval = 0;
+	long long size = imageWidth*imageHeight*imageDepth;
+	printf("subtractImage: buffer p: %p size: %lld\n",p,size);
+    for (long long i=0; i<size; i++) {
         p[i] = MAX(0,p[i]-psub[i]);
+		maxval = MAX(maxval,p[i]);
     }
+	printf("maxval: %d\n",maxval);
 }
 
 void ImageWidget::addImage(unsigned char * psub) {
     unsigned char *p = getBuffer();
     int sum;
-    for (int i=0; i<imageWidth*imageHeight*imageDepth; i++) {
+	long long size = imageWidth*imageHeight*imageDepth;
+    for (long long i=0; i<size; i++) {
         sum = p[i]+psub[i];
         p[i] = MIN(255,sum);
     }
@@ -291,12 +305,12 @@ void ImageWidget::addImage(unsigned char * psub) {
 
 void ImageWidget::subtract(int val)
 {
-    int size, i;
+    long long size, i;
     unsigned char *p;
 
     printf("subtract %d from image\n",val);
     if (numDimensions == 3) {
-        size = imageWidth*imageHeight*imageDepth;
+        size = imageWidth*(long long)(imageHeight*imageDepth);
         p = (unsigned char *)(itkImage3->GetBufferPointer());
     } else {
         size = imageWidth*imageHeight;
@@ -584,6 +598,12 @@ void ImageWidget::setImageProperties(std::string fileName, bool verbose)
 	}
 }
 
+void ImageWidget::getImageDimensions(long long *w, long long *h, long long *d)
+{
+	*w = imageWidth;
+	*h = imageHeight;
+	*d = imageDepth;
+}
 
 
 // NOT USED

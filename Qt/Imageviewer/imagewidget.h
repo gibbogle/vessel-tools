@@ -92,6 +92,7 @@ public:
     void subtractImage(unsigned char *);
     void addImage(unsigned char *);
     void AddNumber(int *);
+	void getImageDimensions(long long *w, long long *h, long long *d);
 
 public slots:
     void tallyMark(QMouseEvent* event);
@@ -154,9 +155,9 @@ private:
 
     void getImageXY(int pos[], int xy[]);
 
-    int imageWidth;
-    int imageHeight;
-    int imageDepth;
+    long long imageWidth;
+    long long imageHeight;
+    long long imageDepth;
     QString fileName;
 
 };

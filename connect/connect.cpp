@@ -899,7 +899,7 @@ int main(int argc, char**argv)
 	fclose(fpout);
 
 	int nvoxels = 0;
-	for(i=0; i<imsize*depth; i++) {
+	for(long long i=0; i<imsize*depth; i++) {
 		if (p[i] != 0) nvoxels++;
 	}
 	fprintf(fpout,"After despeckling, total lit voxels = %d\n",nvoxels);

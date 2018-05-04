@@ -99,7 +99,7 @@ int main( int argc, char ** argv )
 	compress = (compressFlag == 1);
 	const char * outputFilename = argv[6];
 	char infile[256];
-	int width, height, depth;
+	long long width, height, depth;
 	unsigned char *p2D_8;
 	unsigned short *p2D_16;
 	unsigned char *p3D;

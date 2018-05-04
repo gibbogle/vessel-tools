@@ -193,7 +193,10 @@ bool ImageViewer::imageEquivalence() {
     if (!imageWidget1 || !imageWidget2) return false;
     imageWidget1->getInfo(&n1,&w1,&h1,&d1);
     imageWidget2->getInfo(&n2,&w2,&h2,&d2);
-    if (n1 != n2 || w1 != w2 || h1 != h2 || d1 != d2) return false;
+    if (n1 != n2 || w1 != w2 || h1 != h2 || d1 != d2) {
+		printf("The images are not equivalent: n,w,h,d: %d %d %d %d    %d %d %d %d\n",n1,w1,h1,d1,n2,w2,h2,d2);
+		return false;
+	}
     return true;
 }
 
@@ -207,12 +210,31 @@ void ImageViewer::subtractImage()
 {
     unsigned char *p;
 
-    if (!imageEquivalence()) return;
+	printf("subtractImage:\n");
+    if (!imageEquivalence()) {
+		printf("The images are not equivalent\n");
+		return;
+	}
+	long long imageWidth, imageHeight, imageDepth;
     if (ui->radioButtonImage1->isChecked()) {
+		unsigned char *p1 = imageWidget1->getBuffer();
+		printf("Subtracting image2 from image1: buffer p1: %p\n",p1);
         p = imageWidget2->getBuffer();
         imageWidget1->subtractImage(p);
+		printf("did subtractImage\n");
+		imageWidget1->getImageDimensions(&imageWidth,&imageHeight,&imageDepth);
+		printf("dimensions: %ld %ld %ld\n",imageWidth, imageHeight, imageDepth);
+		unsigned char maxval = 0;
+		long long size = imageWidth*imageHeight*imageDepth;
+		for (long long i=0; i<size; i++) {
+//			p1[i] = 128;	// TESTING
+			maxval = MAX(maxval,p1[i]);
+		}
+		printf("after subtraction: maxval: %d\n",maxval);
         imageWidget1->showFrame(iframe);
     } else {
+		unsigned char *p2 = imageWidget2->getBuffer();
+		printf("Subtracting image1 from image2: buffer p2: %p\n",p2);
         p = imageWidget1->getBuffer();
         imageWidget2->subtractImage(p);
         imageWidget2->showFrame(iframe);

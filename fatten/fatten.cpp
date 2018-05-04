@@ -21,8 +21,7 @@
 
 typedef itk::Image<unsigned char,3> ImageType_u8; 
 ImageType_u8::Pointer im_in, im_out;
-int width, height, depth;
-long xysize;
+long long width, height, depth, xysize;
 unsigned char *p_in, *p_out;
 
 #define V_in(a,b,c)   p_in[(c)*xysize+(b)*width+(a)]

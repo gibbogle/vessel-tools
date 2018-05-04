@@ -32,8 +32,7 @@ unsigned char *p;
 
 #define MAXFILL 20000
 
-int width, height, depth;
-int imsize;
+long long width, height, depth, imsize;
 typedef itk::Image<unsigned char,3> ImageType;
 ImageType::Pointer im;
 

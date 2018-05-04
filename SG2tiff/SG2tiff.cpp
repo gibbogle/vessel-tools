@@ -766,7 +766,7 @@ int main(int argc, char**argv)
 {
 	int err;
 	int x, y, z, val, res;
-	int width, height, depth, xysize;
+	long long width, height, depth, xysize;
 	double pos[3];
 	char *input_SGfile;
 	char drive[32], dir[128],filename[256], ext[32];

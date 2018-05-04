@@ -21,7 +21,7 @@ short *p, *plabel;
 unsigned char *p3D;
 unsigned int *npixels;
 bool *fill;
-int width, height, depth, imsize_xy;
+long long width, height, depth, imsize_xy;
 int nobjects;
 int gapwidth, niter;
 

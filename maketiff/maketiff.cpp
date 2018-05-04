@@ -33,7 +33,7 @@ int main(int argc, char**argv)
 {
 	int nx, ny, nz, nbytes, direction, nx8, ny8, nz8, k;
 //	int n, x, y, z, dx, dy;
-	int width, height, depth, xysize;
+	long long width, height, depth, xysize;
 	char *dataFile, *tiffFile;
 	bool use_compression = true, data2tiff, compressdata = true;
 	FILE *fpdata;
