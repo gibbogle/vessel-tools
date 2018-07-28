@@ -427,6 +427,8 @@ void MainWindow::batch_analyser()
             else
                 qstr += R_str;
             qstr += " ";
+            qstr += ui->lineEdit_deadend_radius->text();
+            qstr += " ";
             qstr += ui->lineEdit_speed->text();
             qstr += " ";
             qstr += "0";    //ui->lineEdit_npaths->text();
