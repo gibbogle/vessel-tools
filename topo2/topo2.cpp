@@ -2163,9 +2163,10 @@ void dropnbr(int kdrop, VOXEL *pv)
 //-----------------------------------------------------------------------------------------------------
 int deloop()
 {
+#define MAXNEAR 100
 	int k, k0, i, i1, i2, k1, k2, j, kj1, kj2, kdrop, nbrs, x0, y0, z0, x, y, z;
 	int xmin, xmax, ymin, ymax, zmin, zmax;
-	int nnear, nearlist[20], n3dropped, n4dropped;
+	int nnear, nearlist[MAXNEAR], n3dropped, n4dropped;
 	int nr = 3;		// the searched cube has side = 2*nr+1
 	float d1, d2;
 	bool triangle, loop4;
@@ -2202,6 +2203,12 @@ int deloop()
 								if (pv->nbr[i] == k0) {
 									nearlist[nnear] = k;
 									nnear++;
+									if (nnear >= MAXNEAR) {
+										printf("Error: (a) MAXNEAR exceeded: %d\n",MAXNEAR);
+										fprintf(fpout,"Error: (a) MAXNEAR exceeded: %d\n",MAXNEAR);
+										fflush(fpout);
+										return 1;
+									}
 									break;
 								}
 							}
@@ -2265,6 +2272,12 @@ int deloop()
 								if (pv->nbr[i] == k0) {
 									nearlist[nnear] = k;
 									nnear++;
+									if (nnear >= MAXNEAR) {
+										printf("Error: (b) MAXNEAR exceeded: %d\n",MAXNEAR);
+										fprintf(fpout,"Error: (b) MAXNEAR exceeded: %d\n",MAXNEAR);
+										fflush(fpout);
+										return 2;
+									}
 									break;
 								}
 							}
@@ -2919,7 +2932,9 @@ int main(int argc, char**argv)
 	fflush(fpout);
 
 //	fprintf(fpout,"DROP deloop for TESTING\n");
+	printf("call deloop\n");
 	err = deloop();
+	printf("deloop returned: %d\n",err);
 	if (err != 0) {
 		printf("Error in deloop\n");
 		fprintf(fperr,"Error in deloop\n");

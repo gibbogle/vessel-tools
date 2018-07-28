@@ -118,6 +118,8 @@ void MainWindow::conduit_analyser()
         qstr += " ";
         qstr += ui->lineEdit_radius->text();
         qstr += " ";
+        qstr += ui->lineEdit_deadend_radius->text();
+        qstr += " ";
         qstr += ui->lineEdit_speed->text();
         qstr += " ";
         qstr += ui->lineEdit_npaths->text();

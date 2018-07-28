@@ -33,3 +33,5 @@ Option 2: vessels less than the specified length limit are excluded
 Option 3: vessels with length/diameter less than the specified limit are excluded
 
 The widths of the boxes used for counting vessels to compute the probability distributions must be specified.
+
+Counting deadends: If the counting sphere radius is non-zero, deadends are counted within a sphere of this radius with the starting sphere centre.  Otherwise the whole network is used.

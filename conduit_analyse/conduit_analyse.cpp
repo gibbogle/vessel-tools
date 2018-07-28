@@ -62,6 +62,7 @@ double min_len = 3;		// to compute fibre length distribution with a lower limit 
 int npow = 4;					// probability of selecting a branch depends on power (npow) of cosine(turning angle)
 int ntrials = 5000;				// number of random start locations
 double start_radius = 100;		// radius of sphere within which paths start (um)
+double deadend_radius = 300;		// radius of sphere within which deadends will be counted
 bool save_paths;
 int npaths;
 double mean_speed=12;			// mean cell speed (um/min)
@@ -410,6 +411,7 @@ int ReadAmiraFile(char *amFile, NETWORK *net)
 	char line[STR_LEN];
 
 	fprintf(fpout,"ReadAmiraFile: %s\n",amFile);
+	fflush(fpout);
 	FILE *fpam = fopen(amFile,"r");
 
 	npts = 0;
@@ -436,6 +438,8 @@ int ReadAmiraFile(char *amFile, NETWORK *net)
 	net->edgeList = (EDGE *)malloc(net->ne*sizeof(EDGE));
 	net->point = (POINT *)malloc(net->np*sizeof(POINT));
 	printf("Allocated arrays: np: %d nv: %d ne: %d\n",net->np,net->nv,net->ne);
+	fprintf(fpout,"Allocated arrays: np: %d nv: %d ne: %d\n",net->np,net->nv,net->ne);
+	fflush(fpout);
 
 	// Initialize
 	for (i=0; i<net->ne; i++) {
@@ -1534,7 +1538,11 @@ void traverse(NETWORK *net, int nsteps, double *tpt, double *res_d2sum, double *
 }
 
 //-----------------------------------------------------------------------------------------------------
-// Count deadends in the network
+// Count deadends in the network.  
+// If deadend_radius = 0 
+//    count the whole network
+// else
+//    count in a sphere of radius deadend_radius centred at (x0,y0,z0)
 //-----------------------------------------------------------------------------------------------------
 int NumberOfDeadends(NETWORK *net)
 {
@@ -1542,17 +1550,39 @@ int NumberOfDeadends(NETWORK *net)
 	int k1, k2;
 	int nshort = 0;
 	int ndeadends = 0;
+
+	if (deadend_radius > 0) {
+		fprintf(fpout,"\nCounting deadends in a sphere: radius: %6.1f centre: %6.1f %6.1f %6.1f\n",deadend_radius, centre.x, centre.y, centre.z);
+	} else {
+		fprintf(fpout,"\nCounting deadends in the whole network\n");
+	}
 	for (int i=0; i<nfibres; i++) {
 		for (int k=0; k<2; k++) {
-			if (fibre[i].nlinks[k] == 0) {
-				ndeadends++;
-				k1 = fibre[i].pt[0];
-				k2 = fibre[i].pt[1];
-				len = distance(net, k1, k2);
-				if (len <= min_len) nshort++;
+			if (fibre[i].nlinks[k] == 0) {	// deadend
+				if (deadend_radius > 0) {
+					int kp = fibre[i].pt[k];
+					float dx = centre.x - net->point[kp].x;
+					float dy = centre.y - net->point[kp].y;
+					float dz = centre.z - net->point[kp].z;
+					if (sqrt(dx*dx+dy*dy+dz*dz) < deadend_radius) {
+						ndeadends++;
+						k1 = fibre[i].pt[0];
+						k2 = fibre[i].pt[1];
+						len = distance(net, k1, k2);
+						if (len <= min_len) nshort++;
+					}
+				} else {
+					ndeadends++;
+					k1 = fibre[i].pt[0];
+					k2 = fibre[i].pt[1];
+					len = distance(net, k1, k2);
+					if (len <= min_len) nshort++;
+				}
 			}
 		}
 	}
+	printf("Number of dead ends: %d\n",ndeadends);
+	fprintf(fpout,"Number of dead ends: %d\n",ndeadends);
 	printf("Number of short dead ends: %d\n",nshort);
 	fprintf(fpout,"Number of short dead ends: %d\n",nshort);
 	return ndeadends;
@@ -1869,7 +1899,7 @@ int main(int argc, char **argv)
 	printf("For the healing pass, set max_len \n(unscaled upper limit on length of an added connection).\n");
 	printf("The shrinkage compensation factor must be specified\n(Note that the dimensions in the am file are left unscaled)\n");
 	printf("\n");
-	if (argc != 9 && argc != 16) {
+	if (argc != 9 && argc != 17) {
 		printf("To perform joining and trimming of dead ends:\n");
 		printf("Usage: conduit_analyse input_amfile output_file sfactor max_len limit_mode limit_value ddiam dlen\n");
 		printf("       sfactor     = shrinkage compensation factor e.g. 1.25\n");
@@ -1879,12 +1909,13 @@ int main(int argc, char **argv)
 		printf("       ddiam       = bin size for diameter distribution\n");
 		printf("       dlen        = bin size for length distribution\n");
 		printf("\nTo simulate cell paths and estimate Cm:\n");
-		printf("Usage: conduit_analyse input_amfile output_file sfactor npow ntrials x0 y0 z0 radius speed npaths limit_mode limit_value ddiam dlen\n");
+		printf("Usage: conduit_analyse input_amfile output_file sfactor npow ntrials x0 y0 z0 radius deadend_radius speed npaths limit_mode limit_value ddiam dlen\n");
 		printf("       sfactor     = shrinkage compensation factor e.g. 1.25\n");
 		printf("       npow        = power of cos(theta) in weighting function for prob. of \n                     taking a branch (theta = turning angle)\n");
 		printf("       ntrials     = number of cell paths simulated\n");
 		printf("       x0,y0,z0    = centre of sphere within which the cell paths start (um)\n");
 		printf("       radius      = radius of sphere within which the cell paths start (um)\n");
+		printf("       deadend_radius = radius of sphere within which deadends are counted (um)\n");
 		printf("       speed       = mean cell speed (um/min) (Note that CV = %6.2f)\n",CV);
 		printf("       npaths      = number of cell paths to save\n");
 		printf("       limit_mode  = restriction for computing fibre statistics:\n                     0 = no limit, 1 = len limit, 2 =  len/diam limit\n");
@@ -1908,6 +1939,7 @@ int main(int argc, char **argv)
 		fprintf(fpout,"       ntrials     = number of cell paths simulated\n");
 		fprintf(fpout,"       x0,y0,z0    = centre of sphere within which the cell paths start (um)\n");
 		fprintf(fpout,"       radius      = radius of sphere within which the cell paths start (um)\n");
+		fprintf(fpout,"       deadend_radius = radius of sphere within which deadends are counted (um)\n");
 		fprintf(fpout,"       speed       = mean cell speed (um/min) (Note that CV = %6.2f)\n",CV);
 		fprintf(fpout,"       npaths      = number of cell paths to save\n");
 		fprintf(fpout,"       limit_mode  = restriction for computing fibre statistics:\n                     0 = no limit, 1 = len limit, 2 =  len/diam limit\n");
@@ -1948,19 +1980,20 @@ int main(int argc, char **argv)
 		//fprintf(fpout,"\noutput_amfile: %s\n",output_amfile);
 		//return 0;
 
-	} else if (argc == 16) {
+	} else if (argc == 17) {
 		sscanf(argv[4],"%d",&npow);
 		sscanf(argv[5],"%d",&ntrials);
 		sscanf(argv[6],"%f",&centre.x);
 		sscanf(argv[7],"%f",&centre.y);
 		sscanf(argv[8],"%f",&centre.z);
 		sscanf(argv[9],"%lf",&start_radius);
-		sscanf(argv[10],"%lf",&mean_speed);
-		sscanf(argv[11],"%d",&npaths);
-		sscanf(argv[12],"%d",&limit_mode);
-		sscanf(argv[13],"%f",&limit_value);
-		sscanf(argv[14],"%f",&ddiam);
-		sscanf(argv[15],"%f",&dlen);
+		sscanf(argv[10],"%lf",&deadend_radius);
+		sscanf(argv[11],"%lf",&mean_speed);
+		sscanf(argv[12],"%d",&npaths);
+		sscanf(argv[13],"%d",&limit_mode);
+		sscanf(argv[14],"%f",&limit_value);
+		sscanf(argv[15],"%f",&ddiam);
+		sscanf(argv[16],"%f",&dlen);
 		do_connect = false;
 		save_paths = (npaths > 0);
 		if (save_paths) {
