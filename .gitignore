@@ -14,6 +14,8 @@ bin/exec/*
 */ITK*/*/*/*
 */Release
 */Release/*
+*/Debug
+*/Debug/*
 */x64
 */x64/*
 */x64/*/*
@@ -29,10 +31,20 @@ bin/exec/*
 */*.suo
 */*.vcxpro*
 */ZERO_*
+*/*.out
+*/*.log
+*/*/*.out
+*/*/*.log
 Qt/*/*.user
 Qt/*build
 Qt/*build/*
 Qt/*build/*/*
 Qt/*build/*/*/*
-
+Qt/*/CMakeFiles
+Qt/*/CMakeFiles/*
+Qt/*/CMakeFiles/*/*
+Qt/*/CMakeFiles/*/*/*
+Qt/*/CMakeFiles/*/*/*/*
+Qt/Imageviewer/*
+Qt/Imageviewer/*/*
 
