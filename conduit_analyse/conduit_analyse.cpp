@@ -1601,7 +1601,8 @@ void new_traverse(NETWORK *net, int nsteps, double *tpt, double *res_d2sum, doub
 //	std::uniform_real_distribution<double> uni_dist( 0.0, 1.0 ) ;
 	double d, d2sum=0;
 	int np = 0;
-	for (k=0; k<1000000; k++) {
+//	for (k=0; k<1000000; k++) {
+	for(;;) {
 		R = uni_dist(gen);
 		R *= Ltotal;
 		// Randomly choose initial direction on the fibre
