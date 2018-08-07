@@ -18,12 +18,7 @@ using namespace std;
 #include "itkImage.h"
 #include "itkImageFileReader.h"
 #include "itkImageFileWriter.h"
-#include <itkDanielssonDistanceMapImageFilter.h>
 #include "itkSize.h"
-#include "itkThresholdImageFilter.h"
-#include "itkBinaryThresholdImageFilter.h"
-#include "itkMeanImageFilter.h"
-//#include "itkBoxMeanImageFilter.h"
 
 #define MAXPAIRS 100
 #define MAXLABELS 1000000	// 400000
@@ -760,9 +755,6 @@ int createObjectImage(int lab, int cmap[], bool taken[])
 //------------------------------------------------------------------------------------------------
 int main(int argc, char**argv)
 {
-//	bool drop[MAXLABELS];
-//	int cmap[MAXLABELS];
-//	bool taken[MAXLABELS];
 	bool *drop;
 	int *cmap;
 	bool *taken;
@@ -770,13 +762,11 @@ int main(int argc, char**argv)
 	time_t t1;
 	t1 = time(NULL);
 	char objectFile[128];
-//	char baseName[] = "object";
 	char *infile;
 	char *baseName;
 	char numstr[2];
 	char drive[32], dir[128],filename[64], ext[32];
 	char errorFile[128], outputFile[128], outputPath[128];
-	char *temp_name;
 	FILE *fperr;
 
 	if (argc != 4) {
@@ -896,7 +886,6 @@ int main(int argc, char**argv)
 	printf("Did despeckle\n");
 	fprintf(fpout,"Did despeckle\n");
 	fflush(fpout);
-	fclose(fpout);
 
 	int nvoxels = 0;
 	for(long long i=0; i<imsize*depth; i++) {
