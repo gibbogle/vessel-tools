@@ -1,5 +1,5 @@
 /*
- * To find small objects in an image 
+ * To find largest connected objects in an image 
  */
 using namespace std;
 
