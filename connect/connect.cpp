@@ -764,7 +764,7 @@ int main(int argc, char**argv)
 	char objectFile[128];
 	char *infile;
 	char *baseName;
-	char numstr[2];
+	char numstr[3];
 	char drive[32], dir[128],filename[64], ext[32];
 	char errorFile[128], outputFile[128], outputPath[128];
 	FILE *fperr;
