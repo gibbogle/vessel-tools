@@ -1220,6 +1220,7 @@ int createVlist()
 	for (x=0;x<width; x++) {
 		for (y=0;y<height; y++) {
 			for (z=0;z<depth; z++) {
+				Vindex(x,y,z) = 0;
 				if (V3Dskel(x,y,z) != 0) {
 					k++;
 					Vindex(x,y,z) = k;
@@ -2010,6 +2011,10 @@ int vertexDensity2(int noffsets)
 									yy = y + offsety[offset];
 									zz = z + offsetz[offset];
 									kv = Vindex(xx,yy,zz);
+									if (kv < 0) {
+										printf("Vindex: %d at %d %d %d\n",kv,xx,yy,zz);
+										exit(1);
+									}
 									if (kv == 0) continue;
 									pv = &Vlist[kv];
 									if (pv->nbrs > 0) {		// try adding all lit voxels to the list.  Need to use nbrs to avoid vertices dropped in coalesce
