@@ -4,8 +4,8 @@
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
-#define MAXNBRS 40
-#define MAXEDGES 1000000	//1000000
+#define MAXNBRS 50
+#define MAXEDGES 4000000	//1000000
 #define STR_LEN 128
 
 struct voxel_str {

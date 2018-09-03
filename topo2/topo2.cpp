@@ -35,6 +35,9 @@
 bool FRC_fix = false;
 bool METHOD2 = false;
 
+int kdbug = -135932;
+int k0dbug = 134169;
+
 struct xyz_str
 {
 	double x, y, z;
@@ -1769,9 +1772,124 @@ bool in_list(int kvd, int kvlist[], int n)
 //-----------------------------------------------------------------------------------------------------
 int coalesce(int kvlist[], int n, int kmid)
 {
+	int kvhat;
+	VOXEL *pv0, *pv, *pvd;
+	bool added_kmid;
+	bool dbug = false;
+
+//	printf("\ncoalesce: %d %d %d  n: %d\n",ix,iy,iz,n);
+//	dbug = (ix==198) && (iy == 96) && (iz==228);
+	dbug = (kmid == -1);
+	if (dbug) printf("kvlist: %d %d %d %d\n",kvlist[0],kvlist[1],kvlist[2],kvlist[3]);
+
+	kvhat = kmid;
+	pv0 = &Vlist[kvhat];
+
+	// Now look at all neighbours of the vertices in kvlist[]
+	int hat_nbrs = 0;
+	int hat_nbr[50];	// this will store the new list of neighbours for vertex kvhat, i.e. the list of nbrs outside kvlist
+	int new_nbrs;
+	int new_nbr[50];	// this will store the new list of neighbours for each outside vertex (neighbour of kvlist not in kvlist)
+	for (int i=0; i<n; i++) {
+		int kv = kvlist[i];
+		pv = &Vlist[kv];
+		if (dbug) printf("interior vertex #: %d %d  nbrs: %d\n",i,kv,pv->nbrs);
+		for (int j=0; j<pv->nbrs; j++) {
+			int kvd = pv->nbr[j];	// this is a neighbour of the vertex in the cube
+			if (dbug) printf("kv: %d #: %d kvd: %d\n",kv,j,kvd);
+			// We need to ignore any neighbour that is in kvlist[]
+			if (in_list(kvd,kvlist,n)) continue;
+			// We also need to ignore any neighbour that has already been added to hat_nbr[]!
+			if (in_list(kvd,hat_nbr,hat_nbrs)) continue;
+			hat_nbr[hat_nbrs] = kvd;	// add the neighbour to the new list of kvhat neighbours - all outside kvlist
+			hat_nbrs++;
+#if 0
+			pvd = &Vlist[kvd];
+			// Now we need to adjust the neighbour list for kvd to replace all references to 
+			// members of kvlist by a single entry for kvhat
+			int nbrs = 0;
+			int nbr[30];
+			nbr[nbrs] = kvhat;
+			nbrs++;
+			if (pvd->nbrs > MAXNBRS) {
+				printf("coalesce error: too many neighbours\n");
+				fprintf(fperr,"coalesce error: too many neighbours\n");
+				return 1;
+			}
+			for (int k=0; k<pvd->nbrs; k++) {
+				int kvdd = pvd->nbr[k];
+				if (in_list(kvdd,kvlist,n)) continue;
+				nbr[nbrs] = kvdd;
+				nbrs++;
+			}
+			// Now copy the new neighbour list for the outside neighbour
+			if (dbug || kvd == kdbug) fprintf(fpout,"new nbrs for kvd: %d  %d  kmid: %d\n",kvd,nbrs,kmid);
+			pvd->nbrs = nbrs;
+			for (int k=0; k<nbrs; k++) {
+				pvd->nbr[k] = nbr[k];
+				if (dbug) printf("%d %d\n",k,nbr[k]);
+			}
+#endif
+		}
+		if (kv != kvhat) {
+			// Set the # of neighbours for the surplus vertices to 0.  This flags the vertex as no longer used. Also set Vindex(x,y,z) = 0
+			pv->nbrs = 0;
+			Vindex(pv->pos[0],pv->pos[1],pv->pos[2]) = 0;	// Note that the image is changed
+		}
+	}
+	// Now copy the new neighbour list for kvhat
+//	printf("coalesce: (%d %d %d) n: %d  kvhat: %d nbrs: %d\n",ix,iy,iz,n,kvhat,hat_nbrs);
+//	fprintf(fpout,"coalesce: n: %d  kvhat: %d nbrs: %d\n",n,kvhat,hat_nbrs);
+	pv0->nbrs = hat_nbrs;
+	if (hat_nbrs > MAXNBRS) {
+		printf("Error: # of neighbours exceeds limit of: %d\n",MAXNBRS);
+		fprintf(fperr,"Error: # of neighbours exceeds limit of: %d\n",MAXNBRS);
+		return 1;
+	}
+	if (hat_nbrs == 0) fprintf(fpout,"hat_nbrs = 0 for kv0: %d\n",kvhat);
+	if (dbug) printf("kvhat pos: %d %d %d\n",pv0->pos[0],pv0->pos[1],pv0->pos[2]);
+	for (int j=0; j<pv0->nbrs; j++) {
+		int kvd = hat_nbr[j];
+		pv0->nbr[j] = kvd;
+		if (dbug) {
+			pv = &Vlist[hat_nbr[j]];
+			printf("nbr: %d %d pos: %d %d %d\n",j,hat_nbr[j],pv->pos[0],pv->pos[1],pv->pos[2]);
+		}
+		// Now create new nbr list for this outside nbr
+		pvd = &Vlist[kvd];
+		added_kmid = false;
+		new_nbrs = 0;
+		for (int k=0; k<pvd->nbrs; k++) {
+			int kvdd = pvd->nbr[k];
+			if (in_list(kvdd,kvlist,n)) {
+				if (!added_kmid) {
+					new_nbr[new_nbrs] = kmid;
+					new_nbrs++;
+					added_kmid = true;
+				}
+			} else {
+				new_nbr[new_nbrs] = kvdd;
+				new_nbrs++;
+			}
+		}
+		pvd->nbrs = new_nbrs;
+		for (int k=0; k<pvd->nbrs; k++) {
+			pvd->nbr[k] = new_nbr[k];
+		}
+	}
+
+	return 0;
+}
+
+//-----------------------------------------------------------------------------------------------------
+// In the 3x3x3 block at (ix,iy,iz), join the n vertices together
+//-----------------------------------------------------------------------------------------------------
+int coalesce1(int kvlist[], int n, int kmid)
+{
 //	int newpos[3];
 	int kvhat;
 	VOXEL *pv0, *pv, *pvd;
+	bool added_kmid;
 	bool dbug = false;
 
 //	printf("\ncoalesce: %d %d %d  n: %d\n",ix,iy,iz,n);
@@ -1825,7 +1943,7 @@ int coalesce(int kvlist[], int n, int kmid)
 				nbrs++;
 			}
 			// Now copy the new neighbour list for the outside neighbour
-			if (dbug) printf("new nbrs for kvd: %d  %d\n",kvd,nbrs);
+			if (dbug || kvd == kdbug) fprintf(fpout,"new nbrs for kvd: %d  %d  kmid: %d\n",kvd,nbrs,kmid);
 			pvd->nbrs = nbrs;
 			for (int k=0; k<nbrs; k++) {
 				pvd->nbr[k] = nbr[k];
@@ -1836,6 +1954,12 @@ int coalesce(int kvlist[], int n, int kmid)
 		if (kv != kvhat) {
 			// Set the # of neighbours for the surplus vertices to 0.  This flags the vertex as no longer used. Also set Vindex(x,y,z) = 0
 			pv->nbrs = 0;
+			if (kv == kdbug) {
+				fprintf(fpout,"Set nbrs = 0 for kv: %d\n",kv);
+				fprintf(fpout,"coalesce with kmid: %d\n",kmid);
+				fclose(fpout);
+				exit(1);
+			}
 			Vindex(pv->pos[0],pv->pos[1],pv->pos[2]) = 0;	// Note that the image is changed
 		}
 	}
@@ -1848,6 +1972,7 @@ int coalesce(int kvlist[], int n, int kmid)
 		fprintf(fperr,"Error: # of neighbours exceeds limit of: %d\n",MAXNBRS);
 		return 1;
 	}
+	if (hat_nbrs == 0) fprintf(fpout,"hat_nbrs = 0 for kv0: %d\n",kvhat);
 	if (dbug) printf("kvhat pos: %d %d %d\n",pv0->pos[0],pv0->pos[1],pv0->pos[2]);
 	for (int j=0; j<pv0->nbrs; j++) {
 		pv0->nbr[j] = hat_nbr[j];
@@ -1890,28 +2015,31 @@ void selectMidVoxel(int kvlist[], int n, int *kmid)
 }
 
 //-----------------------------------------------------------------------------------------------------
+// For each i < n1, creates a list of voxels that have k0 = kvlist1[i] as a nbr.
+// The list with the most entries becomes kvlist2.
 //-----------------------------------------------------------------------------------------------------
 void group(int kvlist1[],int n1, int kvlist2[], int *n2)
 {
-	int nn[20], imax, nmax, value[20];
-	int list[20][20];
+	int nn[27], imax, nmax;	//, value[20];
+	int list[27][27];
 	VOXEL *pv;
 
 	nmax = 0;
 	for (int i=0; i<n1; i++) {
-		value[i] = 2<<i;
+//		value[i] = 2<<i;
 		nn[i] = 0;
 		list[i][nn[i]] = i;
 		nn[i]++;
 		int k0 = kvlist1[i];
 		for (int j=0; j<n1; j++) {
+			if (j == i) continue;
 			int k = kvlist1[j];
 			pv = &Vlist[k];
 			for (int ib=0; ib<pv->nbrs; ib++) {
 				if (pv->nbr[ib] == k0) {
 					list[i][nn[i]] = j;
 					nn[i]++;
-					value[i] += 2<<j;
+//					value[i] += 2<<j;
 					break;
 				}
 			}
@@ -2926,6 +3054,7 @@ int main(int argc, char**argv)
 	}
 
 //	fprintf(fpout,"DROP vertexDensity2 for TESTING\n");
+//#if 0
 	err = vertexDensity2(noffsets);
 	if (err != 0) {
 		printf("Error in vertexDensity2\n");
@@ -2935,8 +3064,9 @@ int main(int argc, char**argv)
 		printf("Coalesced lit voxels\n");
 	}
 	fflush(fpout);
-
+//#endif
 //	fprintf(fpout,"DROP deloop for TESTING\n");
+//#if 0
 	printf("call deloop\n");
 	err = deloop();
 	printf("deloop returned: %d\n",err);
@@ -2948,7 +3078,7 @@ int main(int argc, char**argv)
 		printf("Eliminated small triangular loops\n");
 	}
 	fflush(fpout);
-
+//#endif
 	err = traceSegments();
 	if (err != 0) {
 		printf("Error in traceSegments\n");
