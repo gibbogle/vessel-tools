@@ -294,10 +294,11 @@ int MainWindow::tiffer(QString numstr) {
 
 // To extract relevant results from the conduit_analyse output file, and write them to a summary result file.
 // Need to read each line, split it into QStrings, compare the first one to each of those in a list of
-int MainWindow::reader(QString ca_outputfile)
+int MainWindow::reader(int isite, QString ca_outputfile)
 {
     QFile inputFile(ca_outputfile);
     values.clear();
+    Cmvalues[isite].clear();
     if (inputFile.open(QIODevice::ReadOnly))
     {
         ui->labelResult->setText("");
@@ -314,6 +315,22 @@ int MainWindow::reader(QString ca_outputfile)
                     values << parts[1];
                 }
             }
+            if ((parts[0].compare("Number") == 0) && (parts[2].compare("reversals:") == 0)) {
+                values << parts[3];
+            }
+            if (parts[0].compare("Cm") == 0) {
+                bool done = false;
+                while (!done) {
+                    QString line = in.readLine();
+                    line = line.simplified();
+                    QStringList Cmparts = line.split(" ");    //,QString::SkipEmptyParts
+                    if (Cmparts[0].compare("t:") == 0) {
+                        Cmvalues[isite] << line;
+                    } else {
+                        done = true;
+                    }
+                }
+            }
         }
         inputFile.close();
     }
@@ -328,11 +345,11 @@ void MainWindow::batch_analyser()
     QString outfile_str;
     double R, Vsphere, vol_factor, tot_len, ave_vess_len, tot_vess_vol;
     double vert_per_mm3, vess_per_mm3, vol_fraction, len_per_mm3;
-    int nvess, nvert;
+    int nvess, nvert, nsites;
 
     variableNames.clear();
     calcNames.clear();
-    variableNames << "Vertices:" << "Points:" << "Vessels:" << "ltot:" << "Ave_pt_diam:" << "Ave_vessel_diam:" << "Ave_wgt_vessel_diam:" << "Ave_vessel_len:" << "Vessel_volume:";
+    variableNames << "Vertices:" << "Points:" << "Vessels:" << "ltot:" << "Ave_pt_diam:" << "Ave_vessel_diam:" << "Ave_wgt_vessel_diam:" << "Ave_vessel_len:" << "Vessel_volume:" << "reversals:";
     calcNames << "total_len" << "vess_per_mm3" << "vol_fraction" << "len_per_mm3" << "vert_per_mm3";
 
     QString summaryFileName = outputBaseFileName + "_summary.out";
@@ -373,7 +390,10 @@ void MainWindow::batch_analyser()
         for (;;) {
             isite++;
             QTableWidgetItem* item = ui->tableWidget->item(isite-1,0);
-            if (!item || item->text().isEmpty()) break;
+            if (!item || item->text().isEmpty()) {
+                nsites = isite-1;
+                break;
+            }
             x0_str = ui->tableWidget->item(isite-1,1)->text();
             y0_str = ui->tableWidget->item(isite-1,2)->text();
             z0_str = ui->tableWidget->item(isite-1,3)->text();
@@ -456,7 +476,7 @@ void MainWindow::batch_analyser()
                 resultstr = "SUCCESS";
                 ui->labelResult->setText(resultstr);
                 if (irun == 1) {
-                    reader(outfile_str);
+                    reader(isite-1,outfile_str);
                     // This returns the parameter values in values.
                     stream << ui->tableWidget->item(isite-1,0)->text() + " ";
                     for (int i=0; i<values.size(); i++) {
@@ -492,6 +512,27 @@ void MainWindow::batch_analyser()
             if (res != 0) return;
         }
     }
+    stream << endl;
+    int ntimes = Cmvalues[0].size();
+    int isite, itime;
+    stream << "Cm by subregion: nsites: " << QString::number(nsites) << "  ntimes: " << QString::number(ntimes) << endl;
+    stream << "t    ";
+    for (isite = 0; isite < nsites; isite++) {
+        stream << QString::number(isite+1) << "      ";
+    }
+    stream << endl;
+    for (itime=0; itime < ntimes; itime++) {
+        for (isite = 0; isite < nsites; isite++) {
+            QString line = Cmvalues[isite].value(itime);
+            QStringList Cmparts = line.split(" ");
+            if (isite == 0) {
+                stream << Cmparts[1] + "  ";
+            }
+            stream << Cmparts[5] + "  ";
+        }
+        stream << endl;
+    }
+
     sumfile.close();
 }
 
