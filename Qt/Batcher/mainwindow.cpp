@@ -431,10 +431,10 @@ void MainWindow::batch_analyser()
             qstr += " ";
             qstr += ui->lineEdit_pow->text();
             qstr += " ";
-            if (irun == 0)
+//            if (irun == 0)
                 qstr += ui->lineEdit_ntrials->text();
-            else
-                qstr += "100";
+//            else
+//                qstr += "1000";
             qstr += " ";
             qstr += x0_str;
             qstr += " ";
