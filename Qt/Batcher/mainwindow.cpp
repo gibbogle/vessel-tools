@@ -294,11 +294,11 @@ int MainWindow::tiffer(QString numstr) {
 
 // To extract relevant results from the conduit_analyse output file, and write them to a summary result file.
 // Need to read each line, split it into QStrings, compare the first one to each of those in a list of
-int MainWindow::reader(int isite, QString ca_outputfile)
+int MainWindow::reader(int irun, int isite, QString ca_outputfile)
 {
     QFile inputFile(ca_outputfile);
     values.clear();
-    Cmvalues[isite].clear();
+    if (irun == 0) Cmvalues[isite].clear();
     if (inputFile.open(QIODevice::ReadOnly))
     {
         ui->labelResult->setText("");
@@ -315,19 +315,21 @@ int MainWindow::reader(int isite, QString ca_outputfile)
                     values << parts[1];
                 }
             }
-            if ((parts[0].compare("Number") == 0) && (parts[2].compare("reversals:") == 0)) {
-                values << parts[3];
-            }
-            if (parts[0].compare("Cm") == 0) {
-                bool done = false;
-                while (!done) {
-                    QString line = in.readLine();
-                    line = line.simplified();
-                    QStringList Cmparts = line.split(" ");    //,QString::SkipEmptyParts
-                    if (Cmparts[0].compare("t:") == 0) {
-                        Cmvalues[isite] << line;
-                    } else {
-                        done = true;
+            if (irun == 0) {
+                if ((parts[0].compare("Number") == 0) && (parts[2].compare("reversals:") == 0)) {
+                    reversals << parts[3];
+                }
+                if (parts[0].compare("Cm") == 0) {
+                    bool done = false;
+                    while (!done) {
+                        QString line = in.readLine();
+                        line = line.simplified();
+                        QStringList Cmparts = line.split(" ");
+                        if (Cmparts[0].compare("t:") == 0) {
+                            Cmvalues[isite] << line;
+                        } else {
+                            done = true;
+                        }
                     }
                 }
             }
@@ -349,7 +351,7 @@ void MainWindow::batch_analyser()
 
     variableNames.clear();
     calcNames.clear();
-    variableNames << "Vertices:" << "Points:" << "Vessels:" << "ltot:" << "Ave_pt_diam:" << "Ave_vessel_diam:" << "Ave_wgt_vessel_diam:" << "Ave_vessel_len:" << "Vessel_volume:" << "reversals:";
+    variableNames << "Vertices:" << "Points:" << "Vessels:" << "ltot:" << "Ave_pt_diam:" << "Ave_vessel_diam:" << "Ave_wgt_vessel_diam:" << "Ave_vessel_len:" << "Vessel_volume:";
     calcNames << "total_len" << "vess_per_mm3" << "vol_fraction" << "len_per_mm3" << "vert_per_mm3";
 
     QString summaryFileName = outputBaseFileName + "_summary.out";
@@ -431,10 +433,10 @@ void MainWindow::batch_analyser()
             qstr += " ";
             qstr += ui->lineEdit_pow->text();
             qstr += " ";
-//            if (irun == 0)
+            if (irun == 0)
                 qstr += ui->lineEdit_ntrials->text();
-//            else
-//                qstr += "1000";
+            else
+                qstr += "100";  // these Cm estimates are useless because the bdry is reached quickly
             qstr += " ";
             qstr += x0_str;
             qstr += " ";
@@ -475,8 +477,8 @@ void MainWindow::batch_analyser()
             if (res == 0) {
                 resultstr = "SUCCESS";
                 ui->labelResult->setText(resultstr);
+                reader(irun,isite-1,outfile_str);
                 if (irun == 1) {
-                    reader(isite-1,outfile_str);
                     // This returns the parameter values in values.
                     stream << ui->tableWidget->item(isite-1,0)->text() + " ";
                     for (int i=0; i<values.size(); i++) {
@@ -513,10 +515,11 @@ void MainWindow::batch_analyser()
         }
     }
     stream << endl;
+
     int ntimes = Cmvalues[0].size();
     int isite, itime;
     stream << "Cm by subregion: nsites: " << QString::number(nsites) << "  ntimes: " << QString::number(ntimes) << endl;
-    stream << "t    ";
+    stream << "t      ";
     for (isite = 0; isite < nsites; isite++) {
         stream << QString::number(isite+1) << "      ";
     }
@@ -533,6 +536,12 @@ void MainWindow::batch_analyser()
         stream << endl;
     }
 
+    stream << "Reversals:" << endl;
+    stream << "       ";
+    for (isite = 0; isite < nsites; isite++) {
+        stream << reversals.value(isite) << "      ";
+    }
+    stream << endl;
     sumfile.close();
 }
 

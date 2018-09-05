@@ -34,7 +34,7 @@ public slots:
     int blocker(QString numstr);
     int distancer(QString numstr);
     int tiffer(QString numstr);
-    int reader(int isite, QString ca_outputfile);
+    int reader(int irun, int isite, QString ca_outputfile);
 
 private:
     Ui::MainWindow *ui;
@@ -49,6 +49,7 @@ public:
     QStringList variableNames;
     QStringList calcNames;
     QStringList values;
+    QStringList reversals;
     QStringList Cmvalues[20];
     QString x0_str, y0_str, z0_str, R_str;
 };
