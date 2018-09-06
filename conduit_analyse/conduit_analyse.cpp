@@ -1550,9 +1550,10 @@ void new_traverse(NETWORK *net, int nsteps, double *tpt, double *res_d2sum, doub
 	double *Lsum=NULL;
 	double Ltotal, R, sum;
 	double t, dt, speed, std_speed;
+#define MAX_SFIBRES 200000
 
 	int nsphere_fibres;
-	int sphere_fibre[100000];
+	int sphere_fibre[MAX_SFIBRES];
 
 	printf("traverse\n");
 	mean_speed /= shrink_factor;	// the mean speed is scaled to account for the fact that the network description
@@ -1579,12 +1580,17 @@ void new_traverse(NETWORK *net, int nsteps, double *tpt, double *res_d2sum, doub
 			float dy = centre.y - net->point[kp].y;
 			float dz = centre.z - net->point[kp].z;
 			if (sqrt(dx*dx+dy*dy+dz*dz) < start_radius) {
+				if (nsphere_fibres >= MAX_SFIBRES) {
+					printf("Error: new_traverse: too many sphere fibres: reduce radius\n");
+					exit(6);
+				}
 				sphere_fibre[nsphere_fibres] = i;
 				nsphere_fibres++;
 				break;
 			}
 		}
 	}
+	printf("nsphere_fibres: %d\n",nsphere_fibres);
 	for (i=0; i<nsphere_fibres; i++) {
 		if (i == 0) 
 			Lsum[0] = fibre[sphere_fibre[0]].L_actual;
