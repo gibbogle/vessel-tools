@@ -518,7 +518,7 @@ void MainWindow::batch_analyser()
 
     int ntimes = Cmvalues[0].size();
     int isite, itime;
-    stream << "Cm by subregion: nsites: " << QString::number(nsites) << "  ntimes: " << QString::number(ntimes) << endl;
+    stream << "Cm_inst by subregion: nsites: " << QString::number(nsites) << "  ntimes: " << QString::number(ntimes) << endl;
     stream << "t      ";
     for (isite = 0; isite < nsites; isite++) {
         stream << QString::number(isite+1) << "      ";
@@ -531,7 +531,7 @@ void MainWindow::batch_analyser()
             if (isite == 0) {
                 stream << Cmparts[1] + "  ";
             }
-            stream << Cmparts[5] + "  ";
+            stream << Cmparts[7] + "  ";
         }
         stream << endl;
     }

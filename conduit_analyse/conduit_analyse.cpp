@@ -2144,7 +2144,7 @@ int main(int argc, char **argv)
 
 	int itpt;
 	double *tpt;
-	double d2ave, Cm1;
+	double d2ave, Cm_ave, Cm_inst;
 	double res_d2sum[NDATAPTS];
 	double Cm[NDATAPTS];
 	int cmgui_flag=1;
@@ -2367,9 +2367,16 @@ int main(int argc, char **argv)
 	for (itpt=0; itpt<NDATAPTS; itpt++) {
 //		d2ave = res_d2sum[itpt]/ntrials;
 		d2ave = res_d2sum[itpt]/nsims;
-		Cm1 = d2ave/(6*tpt[itpt]);		// this is with fixed time - actual t is used, not tmax
-		printf("t: %6.1f d2: %9.1f Cm: %6.2f\n",tpt[itpt],d2ave,Cm1);
-		fprintf(fpout,"t: %6.1f d2: %9.1f Cm: %6.2f\n",tpt[itpt],d2ave,Cm1);		// dropped Cm[itpt] - no difference now
+		Cm_ave = d2ave/(6*tpt[itpt]);		// this is with fixed time - actual t is used, not tmax
+		if (itpt == 0) {
+			Cm_inst = (res_d2sum[1] - res_d2sum[0])/(nsims*6*5);
+		} else if (itpt == NDATAPTS-1) {
+			Cm_inst = (res_d2sum[NDATAPTS-1] - res_d2sum[NDATAPTS-2])/(nsims*6*5);
+		} else {
+			Cm_inst = (res_d2sum[itpt+1] - res_d2sum[itpt-1])/(nsims*6*10);
+		}
+		printf("t: %6.1f d2: %9.1f Cm_ave: %6.2f Cm_inst: %6.2f\n",tpt[itpt],d2ave,Cm_ave,Cm_inst);
+		fprintf(fpout,"t: %6.1f d2: %9.1f Cm_ave: %6.2f Cm_inst: %6.2f\n",tpt[itpt],d2ave,Cm_ave,Cm_inst);		// dropped Cm[itpt] - no difference now
 	}
 	}
 	if (save_paths) {
