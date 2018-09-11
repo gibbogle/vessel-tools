@@ -535,7 +535,18 @@ void MainWindow::batch_analyser()
         }
         stream << endl;
     }
-
+    stream << "Cm_ave: " << endl;
+    for (itime=0; itime < ntimes; itime++) {
+        for (isite = 0; isite < nsites; isite++) {
+            QString line = Cmvalues[isite].value(itime);
+            QStringList Cmparts = line.split(" ");
+            if (isite == 0) {
+                stream << Cmparts[1] + "  ";
+            }
+            stream << Cmparts[5] + "  ";
+        }
+        stream << endl;
+    }
     stream << "Reversals:" << endl;
     stream << "       ";
     for (isite = 0; isite < nsites; isite++) {
