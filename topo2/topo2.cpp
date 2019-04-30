@@ -2968,6 +2968,11 @@ int main(int argc, char**argv)
 	long long psize = (long long)width*height*depth*sizeof(int);
 	pindex = (int *)malloc(psize);		// maps location (i,j,k) to a skeleton lit voxel index (k>0) or 0 (unlit)
 	printf("psize: %lld\n",psize);
+	if (pindex == 0) {
+		printf("Allocation of pindex failed: not enough memory\n");
+		fprintf(fperr,"Allocation of pindex failed: not enough memory\n");
+		return 5;
+	}
 	net->point = (VOXEL *)malloc((nlit+1)*sizeof(VOXEL));
 	Vlist = net->point;
 
