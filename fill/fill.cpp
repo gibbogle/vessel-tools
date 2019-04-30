@@ -49,7 +49,7 @@ struct litvoxel{
 typedef litvoxel LITVOXEL;
 
 CPOINT *candidate;
-int maxcand, ncand;
+long long maxcand, ncand;
 int candHitLimit, insideHitLimit;
 long long width, height, depth, imsize;
 typedef itk::Image<unsigned char,3> ImageType;
@@ -271,9 +271,12 @@ int setupCandidateList(void)
 			for (x0=0; x0<width; x0++)
 			{
 				if (V(x0,y0,z0) == 255) continue;
+//				printf("x0,y0,z0: %d %d %d  ",x0,y0,z0);
 				prober(x0,y0,z0,nhlim,&nhits,&dirmin,&d2min,d2hit);
+//				printf("nhits: %d\n",nhits);
 				if (nhits >= candHitLimit)
 				{
+//					printf("add candidate: %d\n",ncand);
 					candidate[ncand].x = x0;
 					candidate[ncand].y = y0;
 					candidate[ncand].z = z0;
@@ -289,6 +292,7 @@ int setupCandidateList(void)
 			}
 		}
 	}
+	printf("ncand: %d\n",ncand);
 	return 0;
 }
 

@@ -155,6 +155,8 @@ void MainWindow::conduit_analyser()
         resultstr = "FAILED: error in CreateDistributions";
     else if (res == 5)
         resultstr = "FAILED: MAXBLOCK exceeded";
+    else if (res == 6)
+        resultstr = "FAILED: MAX_SFIBRES exceeded: reduce radius";
     ui->labelResult->setText(resultstr);
 }
 
