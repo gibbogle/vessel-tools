@@ -64,6 +64,7 @@ int main(int argc, char**argv)
 	catch (itk::ExceptionObject &e)
 	{
 		std::cout << e << std::endl;
+		printf("Read error on input file\n");
 		fprintf(fp,"Read error on input file\n");
 		fclose(fp);
 		return 2;	// Read error on input file
@@ -82,6 +83,7 @@ int main(int argc, char**argv)
 	writer->SetFileName(argv[2]);
 	writer->SetInput(im);
 
+	printf("Ready to compress\n");
 	typedef  itk::TIFFImageIO TIFFIOType;
 	TIFFIOType::Pointer tiffIO = TIFFIOType::New();
 	writer->SetImageIO(tiffIO);

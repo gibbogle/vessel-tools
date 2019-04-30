@@ -807,6 +807,7 @@ void setupBlockLists(NETWORK *net)
 	POINT p1, p2;
 	int ix, iy, iz, k;
 
+	printf("setipBlockLists: nfibres: %d\n",nfibres);
 	for (ix=0;ix<NX;ix++) {
 		for (iy=0;iy<NY;iy++) {
 			for (iz=0;iz<NZ;iz++) {
@@ -823,6 +824,10 @@ void setupBlockLists(NETWORK *net)
 		B(counter[ix][iy][iz],0,ix,iy,iz) = k;
 		B(counter[ix][iy][iz],1,ix,iy,iz) = 0;	// end 1
 		counter[ix][iy][iz]++;
+		//if (counter[ix][iy][iz] == MAXBLOCK) {
+		//	printf("MAXBLOCK exceeded at: fibre k: %d  block: %d %d %d\n",k,ix,iy,iz);
+		//	exit(5);
+		//}
 		p2 = net->point[net->edgeList[k].pt[npts-1]];
 		ix = (p2.x - xmin)/DX;
 		iy = (p2.y - ymin)/DY;
@@ -830,6 +835,12 @@ void setupBlockLists(NETWORK *net)
 		B(counter[ix][iy][iz],0,ix,iy,iz) = k;
 		B(counter[ix][iy][iz],1,ix,iy,iz) = 1;	// end 2
 		counter[ix][iy][iz]++;
+		//if (counter[ix][iy][iz] == MAXBLOCK) {
+		//	printf("MAXBLOCK exceeded at: fibre k: %d  block: %d %d %d\n",k,ix,iy,iz);
+		//	exit(5);
+		//}
+		if (int(10*p1.x) == 5746) fprintf(fpout,"k: %d  %8.2f %8.2f %8.2f\n",k,p1.x,p1.y,p1.z);
+		if (int(10*p2.x) == 5746) fprintf(fpout,"k: %d  %8.2f %8.2f %8.2f\n",k,p2.x,p2.y,p2.z);
 	}
 	fprintf(fpout,"setupBlockLists\n");
 	int maxcount = 0;
@@ -843,19 +854,34 @@ void setupBlockLists(NETWORK *net)
 	}
 	printf("Max block count: %d\n",maxcount);
 	fprintf(fpout,"Max block count: %d\n",maxcount);
-	//for (ix=0;ix<NX;ix++) {
-	//	for (iy=0;iy<NY;iy++) {
-	//		for (iz=0;iz<NZ;iz++) {
-	//			printf("Block: %d %d %d  count: %d\n",ix,iy,iz,counter[ix][iy][iz]);
-	//		}
-	//	}
-	//}
+	for (ix=0;ix<NX;ix++) {
+		for (iy=0;iy<NY;iy++) {
+			for (iz=0;iz<NZ;iz++) {
+				fprintf(fpout,"Block: %d %d %d  count: %d\n",ix,iy,iz,counter[ix][iy][iz]);
+			}
+		}
+	}
 	if (maxcount > MAXBLOCK) {
 		printf("Error: MAXBLOCK exceeded\n");
 		printf("MAXBLOCK: %d\n",MAXBLOCK);
 		fprintf(fpout,"Error: MAXBLOCK exceeded\n");
 		fprintf(fpout,"MAXBLOCK: %d\n",MAXBLOCK);
+		ix = 7;
+		iy = 8;
+		iz = 8;
+		POINT p;
+		fprintf(fpout,"block: %d %d %d  %8.2f %8.2f %8.2f\n",ix,iy,iz,xmin+ix*DX,ymin+iy*DX,zmin+iz*DX);
+		for (k=0; k<counter[ix][iy][iz]; k++) {
+			int npts = net->edgeList[k].npts;
+			if (B(k,1,ix,iy,iz) == 0) {
+				p = net->point[net->edgeList[k].pt[0]];
+			} else {
+				p = net->point[net->edgeList[k].pt[npts-1]];
+			}
+			fprintf(fpout,"fibre end: %6d %8.2f %8.2f %8.2f\n", B(k,0,ix,iy,iz),p.x,p.y,p.z);
+		}
 		fflush(fpout);
+
 		exit(5);
 	}
 }

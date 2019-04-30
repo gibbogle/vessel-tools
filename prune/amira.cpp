@@ -141,6 +141,7 @@ int WriteAmiraFile(char *amFileOut, char *amFileIn, NETWORK *net, float origin_s
 	int i, k, j, npts;
 	EDGE edge;
 
+	printf("\nWriteAmiraFile: %s\n",amFileOut);
 	fprintf(fpout,"\nWriteAmiraFile: %s\n",amFileOut);
 	npts = 0;
 	for (i=0;i<net->ne;i++) {

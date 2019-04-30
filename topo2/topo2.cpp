@@ -1218,10 +1218,12 @@ int createVlist()
 	printf("createVlist\n");
 	k = 0;
 	for (x=0;x<width; x++) {
+		printf("x: %d  k: %d\n",x,k);
 		for (y=0;y<height; y++) {
 			for (z=0;z<depth; z++) {
 				if (V3Dskel(x,y,z) != 0) {
 					k++;
+					printf("x,y,z: %d %d %d  k: %d\n",x,y,z,k);
 					Vindex(x,y,z) = k;
 					Vlist[k].pos[0] = x;
 					Vlist[k].pos[1] = y;
@@ -2832,7 +2834,16 @@ int main(int argc, char**argv)
 	np = nlit;
 	net->np = nlit;
 
-	pindex = (int *)malloc(width*height*depth*sizeof(int));		// maps location (i,j,k) to a skeleton lit voxel index (k>0) or 0 (unlit)
+	long long psize = (long long)width;
+//	printf("psize: %lld\n",psize);
+	psize = (long long)height*psize;
+//	printf("psize: %lld\n",psize);
+	psize = (long long)depth*psize;
+//	printf("psize: %lld\n",psize);
+	psize = (long long)sizeof(int)*psize;
+	printf("psize: %lld\n",psize);
+	pindex = (int *)malloc(psize);		// maps location (i,j,k) to a skeleton lit voxel index (k>0) or 0 (unlit)
+	printf("pindex: %p\n",pindex);
 	net->point = (VOXEL *)malloc((nlit+1)*sizeof(VOXEL));
 	Vlist = net->point;
 

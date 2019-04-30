@@ -131,7 +131,7 @@ int WriteCmguiData(char *basename, NETWORK *net, float origin_shift[])
 	fprintf(fpout,"wrote headers: ne: %d np: %d\n",net->ne,net->np);
 	fflush(fpout);
 
-	point_used = (bool *)malloc(net->np*sizeof(bool));
+	point_used = (bool *)malloc((net->np+1)*sizeof(bool));
 	for (k=0; k<=net->np; k++) {
 		point_used[k] = false;
 	}

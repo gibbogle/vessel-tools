@@ -41,6 +41,8 @@ float len_limit, len_diam_limit;
 
 double ratio_limit;
 bool use_ratio;
+bool use_fixed_diam;
+float fixed_diam;
 
 #define JOIN_LOOSE_ENDS false
 #define DROP_UNCONNECTED false
@@ -291,13 +293,17 @@ int ReadAmiraFile_old(char *amFile, NETWORK *net)
 							return 1;
 						}
 						j = edge.pt[k];
-						sscanf(line,"%f",&net->point[j].d);
-						if (net->point[j].d == 0) {
-							printf("Error: ReadAmiraFile: zero diameter: i: %d npts: %d k: %d j: %d\n",i,edge.npts,k,j);
-							return 1;
-						}
-						if (j < net->nv) {		// because the first nv points are vertices
-							net->vertex[j].point.d = net->point[j].d;
+						if (use_fixed_diam) {
+							net->point[j].d = fixed_diam;
+						} else {
+							sscanf(line,"%f",&net->point[j].d);
+							if (net->point[j].d == 0) {
+								printf("Error: ReadAmiraFile: zero diameter: i: %d npts: %d k: %d j: %d\n",i,edge.npts,k,j);
+								return 1;
+							}
+							if (j < net->nv) {		// because the first nv points are vertices
+								net->vertex[j].point.d = net->point[j].d;
+							}
 						}
 						dave += net->point[j].d;
 						net->edgeList[i].segavediam = dave/edge.npts;
@@ -316,6 +322,7 @@ int ReadAmiraFile_old(char *amFile, NETWORK *net)
 		}
 	}
 	fclose(fpam);
+	if (use_fixed_diam) return 0;
 
 	err = CheckNetwork(net, "ReadAmiraFile");
 
@@ -1254,6 +1261,7 @@ int squeezer(NETWORK *net0, NETWORK *net1)
 	return 0;
 }
 //-----------------------------------------------------------------------------------------------------
+// This program doubles as pruner-cleaner and as a way to create a network with constant vessel diameter
 //-----------------------------------------------------------------------------------------------------
 int main(int argc, char **argv)
 {
@@ -1266,7 +1274,10 @@ int main(int argc, char **argv)
 	float origin_shift[3];
 	NETWORK *net0, *net1;
 
-	if (argc != 11) {
+	if (argc != 11 && argc != 4) {
+		printf("To generate a network with constant diameters: \n");
+		printf("Usage: prune input_amfile output_amfile fixed_diam\n");
+		printf("\nTo clean up and prune network:\n");
 		printf("Usage: prune input_amfile output_amfile ratio_flag ratio_limit n_prune_cycles prune_flag cmgui_flag delta_diam delta_len dminimum\n");
 		printf("       ratio_flag: = 1 if length/diameter is to be used, 0 if length limit\n");
 		printf("       ratio_limit: either length/diameter limit or length limit\n");
@@ -1288,14 +1299,44 @@ int main(int argc, char **argv)
 
 	input_amfile = argv[1];
 	strcpy(outfilename,argv[2]);
-	sscanf(argv[3],"%d",&ratio_flag);
-	sscanf(argv[4],"%lf",&ratio_limit);
-	sscanf(argv[5],"%d",&n_prune_cycles);
-	sscanf(argv[6],"%d",&prune_flag);
-	sscanf(argv[7],"%d",&cmgui_flag);
-	sscanf(argv[8],"%f",&ddiam);
-	sscanf(argv[9],"%f",&dlen);
-	sscanf(argv[10],"%f",&dminimum);
+	_splitpath(outfilename,drive,dir,filename,ext);
+	strcpy(output_basename,drive);
+	strcat(output_basename,dir);
+	strcat(output_basename,filename);
+	sprintf(errfilename,"%s_prune.log",output_basename);
+	sprintf(output_amfile,"%s.am",output_basename);
+	sprintf(result_file,"%s.out",output_basename);
+	fperr = fopen(errfilename,"w");
+	if (argc == 4) {
+		sscanf(argv[3],"%f",&fixed_diam);
+		use_fixed_diam = true;
+		printf("fixed_diam: %f\n",fixed_diam);
+		origin_shift[0] = 0;
+		origin_shift[1] = 0;
+		origin_shift[2] = 0;
+		net0 = (NETWORK *)malloc(sizeof(NETWORK));
+		fpout = fopen(result_file,"w");	
+		err = ReadAmiraFile_old(input_amfile,net0);
+		if (err != 0) return 2;
+		printf("did ReadAmiraFile_old\n");
+		err = WriteAmiraFile(output_amfile,input_amfile,net0,origin_shift);
+		if (err != 0) return 8;
+		printf("did WriteAmiraFile\n");
+		err = WriteCmguiData(output_basename,net0,origin_shift);
+		if (err != 0) return 10;
+		printf("did WriteCmguiData\n");
+		return 0;
+	} else {
+		sscanf(argv[3],"%d",&ratio_flag);
+		sscanf(argv[4],"%lf",&ratio_limit);
+		sscanf(argv[5],"%d",&n_prune_cycles);
+		sscanf(argv[6],"%d",&prune_flag);
+		sscanf(argv[7],"%d",&cmgui_flag);
+		sscanf(argv[8],"%f",&ddiam);
+		sscanf(argv[9],"%f",&dlen);
+		sscanf(argv[10],"%f",&dminimum);
+		use_fixed_diam = false;
+	}
 	use_ratio = (ratio_flag == 1);
 	if (prune_flag == 0) n_prune_cycles = 0;
 	_splitpath(outfilename,drive,dir,filename,ext);
