@@ -23,7 +23,9 @@ unsigned int *npixels;
 bool *fill;
 long long width, height, depth, imsize_xy;
 int nobjects;
-int gapwidth, niter;
+int niter;
+double gapwidth;
+double dx_voxel, dy_voxel, dz_voxel;
 
 //typedef itk::Image<unsigned char,2> ImageType2D;
 typedef itk::Image<short,2> ImageType2D;
@@ -34,7 +36,6 @@ typedef itk::Image<unsigned char,3> ImageType3D;
 int CountPixels(char axis)
 {
 	int x, y, z;
-//	unsigned char v, lab;
 	short v, lab;
 
 	for (int k=1; k <= nobjects; k++)
@@ -167,9 +168,9 @@ int FillPixels(char axis)
 int CloseGaps_xy(void)
 {
 	int x, y, x0, y0;
-	int kdir, j, sgn, kstep, P1[2], P2[2], dx, dy, d2, w2min, kdirmin, labmin;
+	int kdir, j, sgn, kstep, P1[2], P2[2], kdirmin, labmin;
+	double  dx, dy, d2, w2min;
 	int dir[4][2];
-//	unsigned char v, lab;
 	short v, lab, hitlab[2];
 
 	dir[0][0] = 1; dir[0][1] = 0;
@@ -205,6 +206,8 @@ int CloseGaps_xy(void)
 				if (hitlab[0] > 0 && hitlab[0] == hitlab[1]) {
 					dx = P1[0] - P2[0];
 					dy = P1[1] - P2[1];
+					dx *= dx_voxel;
+					dy *= dy_voxel;
 					d2 = dx*dx + dy*dy;
 					if (d2 < w2min) {
 						w2min = d2;
@@ -236,9 +239,9 @@ int CloseGaps_xy(void)
 int CloseGaps_xz(void)
 {
 	int x, z, x0, z0;
-	int kdir, j, sgn, kstep, P1[2], P2[2], dx, dz, d2, w2min, kdirmin, labmin;
+	int kdir, j, sgn, kstep, P1[2], P2[2], kdirmin, labmin;
+	double  dx, dz, d2, w2min;
 	int dir[4][2];
-//	unsigned char v, lab;
 	short v, lab, hitlab[2];
 
 	dir[0][0] = 1; dir[0][1] = 0;
@@ -274,6 +277,8 @@ int CloseGaps_xz(void)
 				if (hitlab[0] > 0 && hitlab[0] == hitlab[1]) {
 					dx = P1[0] - P2[0];
 					dz = P1[1] - P2[1];
+					dx *= dx_voxel;
+					dz *= dz_voxel;
 					d2 = dx*dx + dz*dz;
 					if (d2 < w2min) {
 						w2min = d2;
@@ -305,9 +310,9 @@ int CloseGaps_xz(void)
 int CloseGaps_yz(void)
 {
 	int y, z, y0, z0;
-	int kdir, j, sgn, kstep, P1[2], P2[2], dy, dz, d2, w2min, kdirmin, labmin;
+	int kdir, j, sgn, kstep, P1[2], P2[2], kdirmin, labmin;
+	double  dz, dy, d2, w2min;
 	int dir[4][2];
-//	unsigned char v, lab;
 	short v, lab, hitlab[2];
 
 //	printf("Closing gaps\n");
@@ -344,6 +349,8 @@ int CloseGaps_yz(void)
 				if (hitlab[0] > 0 && hitlab[0] == hitlab[1]) {
 					dy = P1[0] - P2[0];
 					dz = P1[1] - P2[1];
+					dy *= dy_voxel;
+					dz *= dz_voxel;
 					d2 = dy*dy + dz*dz;
 					if (d2 < w2min) {
 						w2min = d2;
@@ -466,6 +473,7 @@ int main( int argc, char *argv[])
 	char *infile3D, *outfile3D;
 	unsigned int limit = 4000;
 	int x, y, z, nfilled;
+	double pixel_area;
 	char axis;
 	ImageType3D::Pointer image3D;
 	typedef itk::ImageFileReader<ImageType3D> FileReaderType;
@@ -477,15 +485,17 @@ int main( int argc, char *argv[])
 
 	fp = fopen(errfile,"w");
 
-	if (argc != 6) {
-		printf("Usage: flood2D input_tiff output_tiff limit gapwidth niter\n");
-		printf("       where: limit is the maximum number of pixels of a cavity to be filled\n");
-		printf("              gapwidth is the maximum gap to be filled\n");
+	if (argc != 9) {
+		printf("Usage: flood2D input_tiff output_tiff arealimit gapwidth niter dx dy dz\n");
+		printf("       where: arealimit is the maximum area of a cavity to be filled (um^2)\n");
+		printf("              gapwidth is the maximum length of a gap to be closed (um)\n");
 		printf("              iterations is the number of iterations\n");
-		fprintf(fp,"Usage: flood2D input_tiff output_tiff limit gapwidth niter\n");
-		fprintf(fp,"       where: limit is the maximum number of pixels of a cavity to be filled\n");
-		fprintf(fp,"              gapwidth is the maximum gap to be filled\n");
+		printf("              dx, dy, dz are the voxel dimensions (um)\n");
+		fprintf(fp,"Usage: flood2D input_tiff output_tiff arealimit gapwidth niter dx dy dz\n");
+		fprintf(fp,"       where: arealimit is the maximum area of a cavity to be filled (um^2)\n");
+		fprintf(fp,"              gapwidth is the maximum length of a gap to be closed\n");
 		fprintf(fp,"              iterations is the number of iterations\n");
+		fprintf(fp,"              dx, dy, dz are the voxel dimensions (um)\n");
 		fprintf(fp,"Submitted command line: argc: %d\n",argc);
 		for (int i=0; i<argc; i++) {
 			fprintf(fp,"argv: %d: %s\n",i,argv[i]);
@@ -503,6 +513,10 @@ int main( int argc, char *argv[])
 	printf("gapwidth: %d\n",gapwidth);
 	sscanf(argv[5],"%d",&niter);
 	printf("niter: %d\n",niter);
+	sscanf(argv[6],"%lf",&dx_voxel);
+	sscanf(argv[7],"%lf",&dy_voxel);
+	sscanf(argv[8],"%lf",&dz_voxel);
+	printf("voxel dimensions: %lf %lf %lf\n",dx_voxel,dy_voxel,dz_voxel);
 
 	printf("Reading 3D image file\n");
 	reader->SetFileName(infile3D);
@@ -549,6 +563,7 @@ int main( int argc, char *argv[])
 	{
 	printf("Processing xz slices\n");
 	axis = 'Y';
+	pixel_area = dx_voxel*dz_voxel;
 	ImageType2D::Pointer image;
 	ImageType2D::Pointer labelimage;
 	image = ImageType2D::New();
@@ -574,14 +589,14 @@ int main( int argc, char *argv[])
 
 		// Find connected objects
 		ConnectedComponentImageFilterType::Pointer labelFilter = ConnectedComponentImageFilterType::New ();
-		labelFilter->SetInput(image);
-		labelFilter->Update();
-		nobjects = labelFilter->GetObjectCount();
-//		printf("nobjects: %d\n",nobjects);
-		labelimage = labelFilter->GetOutput();
-		plabel = (short *)(labelimage->GetBufferPointer());
-
 		if (gapwidth > 0) {
+			labelFilter->SetInput(image);
+			labelFilter->Update();
+			nobjects = labelFilter->GetObjectCount();
+			labelimage = labelFilter->GetOutput();
+			plabel = (short *)(labelimage->GetBufferPointer());
+
+//		if (gapwidth > 0) {
 			// Close gaps in connected objects
 			CloseGaps_xz();
 		}
@@ -611,7 +626,7 @@ int main( int argc, char *argv[])
 		CountPixels(axis);
 
 		for (int k=1; k<=nobjects; k++) {
-			if (npixels[k] <= limit) {
+			if (npixels[k]*pixel_area <= limit) {
 				fill[k] = true;
 				nfilled++;
 			} else {
@@ -630,6 +645,7 @@ int main( int argc, char *argv[])
 		p = (short *)(image->GetBufferPointer());
 
 		PutSlice(axis,y);
+		free (npixels);
 	}
 	printf("Number of holes filled: %d\n\n",nfilled);
 	}
@@ -639,6 +655,7 @@ int main( int argc, char *argv[])
 	{
 	printf("Processing yz slices\n");
 	axis = 'X';
+	pixel_area = dy_voxel*dz_voxel;
 	ImageType2D::Pointer image;
 	ImageType2D::Pointer labelimage;
 	image = ImageType2D::New();
@@ -664,13 +681,14 @@ int main( int argc, char *argv[])
 
 		// Find connected objects
 		ConnectedComponentImageFilterType::Pointer labelFilter = ConnectedComponentImageFilterType::New ();
-		labelFilter->SetInput(image);
-		labelFilter->Update();
-		nobjects = labelFilter->GetObjectCount();
-		labelimage = labelFilter->GetOutput();
-		plabel = (short *)(labelimage->GetBufferPointer());
-
 		if (gapwidth > 0) {
+			labelFilter->SetInput(image);
+			labelFilter->Update();
+			nobjects = labelFilter->GetObjectCount();
+			labelimage = labelFilter->GetOutput();
+			plabel = (short *)(labelimage->GetBufferPointer());
+
+//		if (gapwidth > 0) {
 			// Close gaps in connected objects
 			CloseGaps_yz();
 		}
@@ -697,7 +715,7 @@ int main( int argc, char *argv[])
 		CountPixels(axis);
 
 		for (int k=1; k<=nobjects; k++) {
-			if (npixels[k] <= limit) {
+			if (npixels[k]*pixel_area <= limit) {
 				fill[k] = true;
 				nfilled++;
 			} else {
@@ -716,6 +734,7 @@ int main( int argc, char *argv[])
 		p = (short *)(image->GetBufferPointer());
 
 		PutSlice(axis,x);
+		free (npixels);
 	}
 	printf("Number of holes filled: %d\n\n",nfilled);
 	}
@@ -724,6 +743,7 @@ int main( int argc, char *argv[])
 	{
 	printf("Processing xy slices\n");
 	axis = 'Z';
+	pixel_area = dx_voxel*dy_voxel;
 	ImageType2D::Pointer image;
 	ImageType2D::Pointer labelimage;
 	image = ImageType2D::New();
@@ -749,13 +769,14 @@ int main( int argc, char *argv[])
 
 		// Find connected objects
 		ConnectedComponentImageFilterType::Pointer labelFilter = ConnectedComponentImageFilterType::New ();
-		labelFilter->SetInput(image);
-		labelFilter->Update();
-		nobjects = labelFilter->GetObjectCount();
-		labelimage = labelFilter->GetOutput();
-		plabel = (short *)(labelimage->GetBufferPointer());
-
 		if (gapwidth > 0) {
+			labelFilter->SetInput(image);
+			labelFilter->Update();
+			nobjects = labelFilter->GetObjectCount();
+			labelimage = labelFilter->GetOutput();
+			plabel = (short *)(labelimage->GetBufferPointer());
+
+//		if (gapwidth > 0) {
 			// Close gaps in connected objects
 			CloseGaps_xy();
 		}
@@ -782,7 +803,7 @@ int main( int argc, char *argv[])
 		CountPixels(axis);
 
 		for (int k=1; k<=nobjects; k++) {
-			if (npixels[k] <= limit) {
+			if (npixels[k]*pixel_area <= limit) {
 				fill[k] = true;
 				nfilled++;
 			} else {
@@ -801,6 +822,7 @@ int main( int argc, char *argv[])
 		p = (short *)(image->GetBufferPointer());
 
 		PutSlice(axis,z);
+		free (npixels);
 	}
 	printf("Number of holes filled: %d\n\n",nfilled);
 	}

@@ -10,7 +10,7 @@ greaterThan(QT_MAJOR_VERSION, 4) {
 }
 QT       += core gui
 
-TARGET = flooder
+TARGET = flooder2D
 TEMPLATE = app
 
 

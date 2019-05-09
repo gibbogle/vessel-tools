@@ -66,7 +66,13 @@ void MainWindow::flooder()
 	qstr += ui->lineEditGapWidth->text();
 	qstr += " ";
 	qstr += ui->lineEditNiter->text();
-	if (qstr.size()>(int)sizeof(cmdstr)-1) {
+    qstr += " ";
+    qstr += ui->lineEditVoxelsize_x->text();
+    qstr += " ";
+    qstr += ui->lineEditVoxelsize_y->text();
+    qstr += " ";
+    qstr += ui->lineEditVoxelsize_z->text();
+    if (qstr.size()>(int)sizeof(cmdstr)-1) {
 		printf("Failed to convert qstr->cmdstr since qstr didn't fit\n");
 		resultstr = "FAILED: cmdstr not big enough for the command";
 		ui->labelResult->setText(resultstr);
