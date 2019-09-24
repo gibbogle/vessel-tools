@@ -68,7 +68,7 @@ int main( int argc, char ** argv )
     {
     std::cerr << "Usage: " << std::endl;
     std::cerr << argv[0] << " 2DTemplateFile bits firstSliceValue lastSliceValue compressFlag output3DImageFile " << std::endl;
-	std::cerr << "E.g.: " << argv[0] << " frame%04d.tif 8 0 99 result3D.tif " << std::endl;
+	std::cerr << "E.g.: " << argv[0] << " frame%04d.tif 8 0 99 1 result3D.tif " << std::endl;
 	std::cerr << "where the 8-bit 2D images are: frame0000.tif, frame0001.tif,..,frame0099.tif " << std::endl;
     return 1;
     }
@@ -100,6 +100,8 @@ int main( int argc, char ** argv )
 	const char * outputFilename = argv[6];
 	char infile[256];
 	long long width, height, depth;
+	double range;
+	int maxmax;
 	unsigned char *p2D_8;
 	unsigned short *p2D_16;
 	unsigned char *p3D;
@@ -115,6 +117,7 @@ int main( int argc, char ** argv )
 	if (bits == 8) {
 	  	reader8 = ReaderType8::New();
 	} else {
+		range = pow(2,16);		// 12-bit data stored in 16 bits
   		reader16 = ReaderType16::New();
 	}
 
@@ -135,6 +138,7 @@ int main( int argc, char ** argv )
 		if (fexists(infile)) depth++;
 	}
 	
+	maxmax = 0;
 	int z = -1;
 	for (int i=first; i<=last; i++) {
 //		int z = i - first;
@@ -145,7 +149,7 @@ int main( int argc, char ** argv )
 			continue;
 		}
 		z++;
-		printf("z: %d  infile: %s\n",z,infile);
+//		printf("z: %d  infile: %s\n",z,infile);
 		if (bits == 8) {
 			reader8->SetFileName(infile);
 			try
@@ -191,21 +195,25 @@ int main( int argc, char ** argv )
 			p3D = (unsigned char *)(image3D->GetBufferPointer());
 		}
 		int maxpix = 0;
+		int max3D = 0;
 		for (int x=0; x<width; x++) {
 			for (int y=0; y<height; y++) {
-				//maxpix = MAX(maxpix,V2D(x,y));
 				if (bits == 8) {
+					maxpix = MAX(maxpix,V2D_8(x,y));
 					V3D(x,y,z) = V2D_8(x,y);
 				} else {
-					double range = 65536.;
+					maxpix = MAX(maxpix,V2D_16(x,y));
 					double r = V2D_16(x,y)/range;
-					V3D(x,y,z) = MIN(255,(r*255. + 0.5));
+					V3D(x,y,z) = int(MIN(255.,(r*255. + 0.5)));
+					max3D = MAX(V3D(x,y,z),max3D);
 					//if (z == 0 && x <100 && y == 10) {
 					//	printf("%d %d %f  V2D: %d  V3D: %d\n",x,y,r,V2D_16(x,y),V3D(x,y,z));
 					//}
 				}
 			}
 		}
+		maxmax = MAX(maxpix,maxmax);
+		printf("slice i: %3d maxpix: %6d max3D: %6d maxmax: %6d\n",i,maxpix,max3D,maxmax);
 	}
 
     writer->SetFileName( outputFilename );
@@ -227,7 +235,7 @@ int main( int argc, char ** argv )
 //		fclose(fp);
 		return 3;	// Write error on output file
 	}
-	printf("Created filled 3D image file: %s\n",outputFilename);
+	printf("Created 3D 8-bit image file: %s\n",outputFilename);
 
   return 0;
 }
