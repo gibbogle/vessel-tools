@@ -224,7 +224,7 @@
    <widget class="QGroupBox" name="groupBox_traverse">
     <property name="geometry">
      <rect>
-      <x>310</x>
+      <x>300</x>
       <y>200</y>
       <width>241</width>
       <height>271</height>
@@ -336,7 +336,7 @@
     <widget class="QLineEdit" name="lineEdit_speed">
      <property name="geometry">
       <rect>
-       <x>130</x>
+       <x>120</x>
        <y>90</y>
        <width>31</width>
        <height>20</height>
@@ -379,7 +379,7 @@
      <property name="geometry">
       <rect>
        <x>40</x>
-       <y>120</y>
+       <y>150</y>
        <width>71</width>
        <height>21</height>
       </rect>
@@ -391,8 +391,8 @@
     <widget class="QLineEdit" name="lineEdit_pow">
      <property name="geometry">
       <rect>
-       <x>130</x>
-       <y>120</y>
+       <x>120</x>
+       <y>150</y>
        <width>31</width>
        <height>20</height>
       </rect>
@@ -408,7 +408,7 @@
      <property name="geometry">
       <rect>
        <x>130</x>
-       <y>150</y>
+       <y>190</y>
        <width>41</width>
        <height>20</height>
       </rect>
@@ -424,8 +424,8 @@
      <property name="geometry">
       <rect>
        <x>40</x>
-       <y>150</y>
-       <width>91</width>
+       <y>190</y>
+       <width>81</width>
        <height>21</height>
       </rect>
      </property>
@@ -489,6 +489,35 @@
      </property>
      <property name="text">
       <string>0</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_2">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>120</y>
+       <width>81</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Coeff. of var.</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="lineEdit_CV">
+     <property name="geometry">
+      <rect>
+       <x>120</x>
+       <y>120</y>
+       <width>31</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>0.1</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -754,7 +783,7 @@
      <x>0</x>
      <y>0</y>
      <width>1370</width>
-     <height>18</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>

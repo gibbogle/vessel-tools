@@ -122,6 +122,8 @@ void MainWindow::conduit_analyser()
         qstr += " ";
         qstr += ui->lineEdit_speed->text();
         qstr += " ";
+        qstr += ui->lineEdit_CV->text();
+        qstr += " ";
         qstr += ui->lineEdit_npaths->text();
     }
     qstr += " ";
