@@ -156,7 +156,7 @@ int CreateDistributions(NETWORK *net)
 		if (!edge.used) continue;
 		len = shrink_factor*edge.length_um;
 		dave = edge.segavediam;
-//		printf("ie,len,dave: %d %f %f\n",ie,len,dave);
+//		printf("ie,len,dave,npts: %d %f %f %d\n",ie,len,dave,edge.npts);
 		if (use_len_limit && len < len_limit) continue;
 		for (ip=0; ip<edge.npts; ip++) {
 			kp = edge.pt[ip];
@@ -858,7 +858,7 @@ void setupBlockLists(NETWORK *net)
 	for (ix=0;ix<NX;ix++) {
 		for (iy=0;iy<NY;iy++) {
 			for (iz=0;iz<NZ;iz++) {
-				fprintf(fpout,"Block: %d %d %d  count: %d\n",ix,iy,iz,counter[ix][iy][iz]);
+//				fprintf(fpout,"Block: %d %d %d  count: %d\n",ix,iy,iz,counter[ix][iy][iz]);
 			}
 		}
 	}
@@ -871,7 +871,7 @@ void setupBlockLists(NETWORK *net)
 		iy = 8;
 		iz = 8;
 		POINT p;
-		fprintf(fpout,"block: %d %d %d  %8.2f %8.2f %8.2f\n",ix,iy,iz,xmin+ix*DX,ymin+iy*DX,zmin+iz*DX);
+//		fprintf(fpout,"block: %d %d %d  %8.2f %8.2f %8.2f\n",ix,iy,iz,xmin+ix*DX,ymin+iy*DX,zmin+iz*DX);
 		for (k=0; k<counter[ix][iy][iz]; k++) {
 			int npts = net->edgeList[k].npts;
 			if (B(k,1,ix,iy,iz) == 0) {
@@ -2178,7 +2178,9 @@ int main(int argc, char **argv)
 	printf("For the healing pass, set max_len \n(unscaled upper limit on length of an added connection).\n");
 	printf("The shrinkage compensation factor must be specified\n(Note that the dimensions in the am file are left unscaled)\n");
 	printf("\n");
-	if (argc != 9 && argc != 17) {
+
+	printf("argc: %d\n", argc);
+	if (argc != 9 && argc != 18) {
 		printf("To perform joining and trimming of dead ends:\n");
 		printf("Usage: conduit_analyse input_amfile output_file sfactor max_len limit_mode limit_value ddiam dlen\n");
 		printf("       sfactor     = shrinkage compensation factor e.g. 1.25\n");
@@ -2205,7 +2207,7 @@ int main(int argc, char **argv)
 		printf("\n");
 		fpout = fopen("\conduit_analyse_error.log","w");
 		fprintf(fpout,"To perform joining and trimming of dead ends:\n");
-		fprintf(fpout,"Usage: conduit_analyse input_amfile output_file sfactor max_len\n");
+		fprintf(fpout,"Usage: conduit_analyse input_amfile output_file sfactor max_len limit_mode limit_value ddiam dlen\n");
 		fprintf(fpout,"       sfactor     = shrinkage compensation factor e.g. 1.25\n");
 		fprintf(fpout,"       max_len     = upper limit on (unscaled) connecting fibre length (um)\n");
 		fprintf(fpout,"       limit_mode  = restriction for computing fibre statistics:\n                     0 = no limit, 1 = len limit, 2 =  len/diam limit\n");
@@ -2213,14 +2215,15 @@ int main(int argc, char **argv)
 		fprintf(fpout,"       ddiam       = bin size for diameter distribution\n");
 		fprintf(fpout,"       dlen        = bin size for length distribution\n");
 		fprintf(fpout,"\nTo simulate cell paths and estimate Cm:\n");
-		fprintf(fpout,"Usage: conduit_analyse input_amfile output_file sfactor npow ntrials x0 y0 z0 radius speed npaths\n");
+		fprintf(fpout,"Usage: conduit_analyse input_amfile output_file sfactor npow ntrials x0 y0 z0 radius speed CV npaths limit_mode limit_value ddiam dlen\n");
 		fprintf(fpout,"       sfactor     = shrinkage compensation factor e.g. 1.25\n");
 		fprintf(fpout,"       npow        = power of cos(theta) in weighting function for prob. of \n                     taking a branch (theta = turning angle)\n");
 		fprintf(fpout,"       ntrials     = number of cell paths simulated\n");
 		fprintf(fpout,"       x0,y0,z0    = centre of sphere within which the cell paths start (um)\n");
 		fprintf(fpout,"       radius      = radius of sphere within which the cell paths start (um)\n");
 		fprintf(fpout,"       deadend_radius = radius of sphere within which deadends are counted (um)\n");
-		fprintf(fpout,"       speed       = mean cell speed (um/min) (Note that CV = %6.2f)\n",CV);
+		fprintf(fpout,"       speed       = mean cell speed (um/min)\n",CV);
+		fprintf(fpout,"       CV          = coefficient of variation of speed (std dev/mean)\n");
 		fprintf(fpout,"       npaths      = number of cell paths to save\n");
 		fprintf(fpout,"       limit_mode  = restriction for computing fibre statistics:\n                     0 = no limit, 1 = len limit, 2 =  len/diam limit\n");
 		fprintf(fpout,"       limit_value = value of limit for the chosen mode\n");
@@ -2260,7 +2263,7 @@ int main(int argc, char **argv)
 		//fprintf(fpout,"\noutput_amfile: %s\n",output_amfile);
 		//return 0;
 
-	} else if (argc == 17) {
+	} else if (argc == 18) {
 		sscanf(argv[4],"%d",&npow);
 		sscanf(argv[5],"%d",&ntrials);
 		sscanf(argv[6],"%f",&centre.x);
