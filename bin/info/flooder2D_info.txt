@@ -1,0 +1,22 @@
+Flooder2D information
+
+Parameters:
+
+maximum area of hole to be filled (um^2) = M
+maximum length of gap to be closed = G
+# of iterations
+
+2D flood filling is used to fill vessel interiors. In three passes, processing
+is carried out on all slices in the XY, YZ and XZ planes.
+
+In each slice, there are optionally one or two processing stages.
+
+Stage 1 (optional)
+If G > 0, there is a preliminary closing of small gaps in connected (lit) objects.
+This is to handle the cases where the cross-section of a vessel is not quite closed.
+Closing the gap to fully enclose the interior ensures that this will be filled in
+the next stage.
+
+Stage 2
+Totally enclosed "islands" of unlit pixels are detected, and those with an area < M are lit.
+
