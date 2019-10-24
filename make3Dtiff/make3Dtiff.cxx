@@ -97,6 +97,7 @@ int main( int argc, char ** argv )
 	const unsigned int last  = atoi( argv[4] );
 	const unsigned int compressFlag  = atoi( argv[5] );
 	compress = (compressFlag == 1);
+	printf("first,last: %d %d\n",first,last);
 	const char * outputFilename = argv[6];
 	char infile[256];
 	long long width, height, depth;
@@ -117,8 +118,9 @@ int main( int argc, char ** argv )
 	if (bits == 8) {
 	  	reader8 = ReaderType8::New();
 	} else {
-		range = pow(2.,16);		// 12-bit data stored in 16 bits
+		range = pow(2.,16);		// 12-bit or 16-bit data stored in 16 bits
   		reader16 = ReaderType16::New();
+		printf("16-bit data: range: %f\n",range);
 	}
 
   	OutputImageType::Pointer image3D;
@@ -180,6 +182,7 @@ int main( int argc, char ** argv )
 			width = im2D->GetLargestPossibleRegion().GetSize()[0];
 			height = im2D->GetLargestPossibleRegion().GetSize()[1];
  			p2D_16 = (unsigned short *)(im2D->GetBufferPointer());
+			printf("width,height: %d %d\n",width,height);
 		}
 
 		if (i == first) {
