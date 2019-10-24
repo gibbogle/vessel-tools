@@ -145,11 +145,11 @@ int main( int argc, char ** argv )
 		sprintf(infile, inTemplateFile, i);
 		// Check for existence of file
 		if (!fexists(infile)) {
-//			printf("Missing file: %s\n",infile);
+			printf("Missing file: %s\n",infile);
 			continue;
 		}
 		z++;
-//		printf("z: %d  infile: %s\n",z,infile);
+		printf("z: %d  infile: %s\n",z,infile);
 		if (bits == 8) {
 			reader8->SetFileName(infile);
 			try
