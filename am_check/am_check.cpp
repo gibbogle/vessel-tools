@@ -332,7 +332,7 @@ int ivlistAdd(int iv, int *ivlist, int *nv)
 //-----------------------------------------------------------------------------------------------------
 // Look for edges with the same vertices
 //-----------------------------------------------------------------------------------------------------
-int amcheck(NETWORK *net)
+int amcheck_a(NETWORK *net)
 {
 	int ia, ib, npa, npb, kva[2], kvb[2], i, j;
 	EDGE edgea, edgeb;
@@ -343,7 +343,8 @@ int amcheck(NETWORK *net)
 		npa = edgea.npts;
 		kva[0] = edgea.vert[0];
 		kva[1] = edgea.vert[1];
-		printf("Edgea: %8d  kva: %8d %8d  npa: %3d\n", ia,kva[0],kva[1],npa);
+		if (ia%100 == 0)
+			printf("Edgea: %8d  kva: %8d %8d  npa: %3d\n", ia,kva[0],kva[1],npa);
 		p0a = net->point[edgea.pt[1]];
 		p1a = net->point[edgea.pt[npa-2]];
 		for (ib=0; ib<net->ne; ib++) {
@@ -416,35 +417,92 @@ int amcheck(NETWORK *net)
 }
 
 //-----------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------
+int amcheck_b(NETWORK *net)
+{
+	int iv, ie, kv, k, ncon, count[2], maxl;
+	EDGE *ep;
+
+	for (iv=0; iv<net->nv; iv++) {
+		net->vertex[iv].nlinks = 0;
+	}
+	maxl = 0;
+	for (ie=0; ie<net->ne; ie++) {
+		ep = &net->edgeList[ie];
+		for (k=0; k<2; k++) {
+			kv = ep->vert[k];
+			net->vertex[kv].link[net->vertex[kv].nlinks] = ie;
+			net->vertex[kv].nlinks++;
+			if (net->vertex[kv].nlinks > maxl) {
+				maxl = net->vertex[kv].nlinks;
+				printf("maxl: %d\n",maxl);
+			}
+			if (net->vertex[kv].nlinks == MAX_LINKS) {
+				printf("ERROR: number of links exceeds MAX_LINKS\n");
+				exit(1);
+			}
+		}
+	}
+	count[0] = count[1] = 0;
+	for (ie=0; ie<net->ne; ie++) {
+		ep = &net->edgeList[ie];
+		ncon = 0;
+		for (k=0; k<2; k++) {
+			if (net->vertex[ep->vert[k]].nlinks > 1) ncon++;
+		}
+		if (ncon < 2) {
+			if (ncon == 0) {
+				printf("edge: %d has %d connections: %d %d\n",ie,ncon,ep->vert[0],ep->vert[1]);
+				ep->used = false;
+			}
+			count[ncon]++;
+		}
+	}
+	printf("edges with 0, 1 connection: %d %d\n",count[0],count[1]);
+	printf("max number of nlinks: %d\n",maxl);
+	kv = 0;
+	printf("vertex %d nlinks: %d\n",kv,net->vertex[kv].nlinks);
+	kv = 5016;
+	printf("vertex %d nlinks: %d\n",kv,net->vertex[kv].nlinks);
+	kv = 1;
+	printf("vertex %d nlinks: %d\n",kv,net->vertex[kv].nlinks);
+	kv = 244081;
+	printf("vertex %d nlinks: %d\n",kv,net->vertex[kv].nlinks);
+	return 0;
+}
+
+//-----------------------------------------------------------------------------------------------------
 // A smoothed network NP1 is generated from NP0
 // Edges and vertices are unchanged, but the number of points on an edge is reduced.
 //-----------------------------------------------------------------------------------------------------
 int amsmooth(NETWORK *net0, NETWORK *net1)
 {
-	int ie, iv, ip0, ip1;
+	int ie, iv, ip0, ip1, ne;
 	EDGE edge0;
 
 	printf("amsmooth\n");
-	net1->ne = net0->ne;
+//	net1->ne = net0->ne;
 	net1->nv = net0->nv;
 	net1->vertex = (VERTEX *)malloc(net1->nv*sizeof(VERTEX));
-	net1->edgeList = (EDGE *)malloc(net1->ne*sizeof(EDGE));
+	net1->edgeList = (EDGE *)malloc(net0->ne*sizeof(EDGE));
 	net1->point = (POINT *)malloc(net0->np*sizeof(POINT));
 	for (iv=0; iv<net1->nv; iv++) {
 		net1->vertex[iv].point = net0->vertex[iv].point;
 	}
 	net1->np = 0;
-	for (ie=0; ie<net1->ne; ie++) {
+	ne = 0;
+	for (ie=0; ie<net0->ne; ie++) {
 		edge0 = net0->edgeList[ie];
+		if (!edge0.used) continue;
 //		printf("edge0: %d %d\n",ie,edge0.npts);
-		net1->edgeList[ie].vert[0] = edge0.vert[0];
-		net1->edgeList[ie].vert[1] = edge0.vert[1];
-		net1->edgeList[ie].pt = (int *)malloc(net0->edgeList[ie].npts*sizeof(int));
-		net1->edgeList[ie].used = true;
+		net1->edgeList[ne].vert[0] = edge0.vert[0];
+		net1->edgeList[ne].vert[1] = edge0.vert[1];
+		net1->edgeList[ne].pt = (int *)malloc(net0->edgeList[ie].npts*sizeof(int));
+		net1->edgeList[ne].used = true;
 		int kfrom = edge0.pt[0];
 		ip1 = 0;
 		net1->point[net1->np] = net0->point[net0->edgeList[ie].pt[0]];
-		net1->edgeList[ie].pt[0] = net1->np;
+		net1->edgeList[ne].pt[0] = net1->np;
 		net1->np++;
 		ip1++;
 		for (ip0=1; ip0<edge0.npts; ip0++) {
@@ -453,14 +511,16 @@ int amsmooth(NETWORK *net0, NETWORK *net1)
 			if (d > 0.5*(net0->point[kfrom].d/2 + net0->point[k2].d/2) || ip0 == edge0.npts-1) {
 				net1->point[net1->np] = net0->point[net0->edgeList[ie].pt[ip0]];
 				net1->point[net1->np].used = true;
-				net1->edgeList[ie].pt[ip1] = net1->np;
+				net1->edgeList[ne].pt[ip1] = net1->np;
 				net1->np++;
 				ip1++;
 				kfrom = k2;
 			}
 		}
-		net1->edgeList[ie].npts = ip1;
+		net1->edgeList[ne].npts = ip1;
+		ne++;
 	}
+	net1->ne = ne;
 	printf("done: np: %d\n",net1->np);
 	return 0;
 }
@@ -499,7 +559,7 @@ int main(int argc, char **argv)
 	}
 
 	input_amfile = argv[1];
-	strcpy(output_amfile,"A75s.am");
+	strcpy(output_amfile,"checked.am");
 	_splitpath(output_amfile,drive,dir,filename,ext);
 	strcpy(output_basename,drive);
 	strcat(output_basename,dir);
@@ -513,7 +573,10 @@ int main(int argc, char **argv)
 	NP1 = (NETWORK *)malloc(sizeof(NETWORK));
 	err = ReadAmiraFile(input_amfile,NP0);
 	if (err != 0) return 2;
-//	amcheck(NP0);
+//	amcheck_a(NP0);
+	amcheck_b(NP0);
+	return 0;
+
 	amsmooth(NP0,NP1);
 
 	origin_shift[0] = 0;

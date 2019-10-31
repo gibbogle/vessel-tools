@@ -1,6 +1,8 @@
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
+#define MAX_LINKS 8
+
 struct point_str
 {
 	float x,y,z;
@@ -14,6 +16,7 @@ struct vertex_str
 {
 	POINT point;
 	int nlinks;
+	int link[MAX_LINKS];
 	int pt[10];
 	bool used;
 };
