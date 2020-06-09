@@ -31,7 +31,7 @@ struct fibre_str
 	double L_actual, L_direct;
 	double u[3];
 	int kv[2];	// vertex indicies
-	int pt[2];	// end point indicies
+	int pt[2];	// end point indicies - this is redundant, since pt = kv
 	int nlinks[2];
 	int link[2][MAX_LINKS];
 	int near_fibre[2][2];		// [kend][0] is near fibre index (-1 means no near fibre), [kend][1] is end of near fibre, kend = (0,1) is end of this fibre
@@ -94,7 +94,15 @@ float ddiam, dlen;
 #define N4 2*MAXBLOCK*NX*NY
 #define B(j,kfe,ix,iy,iz) blocks[(iz)*N4 + (iy)*N3 + (ix)*N2 + (kfe)*N1 + (j)]	
 
-int jumpy = 0;
+int vcounter[NX][NY][NZ];
+int *vertexList[NX][NY][NZ];
+
+
+bool jumpy = true;		// jumping between fibres
+bool v_jumpy = false;	// jumping vertex -> vertex
+double jumpprobfactor = 1;
+int njumpcalls;
+double djumpsum;
 
 using namespace std;
 
@@ -102,6 +110,325 @@ seed_seq seq;
 mt19937 gen(seq);
 
 uniform_real_distribution<double> uni_dist( 0.0, 1.0 ) ;
+
+float pdist2(POINT p1, POINT p2)
+{
+	return (p1.x - p2.x)*(p1.x - p2.x) + (p1.y - p2.y)*(p1.y - p2.y) + (p1.z - p2.z)*(p1.z - p2.z);
+}
+
+//-----------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------
+int SetupVertexLists(NETWORK *net)
+{
+	int ix, iy, iz, k;
+	POINT p1;
+
+	printf("SetupVertexLists\n");
+	xmin = 1.0e10;
+	ymin = 1.0e10;
+	zmin = 1.0e10;
+	xmax = -1.0e10;
+	ymax = -1.0e10;
+	zmax = -1.0e10;
+	for (k=0; k<net->np; k++) {
+		p1 = net->point[k];
+		xmin = MIN(xmin,p1.x);
+		xmax = MAX(xmax,p1.x);
+		ymin = MIN(ymin,p1.y);
+		ymax = MAX(ymax,p1.y);
+		zmin = MIN(zmin,p1.z);
+		zmax = MAX(zmax,p1.z);
+	}
+	DX = (xmax-xmin)/NX+1;
+	DY = (ymax-ymin)/NY+1;
+	DZ = (zmax-zmin)/NZ+1;
+
+	fprintf(fpout,"\nDimension ranges and grid spacings\n");
+	fprintf(fpout,"X: %f %f  NX: %d DX: %f\n",xmin,xmax,NX,DX);
+	fprintf(fpout,"Y: %f %f  NY: %d DY: %f\n",ymin,ymax,NY,DY);
+	fprintf(fpout,"Z: %f %f  NZ: %d DZ: %f\n",zmin,zmax,NZ,DZ);
+	fflush(fpout);
+
+	for (ix=0; ix < NX; ix++) {
+		for (iy=0; iy < NY; iy++) {
+			for (iz=0; iz < NZ; iz++) {
+				vcounter[ix][iy][iz] = 0;
+			}
+		}
+	}
+	for (k=0; k<net->nv; k++) {
+		p1 = net->point[k];
+		if (!p1.used) continue;
+		ix = (int)((p1.x - xmin)/DX);
+		iy = (int)((p1.y - ymin)/DY);
+		iz = (int)((p1.z - zmin)/DZ);
+		vcounter[ix][iy][iz]++;
+	}
+	for (ix=0; ix < NX; ix++) {
+		for (iy=0; iy < NY; iy++) {
+			for (iz=0; iz < NZ; iz++) {
+				vertexList[ix][iy][iz] = (int *)malloc(vcounter[ix][iy][iz]*sizeof(int));
+			}
+		}
+	}
+
+	for (ix=0; ix < NX; ix++) {
+		for (iy=0; iy < NY; iy++) {
+			for (iz=0; iz < NZ; iz++) {
+				vcounter[ix][iy][iz] = 0;
+			}
+		}
+	}
+	for (k=0; k<net->nv; k++) {
+		p1 = net->point[k];
+		if (!p1.used) continue;
+		ix = (int)((p1.x - xmin)/DX);
+		iy = (int)((p1.y - ymin)/DY);
+		iz = (int)((p1.z - zmin)/DZ);
+		*(vertexList[ix][iy][iz] + vcounter[ix][iy][iz]) = k;
+		vcounter[ix][iy][iz]++;
+		net->vertex[k].nlinks = 0;
+	}
+	for (k=0; k<net->ne; k++) {
+		for (int iv=0; iv<2; iv++) {							// edge ends
+			int kv = net->edgeList[k].vert[iv];					// end vertexes
+			net->vertex[kv].link[net->vertex[kv].nlinks] = k;	// end vertex is connected to edge k
+			net->vertex[kv].nlinks++;
+		}
+	}
+
+	printf("did SetupVertexLists\n");
+
+	return 0;
+}
+
+//-----------------------------------------------------------------------------------------------------
+// Uses fibre[].nlinks[], fibre[].link[][]
+//-----------------------------------------------------------------------------------------------------
+int SetupPointLists(NETWORK *net)
+{
+	int PLcounter[NX][NY][NZ];
+	int *pointList[NX][NY][NZ];
+	int i, j, k, j2, ix, iy, iz, npts;
+	POINT p1, p2;
+	EDGE *edge1, edge2;
+
+	printf("SetupPointLists\n");
+
+	for (ix=0; ix < NX; ix++) {
+		for (iy=0; iy < NY; iy++) {
+			for (iz=0; iz < NZ; iz++) {
+				PLcounter[ix][iy][iz] = 0;
+			}
+		}
+	}
+	for (k=0; k<net->np; k++) {
+		p1 = net->point[k];
+		if (!p1.used) continue;
+		ix = (int)((p1.x - xmin)/DX);
+		iy = (int)((p1.y - ymin)/DY);
+		iz = (int)((p1.z - zmin)/DZ);
+		PLcounter[ix][iy][iz]++;
+	}
+	for (ix=0; ix < NX; ix++) {
+		for (iy=0; iy < NY; iy++) {
+			for (iz=0; iz < NZ; iz++) {
+				pointList[ix][iy][iz] = (int *)malloc(PLcounter[ix][iy][iz]*sizeof(int));
+			}
+		}
+	}
+	for (ix=0; ix < NX; ix++) {
+		for (iy=0; iy < NY; iy++) {
+			for (iz=0; iz < NZ; iz++) {
+				PLcounter[ix][iy][iz] = 0;
+			}
+		}
+	}
+	for (k=0; k<net->np; k++) {
+		p1 = net->point[k];
+		if (!p1.used) continue;
+		ix = (int)((p1.x - xmin)/DX);
+		iy = (int)((p1.y - ymin)/DY);
+		iz = (int)((p1.z - zmin)/DZ);
+		*(pointList[ix][iy][iz] + PLcounter[ix][iy][iz]) = k;
+		PLcounter[ix][iy][iz]++;
+	} 
+
+	// Check points in [5][4][5] for test.am
+//	ix = 5;
+//	iy = 4;
+//	iz = 5;
+//	fprintf(fpout,"points in block: %d %d %d\n",ix,iy,iz);
+//	for (i=0; i<PLcounter[ix][iy][iz]; i++) {
+//		j = *(pointList[ix][iy][iz] + i);
+//		p1 = net->point[j];
+//		fprintf(fpout,"%d  %f %f %f\n",j,p1.x,p1.y,p1.z);
+//	}
+
+	fprintf(fpout,"Find nearest points\n");
+	POINT *plist = NULL;
+	// Now find the nearest point to each point
+	for (ix=0; ix < NX; ix++) {
+		for (iy=0; iy < NY; iy++) {
+			printf(".");
+			for (iz=0; iz < NZ; iz++) {
+				int n = PLcounter[ix][iy][iz];
+				// Create the list of points in this block
+				if (plist) free(plist);
+				plist = (POINT *)malloc(n*sizeof(POINT));
+				for (i=0; i<n; i++) {
+					j = *(pointList[ix][iy][iz] + i);
+					plist[i] = net->point[j];
+				}
+				for (int i1=0; i1<n; i1++) {
+					int j1 = *(pointList[ix][iy][iz] + i1);
+					p1 = plist[i1];
+					int iedge1 = p1.iedge;
+					int i2min = -1;
+					float d2min = 1.0e10;
+					for (int i2=0; i2<n; i2++) {
+						if (i1 == i2) continue;
+						j2 = *(pointList[ix][iy][iz] + i2);
+						p2 = plist[i2];
+						int iedge2 = p2.iedge;
+						if (iedge1 == iedge2) continue;		// ignore other points on this edge
+
+						// Also need to exclude edges that have a connection to this edge,
+						// i.e. connected to the vertex at either end of iedge1
+						bool connected = false;
+						for (int iend = 0; iend<2; iend++) {
+							int nlinks = fibre[iedge1].nlinks[iend];
+							for (int ilink=0; ilink<nlinks; ilink++) {
+								int ifib2 = fibre[iedge1].link[iend][ilink];
+								if (ifib2 == iedge2) {
+									connected = true;
+									continue;
+								}
+							}
+							if (connected) continue;
+						}
+						if (connected) continue;
+						
+						float d2 = pdist2(p1,p2);
+						if (d2 < 1) printf("d2 < 1: iedge1: %d iedge2: %d\n",iedge1,iedge2);
+						if (d2 < d2min) {
+							d2min = d2;
+							i2min = i2;
+						}
+					}
+					if (i2min == -1) {	// no other edges in this block
+						net->point[j1].nearestpt = -1;	// no edges nearby
+						net->point[j1].d2near = 0;
+					} else {
+						// i2min is the index in plist[]
+						net->point[j1].nearestpt = *(pointList[ix][iy][iz] + i2min);	// this is the pt index
+						net->point[j1].d2near = d2min;
+					}
+				}
+			}
+		}
+	}
+	printf("\ndid set up nearestpt\n");
+	int jcount[100] = {0};
+
+	// Now look at each edge, and select the point with the smallest d2near
+	for (k=0; k<net->ne; k++) {
+		edge1 = &net->edgeList[k];
+		if (!edge1->used) continue;
+//		printf("edge: %d %p\n",k,edge1);
+		npts = edge1->npts;
+//		printf("npts: %d\n",npts);
+		edge1->jumpable_pt = -1;
+		edge1->dnearest = 0;
+//		if (npts < 6) {
+//			continue;
+//		}
+		float d2min = 1.0e10;
+		int imin = -1;
+//		for (i=3; i<=npts-3; i++) {
+		for (i=1; i<=npts-2; i++) {
+			int ip = edge1->pt[i];
+//			printf("i: %d ip: %d\n",i,ip);
+			p1 = net->point[ip];
+			if (!p1.used) {
+				printf("Error: in SetupPointLists: unused point used: %d\n",ip);
+				exit(1);
+			}
+//			printf("d2near: %f\n",p1.d2near);
+			if (p1.d2near == 0) continue;
+			if (p1.d2near < d2min) {
+				imin = i;
+				d2min = p1.d2near;
+//				printf("imin: %d d2min: %f\n",imin,d2min);
+			}
+		}
+		if (imin == -1) continue;
+		edge1->jumpable_pt = imin;	// index of edge1->pt[]
+		int ip = edge1->pt[imin];
+//		printf("imin: %d ip: %d\n",imin,ip);
+		p1 = net->point[ip];
+		float dj = sqrt(p1.d2near);
+		float dmin = sqrt(d2min);
+		edge1->dnearest = dmin;
+//		if (edge1->dnearest == 1.0) {
+//			printf("d2min: %f dnearest: %f\n",d2min,edge1->dnearest);
+//			exit(1);
+//		}
+//		printf("d2min: %f p1.d2near: %f\n",d2min,p1.d2near);
+//		printf("dmin: %f dj: %f\n",dmin,dj);
+//		printf("dnearest: %f\n",edge1->dnearest);
+		if (edge1->dnearest != dj) {
+//			printf("dnearest (again): %f\n",edge1->dnearest);
+			printf("edge: %d imin: %d d2min: %f dnearest: %f dj: %f\n",k,imin,d2min,edge1->dnearest,dj);
+		}
+//		if (imin > 0 && imin < 100) jcount[imin]++;
+//		if (imin > 0 && imin < 100) {
+//			int ii = npts - imin - 1;
+//			jcount[ii]++;
+//		}
+//		fprintf(fpout,"edge1: %d  jumpable_pt: %d  npts: %d dnearest: %f\n",k,imin,npts,edge1.dnearest);
+
+		// Check:
+		if (imin < 0) {
+			// no nearby edge
+			continue;
+		}
+		p1 = net->point[edge1->pt[imin]];
+		int ptnear = p1.nearestpt;
+		int ienear = net->point[ptnear].iedge;
+		edge2 = net->edgeList[ienear];
+		// find jpt = index of ptnear on edge2
+		int jpt = -1;
+		npts = edge2.npts;
+		for (i=0; i<npts; i++) {
+			if (ienear == 0) printf("edge: %d i: %d pt[i]: %d\n",ienear,i,edge2.pt[i]);
+			if (edge2.pt[i] == ptnear) {
+				jpt = i;
+				break;
+			}
+		}
+		if (jpt < 0) {
+			printf("Error: on edge: %d pt: %d ptnear: %d not found on edge2: %d\n",k,edge1->pt[imin],ptnear,ienear);
+			printf("pt %d used: %d\n",ptnear,net->point[ptnear]);
+			exit(1);
+		}
+//		exit(1);
+	}
+
+	// Now free pointList
+	for (ix=0; ix < NX; ix++) {
+		for (iy=0; iy < NY; iy++) {
+			for (iz=0; iz < NZ; iz++) {
+				free(pointList[ix][iy][iz]);
+			}
+		}
+	}
+	printf("Freed pointList\n");
+	printf("did SetupPointLists\n");
+		
+	return 0;
+}
+
 
 //-----------------------------------------------------------------------------------------------------
 // This assumes that edge dimensions (average diameter and length) have already been computed.
@@ -241,6 +568,7 @@ int CreateDistributions(NETWORK *net)
 		ave_len += len;
 		ltot++;
 	}
+
 	ave_pt_diam /= ndtot;
 	ave_seg_diam /= nsegdtot;
 	ave_lseg_diam /= lsegdtot;
@@ -402,12 +730,157 @@ int WriteAmiraFile(char *amFileOut, char *amFileIn, NETWORK *net, float origin_s
 }
 
 //-----------------------------------------------------------------------------------------------------
+// Write Amira SpatialGraph file with some edges tagged as unused
+//-----------------------------------------------------------------------------------------------------
+int WriteAmiraFile_used(char *amFileOut, char *amFileIn, NETWORK *net, float origin_shift[])
+{
+	int i, k, j, new_np, new_nv, new_ne, iv;
+	int *new_iv, *old_iv;
+	EDGE edge;
+
+	printf("\nWriteAmiraFile_used: %s\n",amFileOut);
+	fprintf(fpout,"\nWriteAmiraFile_used: %s\n",amFileOut);
+	new_iv = (int *)malloc(net->nv*sizeof(int));
+	old_iv = (int *)malloc(net->nv*sizeof(int));
+	
+	// Reset used flags on vertexes
+	for (i=0; i<net->nv; i++)
+		net->vertex[i].used = false;
+	for (i=0; i<net->ne; i++) {
+		edge = net->edgeList[i];
+		if (edge.used) {
+			for (j=0; j<2; j++) {
+				iv = edge.vert[j];
+				net->vertex[iv].used = true;
+			}
+		}
+	}
+
+	iv = 0;
+	for (i=0; i<net->nv; i++) {
+		if (net->vertex[i].used) {
+			new_iv[i] = iv;
+			old_iv[iv] = i;
+			iv++;
+		}
+	}
+	new_nv = iv;
+	
+	new_np = 0;
+	new_ne = 0;
+	for (i=0;i<net->ne;i++) {
+		edge = net->edgeList[i];
+		if (edge.used) {
+			new_ne++;
+			new_np += edge.npts-2;	// don't double-count the vertex pts
+			for (j=0; j<2; j++) {
+				iv = edge.vert[j];
+				if (!net->vertex[iv].used) {
+					printf("Error: used edge: %d has unused vertex: %d %d\n",i,j,iv);
+					exit(1);
+				}
+			}
+		} else {
+			for (j=0; j<2; j++) {
+				iv = edge.vert[j];
+				if (net->vertex[iv].used) {
+					printf("Error: unused edge: %d has used vertex: %d %d\n",i,j,iv);
+					exit(1);
+				}
+			}
+		}
+	}
+	new_np += new_nv;
+	printf("new_ne: %d new_nv: %d new_np: %d\n",new_ne,new_nv,new_np);
+
+	FILE *fpam = fopen(amFileOut,"w");
+	fprintf(fpam,"# AmiraMesh 3D ASCII 2.0\n");
+	fprintf(fpam,"# Created by conduit_analyse from: %s by removing unused edges\n",amFileIn);
+	fprintf(fpam,"\n");
+	fprintf(fpam,"define VERTEX %d\n",new_nv);
+	fprintf(fpam,"define EDGE %d\n",new_ne);
+	fprintf(fpam,"define POINT %d\n",new_np);
+	fprintf(fpam,"\n");
+	fprintf(fpam,"Parameters {\n");
+	fprintf(fpam,"    ContentType \"HxSpatialGraph\"\n");
+	fprintf(fpam,"}\n");
+	fprintf(fpam,"\n");
+	fprintf(fpam,"VERTEX { float[3] VertexCoordinates } @1\n");
+	fprintf(fpam,"EDGE { int[2] EdgeConnectivity } @2\n");
+	fprintf(fpam,"EDGE { int NumEdgePoints } @3\n");
+	fprintf(fpam,"POINT { float[3] EdgePointCoordinates } @4\n");
+	fprintf(fpam,"POINT { float thickness } @5\n");
+	fprintf(fpam,"\n");
+
+	fprintf(fpam,"\n@1\n");
+	for (iv=0;iv<new_nv;iv++) {
+		i = old_iv[iv];
+		fprintf(fpam,"%6.1f %6.1f %6.1f\n",
+			net->vertex[i].point.x - origin_shift[0],
+			net->vertex[i].point.y - origin_shift[1],
+			net->vertex[i].point.z - origin_shift[2]);
+	}
+	printf("did vertices\n");
+	fprintf(fpam,"\n@2\n");
+	for (i=0;i<net->ne;i++) {
+		edge = net->edgeList[i];
+		if (edge.used) {
+			int iv0 = new_iv[edge.vert[0]];
+			int iv1 = new_iv[edge.vert[1]];
+	//		fprintf(fpam,"%d %d\n",edge.vert[0],edge.vert[1]);
+			fprintf(fpam,"%d %d\n",iv0,iv1);
+			if (iv0 == iv1) {
+				printf("Error: identical vertex indexes: edge: %d vert: %d %d iv0,iv1: %d %d\n",i,edge.vert[0],edge.vert[1],iv0,iv1);
+				exit(1);
+			}
+		}
+	}
+	printf("did edge vert\n");
+	fprintf(fpam,"\n@3\n");
+	for (i=0;i<net->ne;i++) {
+		edge = net->edgeList[i];
+		if (edge.used) {
+			fprintf(fpam,"%d\n",edge.npts);
+		}
+	}
+	printf("did edge npts\n");
+	fprintf(fpam,"\n@4\n");
+	for (i=0;i<net->ne;i++) {
+		edge = net->edgeList[i];
+		if (edge.used) {
+			for (k=0;k<edge.npts;k++) {
+				j = edge.pt[k];
+				fprintf(fpam,"%6.1f %6.1f %6.1f\n",
+					net->point[j].x - origin_shift[0],
+					net->point[j].y - origin_shift[1],
+					net->point[j].z - origin_shift[2]);
+			}
+		}
+	}
+	printf("did points\n");
+	fprintf(fpam,"\n@5\n");
+	for (i=0;i<net->ne;i++) {
+		edge = net->edgeList[i];
+		if (edge.used) {
+			for (k=0;k<edge.npts;k++) {
+				j = edge.pt[k];
+				fprintf(fpam,"%6.2f\n",net->point[j].d);
+			}
+		}
+	}
+	printf("did diameters\n");
+	fclose(fpam);
+	printf("Completed WriteAmiraFile_used\n");
+	return 0;
+}
+
+//-----------------------------------------------------------------------------------------------------
 // Read Amira SpatialGraph file
 //-----------------------------------------------------------------------------------------------------
 int ReadAmiraFile(char *amFile, NETWORK *net)
 {
 	int i, j, k, kp, npts;
-	int np_used, ne_used;
+	int np_used, ne_used, nv_used;
 	EDGE edge;
 	char line[STR_LEN];
 
@@ -437,7 +910,8 @@ int ReadAmiraFile(char *amFile, NETWORK *net)
 
 	net->vertex = (VERTEX *)malloc(net->nv*sizeof(VERTEX));
 	net->edgeList = (EDGE *)malloc(net->ne*sizeof(EDGE));
-	net->point = (POINT *)malloc(net->np*sizeof(POINT));
+	net->point = (POINT *)malloc(net->np*sizeof(POINT));	// Note: this assumes that the largest pt index is < net->np
+	bool *vused = (bool *)malloc(net->nv*sizeof(bool));		// to check usage of vertices
 	printf("Allocated arrays: np: %d nv: %d ne: %d\n",net->np,net->nv,net->ne);
 	fprintf(fpout,"Allocated arrays: np: %d nv: %d ne: %d\n",net->np,net->nv,net->ne);
 	fflush(fpout);
@@ -469,10 +943,14 @@ int ReadAmiraFile(char *amFile, NETWORK *net)
 					kp = i;
 					net->vertex[i].point.d = 0;
 					net->point[kp] = net->vertex[i].point;
+					net->vertex[i].pt = kp;
+					net->vertex[i].used = true;
 				}
 				kp++;
 				printf("Got vertices\n");
 			} else if (k == 2) {
+				for (i=0;i<net->nv; i++)
+					vused[i] = false;
 				for (i=0;i<net->ne;i++) {
 					if (fgets(line, STR_LEN, fpam) == NULL) {
 						printf("ERROR reading section @2\n");
@@ -480,6 +958,8 @@ int ReadAmiraFile(char *amFile, NETWORK *net)
 					}
 					sscanf(line,"%d %d",&net->edgeList[i].vert[0],&net->edgeList[i].vert[1]);
 					net->edgeList[i].used = true;
+					vused[net->edgeList[i].vert[0]] = true;
+					vused[net->edgeList[i].vert[1]] = true;
 				}
 				printf("Got edge vertex indices\n");
 			} else if (k == 3) {
@@ -506,7 +986,7 @@ int ReadAmiraFile(char *amFile, NETWORK *net)
 					edge = net->edgeList[i];
 					float len = 0;
 					for (int kk=0;kk<edge.npts;kk++) {
-						if (fgets(line, STR_LEN, fpam) == NULL) {
+						if (fgets(line, STR_LEN, fpam) == NULL) { 
 							printf("ERROR reading section @4\n");
 							return 1;
 						}
@@ -514,6 +994,9 @@ int ReadAmiraFile(char *amFile, NETWORK *net)
 							sscanf(line,"%f %f %f",&net->point[kp].x,&net->point[kp].y,&net->point[kp].z);
 							net->edgeList[i].pt[kk] = kp;
 							net->edgeList[i].pt_used[kk] = kp;
+//							net->point[kp].iedge = i;
+//							if (i == 0) printf("on edge: %d kk: %d pt: %d\n",i,kk,kp);
+							if (kp == 6) printf("pt: %d is on edge: %d\n",kp,i);
 							kp++;
 						}
 						if (kk > 0) {
@@ -550,10 +1033,14 @@ int ReadAmiraFile(char *amFile, NETWORK *net)
 		}
 	}
 	// Flag used points
+	for (j=0; j<net->np; j++) {
+		net->point[j].used = false;
+	}
 	for (i=0; i<net->ne; i++) {
 		edge = net->edgeList[i];
 		for (k=0; k<edge.npts; k++) {
 			j = edge.pt[k];
+			net->point[j].iedge = i;
 			net->point[j].used = true;
 		}
 	}
@@ -568,6 +1055,12 @@ int ReadAmiraFile(char *amFile, NETWORK *net)
 		if (net->edgeList[j].used) ne_used++;
 	}
 	printf("Edges: ne: %d ne_used: %d\n",net->ne,ne_used);
+	// Count used vertexes
+	nv_used = 0;
+	for (i=0;i<net->nv;i++) {
+		if (vused[i]) nv_used++;
+	}
+	printf("vertexes: nv: %d nv_used: %d\n",net->nv,nv_used);
 	return 0;
 }
 
@@ -680,7 +1173,7 @@ int amcheck(NETWORK *net)
 }
 
 //-----------------------------------------------------------------------------------------------------
-// A smoothed network NP1 is generated from NP0
+// A smoothed network net1 is generated from net0
 // Edges and vertices are unchanged, but the number of points on an edge is reduced.
 //-----------------------------------------------------------------------------------------------------
 int amsmooth(NETWORK *net0, NETWORK *net1)
@@ -783,7 +1276,7 @@ double getAngle(int iv, int kf1, int kf2)
 	else
 		usign2 = -1;
 	dot = usign1*usign2*dotproduct(u1,u2);
-	float rad;
+	double rad;
 	if (dot >= 1) {
 		rad = 0;
 	} else if (dot <= -1) {
@@ -808,7 +1301,7 @@ void setupBlockLists(NETWORK *net)
 	POINT p1, p2;
 	int ix, iy, iz, k;
 
-	printf("setipBlockLists: nfibres: %d\n",nfibres);
+	printf("setupBlockLists: nfibres: %d\n",nfibres);
 	for (ix=0;ix<NX;ix++) {
 		for (iy=0;iy<NY;iy++) {
 			for (iz=0;iz<NZ;iz++) {
@@ -819,31 +1312,26 @@ void setupBlockLists(NETWORK *net)
 	for (k=0; k<nfibres; k++) {
 		int npts = net->edgeList[k].npts;
 		p1 = net->point[net->edgeList[k].pt[0]];
-		ix = (p1.x - xmin)/DX;
-		iy = (p1.y - ymin)/DY;
-		iz = (p1.z - zmin)/DZ;
+		ix = (int)((p1.x - xmin)/DX);
+		iy = (int)((p1.y - ymin)/DY);
+		iz = (int)((p1.z - zmin)/DZ);
 		B(counter[ix][iy][iz],0,ix,iy,iz) = k;
-		B(counter[ix][iy][iz],1,ix,iy,iz) = 0;	// end 1
+		B(counter[ix][iy][iz],1,ix,iy,iz) = 0;	// end 0
 		counter[ix][iy][iz]++;
 		//if (counter[ix][iy][iz] == MAXBLOCK) {
 		//	printf("MAXBLOCK exceeded at: fibre k: %d  block: %d %d %d\n",k,ix,iy,iz);
 		//	exit(5);
 		//}
 		p2 = net->point[net->edgeList[k].pt[npts-1]];
-		ix = (p2.x - xmin)/DX;
-		iy = (p2.y - ymin)/DY;
-		iz = (p2.z - zmin)/DZ;
+		ix = (int)((p2.x - xmin)/DX);
+		iy = (int)((p2.y - ymin)/DY);
+		iz = (int)((p2.z - zmin)/DZ);
 		B(counter[ix][iy][iz],0,ix,iy,iz) = k;
-		B(counter[ix][iy][iz],1,ix,iy,iz) = 1;	// end 2
+		B(counter[ix][iy][iz],1,ix,iy,iz) = 1;	// end 1
 		counter[ix][iy][iz]++;
-		//if (counter[ix][iy][iz] == MAXBLOCK) {
-		//	printf("MAXBLOCK exceeded at: fibre k: %d  block: %d %d %d\n",k,ix,iy,iz);
-		//	exit(5);
-		//}
-		if (int(10*p1.x) == 5746) fprintf(fpout,"k: %d  %8.2f %8.2f %8.2f\n",k,p1.x,p1.y,p1.z);
-		if (int(10*p2.x) == 5746) fprintf(fpout,"k: %d  %8.2f %8.2f %8.2f\n",k,p2.x,p2.y,p2.z);
 	}
-	fprintf(fpout,"setupBlockLists\n");
+	printf("setupBlockLists\n");
+//	fprintf(fpout,"setupBlockLists\n");
 	int maxcount = 0;
 	for (ix=0;ix<NX;ix++) {
 		for (iy=0;iy<NY;iy++) {
@@ -891,23 +1379,23 @@ void setupBlockLists(NETWORK *net)
 // Apply shrink_factor here only to the values that are output, and the length distribution.
 // All node locations and fibre dimensions are left unscaled.
 //-----------------------------------------------------------------------------------------------------
-void makeFibreList(NETWORK *net)
+void MakeFibreList(NETWORK *net)
 {
 #define NBINS 50
 #define NANGS 45
 	int i, k, iv, idir, i_scaled, i_limit, nf_limit;
 	int ix, iy, iz;
-	int kv[2], nlinks[2];
+	int nlinks[2];
 	POINT p1, p2;
-	float L_actual_sum=0, L_direct_sum=0;
-	float deltaL = 1.0;
-	float v[3], dotsum[26];
-	float Lmin, Lmax, Lsum, Lbin[NBINS+1], NBbin[MAX_LINKS], Lbin_scaled[NBINS+1], Lbin_limit[NBINS+1];
-	float Angbin[NANGS], dang;
+	double L_actual_sum=0, L_direct_sum=0;
+	double deltaL = 1.0;
+	double v[3], dotsum[26];
+	double Lmin, Lmax, Lsum, Lbin[NBINS+1], NBbin[MAX_LINKS], Lbin_scaled[NBINS+1], Lbin_limit[NBINS+1];
+	double Angbin[NANGS], dang;
 	int nvbin, nangbin;
 
-//	fprintf(fpout,"makeFibreList\n");
-//	fflush(fpout);
+	printf("MakeFibreList\n");
+	fprintf(fpout,"MakeFibreList\n");
 	dang = 180./NANGS;
 	make26directions();
 	nfibres = net->ne;
@@ -924,8 +1412,6 @@ void makeFibreList(NETWORK *net)
 		NBbin[i] = 0;
 	
 	fibre = (FIBRE *)malloc(nfibres*sizeof(FIBRE));
-	xmin = ymin = zmin = 1.0e10;
-	xmax = ymax = zmax = 0;
 	nf_limit = 0;
 	for (k=0; k<nfibres; k++) {
 		fibre[k].kv[0] = net->edgeList[k].vert[0];
@@ -938,15 +1424,15 @@ void makeFibreList(NETWORK *net)
 		Lmin = MIN(Lmin,fibre[k].L_actual);
 		Lmax = MAX(Lmax,fibre[k].L_actual);
 		Lsum += fibre[k].L_actual;
-		i = fibre[k].L_actual/deltaL + 0.5;
+		i = (int)(fibre[k].L_actual/deltaL + 0.5);
 		i = MIN(i,NBINS);
 		Lbin[i] += 1;
-		i_scaled = shrink_factor*fibre[k].L_actual/deltaL + 0.5;
+		i_scaled = (int)(shrink_factor*fibre[k].L_actual/deltaL + 0.5);
 		i_scaled = MIN(i_scaled,NBINS);
 		Lbin_scaled[i_scaled] += 1;
 		if (shrink_factor*fibre[k].L_actual > min_len) {
 			nf_limit++;
-			i_limit = shrink_factor*fibre[k].L_actual/deltaL + 0.5;
+			i_limit = (int)(shrink_factor*fibre[k].L_actual/deltaL + 0.5);
 			i_limit = MIN(i_limit,NBINS);
 			Lbin_limit[i_limit] += 1;
 		}
@@ -959,37 +1445,17 @@ void makeFibreList(NETWORK *net)
 		fibre[k].u[0] = (p2.x - p1.x)/fibre[k].L_direct;
 		fibre[k].u[1] = (p2.y - p1.y)/fibre[k].L_direct;
 		fibre[k].u[2] = (p2.z - p1.z)/fibre[k].L_direct;
-		xmin = MIN(xmin,p1.x);
-		xmin = MIN(xmin,p2.x);
-		xmax = MAX(xmax,p1.x);
-		xmax = MAX(xmax,p2.x);
-		ymin = MIN(ymin,p1.y);
-		ymin = MIN(ymin,p2.y);
-		ymax = MAX(ymax,p1.y);
-		ymax = MAX(ymax,p2.y);
-		zmin = MIN(zmin,p1.z);
-		zmin = MIN(zmin,p2.z);
-		zmax = MAX(zmax,p1.z);
-		zmax = MAX(zmax,p2.z);
 	}
-	DX = (xmax-xmin)/NX+1;
-	DY = (ymax-ymin)/NY+1;
-	DZ = (zmax-zmin)/NZ+1;
-
-	fprintf(fpout,"\nDimension ranges and grid spacings\n");
-	fprintf(fpout,"X: %f %f  NX: %d DX: %f\n",xmin,xmax,NX,DX);
-	fprintf(fpout,"Y: %f %f  NY: %d DY: %f\n",ymin,ymax,NY,DY);
-	fprintf(fpout,"Z: %f %f  NZ: %d DZ: %f\n",zmin,zmax,NZ,DZ);
-	fflush(fpout);
-
+#if 0
 	MAXBLOCK = (50*nfibres)/(NX*NY*NZ*2);
-	MAXBLOCK = max(MAXBLOCK,200);
+	MAXBLOCK = max(MAXBLOCK,300);
 	printf("MAXBLOCK: %d\n",MAXBLOCK);
 	blocks = (int *)malloc(NX*NY*NZ*2*MAXBLOCK*sizeof(int));
 	setupBlockLists(net);
+	printf("did setupBlockLists\n");
 //	fprintf(fpout,"did setupBlockLists\n");
 //	fflush(fpout);
-
+#endif
 	printf("\nShrinkage compensation factor: %6.2f\n\n",shrink_factor);
 	printf("Average L_actual: %6.2f  scaled: %6.2f\n",L_actual_sum/nfibres,shrink_factor*L_actual_sum/nfibres);
 	printf("Average L_direct: %6.2f  scaled: %6.2f\n",L_direct_sum/nfibres,shrink_factor*L_direct_sum/nfibres);
@@ -1016,16 +1482,43 @@ void makeFibreList(NETWORK *net)
 	// This code is to determine, for each fibre, for each end, the list of connected fibres.
 	nvbin = 0;
 	for (k=0; k<nfibres; k++) {
-//		if (k%10000 == 0) {
-//			fprintf(fpout,"fibre: %d\n",k);
-//			fflush(fpout);
-//		}
-		kv[0] = fibre[k].kv[0];
-		nlinks[0] = 0;
-		kv[1] = fibre[k].kv[1];
-		nlinks[1] = 0;
+		for (int iend = 0; iend<2; iend++) {
+			int kvt = fibre[k].kv[iend];
+			nlinks[iend] = 0;
+			VERTEX v = net->vertex[kvt];
+			for (int i=0; i<v.nlinks; i++) {
+				if (v.link[i] != k) {
+					fibre[k].link[iend][nlinks[iend]] = v.link[i];
+					nlinks[iend]++;
+				}
+			}
+			fibre[k].nlinks[iend] = nlinks[iend];
+			if (nlinks[iend] > 1) {
+				nvbin++;
+				NBbin[nlinks[iend]+1]++;
+			}
+//			printf("fibre: %d iend: %d nlinks: %d\n",k,iend,fibre[k].nlinks[iend]);
+//			for (int i=0; i<nlinks[iend]; i++)
+//				printf("i: %d link: %d\n",i,fibre[k].link[iend][i]);
+		}
+	}
+
+			/*
+			p1 = net->point[kvt];
+			ix = (p1.x - xmin)/DX;
+			iy = (p1.y - ymin)/DY;
+			iz = (p1.z - zmin)/DZ;
+			// Look at all vertexes in this block
+			for (int j=0; j<vcounter[ix][iy][iz]; j++) {
+				int kv = *(vertexList[ix][iy][iz] + j);
+				VERTEX v = net->vertex[kv];
+				for (int i=0; i<v.nlinks; i++) {
+			
+			
+		}
+
 		int npts = net->edgeList[k].npts;
-		// Look at end 1 first
+		// Look at end 0 first
 		p1 = net->point[net->edgeList[k].pt[0]];
 		ix = (p1.x - xmin)/DX;
 		iy = (p1.y - ymin)/DY;
@@ -1045,7 +1538,7 @@ void makeFibreList(NETWORK *net)
 				}
 			}
 		}
-		// Now look at end 2
+		// Now look at end 1
 		p2 = net->point[net->edgeList[k].pt[npts-1]];
 		ix = (p2.x - xmin)/DX;
 		iy = (p2.y - ymin)/DY;
@@ -1065,6 +1558,7 @@ void makeFibreList(NETWORK *net)
 				}
 			}
 		}
+
 		fibre[k].nlinks[0] = nlinks[0];
 		fibre[k].nlinks[1] = nlinks[1];
 		if (nlinks[0] > 1) {
@@ -1076,67 +1570,9 @@ void makeFibreList(NETWORK *net)
 			NBbin[nlinks[1]+1]++;
 		}
 	}
+	*/
+
 //	fprintf(fpout,"completed connected fibres\n");
-//	fflush(fpout);
-
-/*
-	nvbin = 0;
-	for (k=0; k<nfibres; k++) {
-		if (k%1000 == 0) printf("fibre: %d\n",k);
-		kv[0] = fibre[k].kv[0];
-		nlinks[0] = 0;
-		kv[1] = fibre[k].kv[1];
-		nlinks[1] = 0;
-		for (int kk=0; kk<nfibres; kk++) {
-			if (kk == k) continue;
-			if (fibre[kk].kv[0] == kv[0]) {
-				fibre[k].link[0][nlinks[0]] = kk;
-				nlinks[0]++;
-				if (nlinks[0] > MAX_LINKS) {
-					printf("Error: nlinks[0]: %d\n",nlinks[0]);
-					exit(1);
-				}
-			}
-			if (fibre[kk].kv[1] == kv[0]) {
-				fibre[k].link[0][nlinks[0]] = kk;
-				nlinks[0]++;
-				if (nlinks[0] > MAX_LINKS) {
-					printf("Error: nlinks[0]: %d\n",nlinks[0]);
-					exit(1);
-				}
-			}
-			if (fibre[kk].kv[0] == kv[1]) {
-				fibre[k].link[1][nlinks[1]] = kk;
-				nlinks[1]++;
-				if (nlinks[1] > MAX_LINKS) {
-					printf("Error: nlinks[1]: %d\n",nlinks[1]);
-					exit(1);
-				}
-			}
-			if (fibre[kk].kv[1] == kv[1]) {
-				fibre[k].link[1][nlinks[1]] = kk;
-				nlinks[1]++;
-				if (nlinks[1] > MAX_LINKS) {
-					printf("Error: nlinks[1]: %d\n",nlinks[1]);
-					exit(1);
-				}
-			}
-		}
-		fibre[k].nlinks[0] = nlinks[0];
-		fibre[k].nlinks[1] = nlinks[1];
-		if (nlinks[0] > 1) {
-			nvbin++;
-			NBbin[nlinks[0]+1]++;
-		}
-		if (nlinks[1] > 1) {
-			nvbin++;
-			NBbin[nlinks[1]+1]++;
-		}
-//		fprintf(fpout,"fibre: %6d nlinks1,nlinks2: %2d %2d\n",k,nlinks1,nlinks2);
-	}
-
-*/
-//	fprintf(fpout,"set up nlinks\n");
 //	fflush(fpout);
 
 	if (centre.x==0 || centre.y==0 || centre.z==0) {
@@ -1145,7 +1581,6 @@ void makeFibreList(NETWORK *net)
 		centre.y = 0;
 		centre.z = 0;
 		for (iv=0; iv<net->nv; iv++) {
-			net->vertex[iv].nf = 0;
 			centre.x += net->vertex[iv].point.x;
 			centre.y += net->vertex[iv].point.y;
 			centre.z += net->vertex[iv].point.z;
@@ -1156,27 +1591,20 @@ void makeFibreList(NETWORK *net)
 	}
 
 	// Evaluate angles at vertices, get centre
-	for (k=0; k<nfibres; k++) {
-		kv[0] = fibre[k].kv[0];
-		kv[1] = fibre[k].kv[1];
-		net->vertex[kv[0]].fib[net->vertex[kv[0]].nf] = k;
-		net->vertex[kv[0]].nf++;
-		net->vertex[kv[1]].fib[net->vertex[kv[1]].nf] = k;
-		net->vertex[kv[1]].nf++;
-	}
-	printf("set up vertex.nf\n");
 	for (i=0;i<NANGS;i++)
 		Angbin[i] = 0;
 	nangbin = 0;
 	for (iv=0; iv<net->nv; iv++) {
-		if (net->vertex[iv].nf < 3) continue;
-		for (int i1=0; i1<net->vertex[iv].nf; i1++) {
-			int kf1 = net->vertex[iv].fib[i1];
-			for (int i2=0; i2<net->vertex[iv].nf; i2++) {
+		if (!net->vertex[iv].used) continue;
+		if (net->vertex[iv].nlinks < 3) continue;
+		for (int i1=0; i1<net->vertex[iv].nlinks; i1++) {
+			int kf1 = net->vertex[iv].link[i1];
+			for (int i2=0; i2<net->vertex[iv].nlinks; i2++) {
 				if (i1 == i2) continue;
-				int kf2 = net->vertex[iv].fib[i2];	// Note float counting of pairs of fibres
+//				int kf2 = net->vertex[iv].fib[i2];	// Note float counting of pairs of fibres
+				int kf2 = net->vertex[iv].link[i2];	// Note float counting of pairs of fibres
 				double theta = getAngle(iv,kf1,kf2);
-				i = theta/dang;
+				i = (int)(theta/dang);
 				if (i > NANGS) exit(1);
 				Angbin[i]++;
 				nangbin++;
@@ -1194,7 +1622,7 @@ void makeFibreList(NETWORK *net)
 		for (i=0; i<3; i++)
 			v[i] = uvec[idir][i];
 		for (int k=0; k<nfibres; k++) {
-			float dot = 0;
+			double dot = 0;
 			for (i=0; i<3; i++) {
 				dot += (v[i]*fibre[k].u[i]);
 			}
@@ -1203,7 +1631,6 @@ void makeFibreList(NETWORK *net)
 		dotsum[idir] /= 2*nfibres;	// because each dot-product gets evaluated twice
 		fprintf(fpout,"idir: %2d v: %6.3f %6.3f %6.3f dot ave: %8.4f\n",idir,v[0],v[1],v[2],dotsum[idir]); 
 	}
-//	return;
 	printf("\nNumber of vertices: %d\n",nvbin/2);
 	printf("Length of fibre/vertex: %f\n",Lsum/net->nv);
 	printf("Distribution of fibres/vertex:\n");
@@ -1215,19 +1642,60 @@ void makeFibreList(NETWORK *net)
 		fprintf(fpout,"%2d %12.4e\n",i,float(NBbin[i])/nvbin);
 	}
 
-	// Now set up near fibres
-	if (jumpy == 0) return;
+//	if (!v_jumpy) return;
+	// Now set up nearest vertex for each vertex
+	for (int kv1=0; kv1<net->nv; kv1++) {
+		VERTEX *v1 = &net->vertex[kv1];
+		if (!v1->used) continue;
+		POINT p1 = v1->point;
+		ix = (int)((p1.x - xmin)/DX);
+		iy = (int)((p1.y - ymin)/DY);
+		iz = (int)((p1.z - zmin)/DZ);
+		// Look at vertexes in [ix][iy][iz]
+		double d2min = 1.0e10;
+		int kvmin = -1;
+		for (int i=0; i<vcounter[ix][iy][iz]; i++) {
+			int kv2 = *(vertexList[ix][iy][iz] + i);
+			if (kv2 == kv1) continue;
+			VERTEX v2 = net->vertex[kv2];
+			if (!v2.used) continue;
+			bool connected = false;
+			for (int ilink=0; ilink < v2.nlinks; ilink++) {
+				int ie = v2.link[ilink];
+				EDGE edge = net->edgeList[ie];
+				if (edge.vert[0] == kv1 || edge.vert[1] == kv1) {
+					connected = true;
+					continue;
+				}
+			}
+			if (connected) continue;
+			POINT p2 = v2.point;
+			double d2 = pdist2(p1,p2);
+			if (d2 < d2min) {
+				d2min = d2;
+				kvmin = kv2;
+			}
+		}
+		v1->kvnearest = kvmin;
+		if (kvmin < 0)
+			v1->dnearest = 0;
+		else
+			v1->dnearest = (float)sqrt(d2min);
+	}
+		
+#if 0
 	for (k=0; k<nfibres; k++) {
 		if (k%10000 == 0) printf("fibre: %d\n",k);
 		kv[0] = fibre[k].kv[0];
 		kv[1] = fibre[k].kv[1];
-		// Look at end 1 first
+		// Look at end 0 first
 		int kend = 0;
 		int k1 = fibre[k].pt[kend];
 		p1 = net->point[k1];
 		ix = (p1.x - xmin)/DX;
 		iy = (p1.y - ymin)/DY;
 		iz = (p1.z - zmin)/DZ;
+		// end 0 of fibre[k] is in block[0][ix][iy][iz]
 		// Look at all fibre ends in this block
 		for (int j=0; j<counter[ix][iy][iz]; j++) {
 			int kk = B(j,0,ix,iy,iz);
@@ -1238,8 +1706,8 @@ void makeFibreList(NETWORK *net)
 			double d = distance(net, k1, k2);
 		}
 	}
-//	fprintf(fpout,"did makeFibreList\n");
-//	fflush(fpout);
+#endif
+//	fprintf(fpout,"did MakeFibreList\n");
 	return;
 }
 
@@ -1257,9 +1725,9 @@ int SetupJumps(NETWORK *net)
 		int kend = 0;
 		int k1 = fibre[k].pt[kend];
 		POINT p1 = net->point[k1];
-		int ix = (p1.x - xmin)/DX;
-		int iy = (p1.y - ymin)/DY;
-		int iz = (p1.z - zmin)/DZ;
+		int ix = (int)((p1.x - xmin)/DX);
+		int iy = (int)((p1.y - ymin)/DY);
+		int iz = (int)((p1.z - zmin)/DZ);
 		// Look at all fibre ends in this block
 		for (int j=0; j<counter[ix][iy][iz]; j++) {
 			int kk = B(j,0,ix,iy,iz);
@@ -1368,31 +1836,61 @@ double get_distance(NETWORK *net, int ifib0, int iend0, int ifib1, int iend1)
 
 
 //-----------------------------------------------------------------------------------------------------
-// The cell started at ifib1, iend1, we first determine where it was after travelling distance dist
+// The cell started on the current fibre (ifib1) at the end iend1.
+// We first determine where it was after travelling distance dist
+// then compute the straight-line distance of this point from the start vertex (iend0 of ifib0)
+// This is returned
 // Note: fibre[k] is actually edge edgelist[k]
+//
+// To accommodate jumping (the continuation of travel from jpt to the end of the fibre):
+// For jump, need to start from ipt=jpt, the pt that was jumped to, on ifib1, and use jdir instead of iend0
+// In usual case, ipt = 0 (if jdir = 1), or npts-1 (if jdir = 0)
 //-----------------------------------------------------------------------------------------------------
-double get_partial_distance(NETWORK *net, int ifib0, int iend0, int ifib1, int iend1, double dist)
+double get_partial_distance(NETWORK *net, int ifib0, int iend0, int ifib1, int ipt, int jdir, double dist)
 {
 	double dd, dsum, dx, dy, dz, x, y, z, fac;
+	int npts;
 	EDGE *ep;
 
 	ep = &net->edgeList[ifib1];
-	dsum = 0;
-	for (int kseg=0; kseg<ep->npts-1; kseg++) {
-		POINT p1 = net->point[ep->pt[kseg]];
-		POINT p2 = net->point[ep->pt[kseg+1]];
-		dx = p2.x - p1.x;
-		dy = p2.y - p1.y;
-		dz = p2.z - p1.z;
-		dd = sqrt(dx*dx+dy*dy+dz*dz);
-		if (dsum + dd > dist) {
-			fac = (dist-dsum)/dd;
-			x = p1.x + fac*dx;
-			y = p1.y + fac*dy;
-			z = p1.z + fac*dz;
-			break;
-		} else {
-			dsum += dd;
+	npts = ep->npts;
+	if (jdir == 1) {	// travel towards end 1
+		dsum = 0;
+		for (int kseg=ipt; kseg<npts-1; kseg++) {
+			POINT p1 = net->point[ep->pt[kseg]];
+			POINT p2 = net->point[ep->pt[kseg+1]];
+			dx = p2.x - p1.x;
+			dy = p2.y - p1.y;
+			dz = p2.z - p1.z;
+			dd = sqrt(dx*dx+dy*dy+dz*dz);
+			if (dsum + dd > dist) {
+				fac = (dist-dsum)/dd;
+				x = p1.x + fac*dx;
+				y = p1.y + fac*dy;
+				z = p1.z + fac*dz;
+				break;
+			} else {
+				dsum += dd;
+			}
+		}
+	} else {	// travel towards end 0
+		dsum = 0;
+		for (int kseg=ipt; kseg>0; kseg--) {
+			POINT p1 = net->point[ep->pt[kseg]];
+			POINT p2 = net->point[ep->pt[kseg-1]];
+			dx = p2.x - p1.x;
+			dy = p2.y - p1.y;
+			dz = p2.z - p1.z;
+			dd = sqrt(dx*dx+dy*dy+dz*dz);
+			if (dsum + dd > dist) {
+				fac = (dist-dsum)/dd;
+				x = p1.x + fac*dx;
+				y = p1.y + fac*dy;
+				z = p1.z + fac*dz;
+				break;
+			} else {
+				dsum += dd;
+			}
 		}
 	}
 	int kv0 = fibre[ifib0].kv[iend0];
@@ -1404,184 +1902,186 @@ double get_partial_distance(NETWORK *net, int ifib0, int iend0, int ifib1, int i
 }
 
 //-----------------------------------------------------------------------------------------------------
-// Travel randomly on the network.
-// nsteps = max number of steps
-// tmax = maximum time (min)
+// The nearest pt on the fibre ifib is found, from the distance to the nearest fibre the jump probability
+// is calculated, then a coin is tossed to determine if the jump happens.
+// If the answer is yes, jpt is the jumped-to pt on jfib the jumped-to fibre (from pt ipt on ifib)
+// (note that ipt and jpt are the indexes of the pts in edgeList[ifib] and edgeList[jfib], i.e. 0,..,npts-1,
+// therefore the pt indexes in net->point[] are: edgeList[ifib].pt[ipt] and edgeList[jfib].pt[jpt])
+// and the distance along the fibre ifib from the starting end (in the direction jdir) is calculated as jdist.
 //-----------------------------------------------------------------------------------------------------
-void traverse(NETWORK *net, int nsteps, double *tpt, double *res_d2sum, double *Cm, int *nsims)
+bool check_jump(NETWORK *net, int ifib, int jdir, int *jpt, int *jfib, double *dist)
 {
-	int i, k, iR, istep, itpt, iseg, reached;
-	int *nvisits=NULL;
-	double *res_d2tsum;
-	double *Lsum=NULL;
-	double Ltotal, R, sum;
-	double t, dt, speed, std_speed;
+	int i, ij, ip, npts, nearpt;
+	POINT p1, p2;
+	EDGE edge1, edge2;
+	double djump, prob, R, d;
 
-	printf("traverse\n");
-	mean_speed /= shrink_factor;	// the mean speed is scaled to account for the fact that the network description
-									// is based on the unscaled measurements - not compensated for shrinkage
-									// This is equivalent to scaling fibre lengths by multiplying by shrink_factor
-	std_speed = CV*mean_speed;
-	res_d2tsum = new double[NDATAPTS];
-	for (i=0; i<NDATAPTS; i++) {
-		res_d2sum[i] = 0;
-		res_d2tsum[i] = 0;
+	njumpcalls++;
+
+//	printf("check_jump: ifib: %d jdir: %d\n",ifib,jdir);
+	edge1 = net->edgeList[ifib];
+	ij = edge1.jumpable_pt;			// index of the jumpable pt on edge
+	ip = edge1.pt[ij];
+	djump = edge1.dnearest;			// jump distance
+	djumpsum += djump;
+//	printf("ij: %d djump: %f\n",ij,djump);
+	if (ij == 0) exit(1);
+	if (ij < 0 || djump == 0) {
+		printf("ij: %d djump: %f\n",ij,djump);
+		return false;
+	} else {
+		prob = jumpprobfactor/(djump*djump);
 	}
-	nvisits = new int[nfibres];
-	Lsum = new double[nfibres];
-	for (i=0; i<nfibres; i++) {
-		if (i == 0)
-			Lsum[0] = fibre[0].L_actual;
-		else
-			Lsum[i] = Lsum[i-1] + fibre[i].L_actual;
-		nvisits[i] = 0;
+	if (djump < 1) printf("check_jump: djump < 1: %f\n",djump);
+	R = uni_dist(gen);
+	if (R > prob) {
+		return false;
 	}
-	Ltotal = Lsum[nfibres-1];
-
-//    std::normal_distribution<double> norm_dist( 0.0, 1.0 ) ;
-    normal_distribution<double> norm_dist( 0.0, 1.0 ) ;
-	
-//	std::uniform_real_distribution<double> uni_dist( 0.0, 1.0 ) ;
-	double d, d2sum=0;
-	int np = 0;
-	for (k=0; k<1000000; k++) {
-		R = uni_dist(gen);
-		R *= Ltotal;
-
-		// Randomly choose initial direction on the fibre
-		int jdir = random_int(0,1);
-
-		// Randomly select a fibre i
-		for (i=0; i<nfibres; i++) {
-			if (R <= Lsum[i]) {
-				break;
-			}
+	// Jumping
+	npts = edge1.npts;
+//	printf("Jumping: ifib: %d ij: %d djump: %f\n",ifib,ij,djump);
+	// Distance from the start vertex depends on jdir, ij
+	if (jdir == 1) {	// travel from end 0 towards end 1
+//		printf("jdir: %d\n",jdir);
+		d = 0;
+		p1 = net->point[edge1.pt[0]];
+		for (i=1; i<=ij; i++) {
+			p2 = net->point[edge1.pt[i]];
+			d += sqrt(pdist2(p1,p2));
+			p1 = p2;
 		}
-		int ifib = i;
-		int ifib0 = ifib;
-
-		int iend0;
-		if (jdir == 0)
-			iend0 = 1;
-		else
-			iend0 = 0;
-		// Starting on fibre ifib0, at the end 0 if jdir=1, at the end 1 if jdir=0
-		// i.e. moving towards end jdir of ifib (=ifib0)
-
-		// Check distance of start point from the centre
-		int kv0 = fibre[ifib0].kv[iend0];
-		POINT p0 = net->vertex[kv0].point;
-
-		float dx = centre.x - p0.x;
-		float dy = centre.y - p0.y;
-		float dz = centre.z - p0.z;
-		d = sqrt(dx*dx+dy*dy+dz*dz);
-//		printf("ifib0,iend0,kv0: %d %d %d\n",ifib0,iend0,kv0);
-//		printf("centre,p0: %f %f %f   %f %f %f\n",centre.x,centre.y,centre.z,p0.x,p0.y,p0.z);
-//		printf("k,d,start_radius: %d %f %f\n\n",k,d,start_radius);
-		if (d > start_radius) continue;
-		if (save_paths) {
-			if (np < npaths) {
-				pathcnt[np] = 1;
-				path[np][0].x = 0;
-				path[np][0].y = 0;
-				path[np][0].z = 0;
-			}
+	} else {
+//		printf("jdir: %d\n",jdir);
+		d = 0;
+		p1 = net->point[edge1.pt[npts-1]];
+		for (i=npts-2; i>=ij; i--) {
+			p2 = net->point[edge1.pt[i]];
+			d += sqrt(pdist2(p1,p2));
+			p1 = p2;
 		}
-
-		speed = mean_speed;
-		R = norm_dist(gen);
-		speed += R*std_speed;
-		reached = 0;
-		itpt = 0;
-		t = 0;
-		for (istep=0; istep<nsteps; istep++) {
-			dt = fibre[ifib].L_actual/speed;
-//			printf("istep,dt: %d %f\n",istep,dt);
-			if (t + dt > tpt[itpt]) {
-//				if (itpt == NDATAPTS-1) {	// This is the last point, we can locate it more accurately on the fibre ifib
-				dt = tpt[itpt] - t;
-				// we need to find where the cell was dt after leaving the other end (not jdir) on fibre ifib
-				t += dt;
-				d = get_partial_distance(net,ifib0,iend0,ifib,1-jdir,dt*speed);
-				reached = 1;
-			} else {
-				t += dt;
-				d = get_distance(net,ifib0,iend0,ifib,jdir);	// d = distance from path start point p0
-			}
-			d *= shrink_factor;
-			d2sum += d*d;
-			if (reached) {	// reached the next time point
-				res_d2sum[itpt] += d*d;
-				res_d2tsum[itpt] += d*d/t;
-//				printf("istep: %d t: %f d: %f d2sum: %f\n",istep,t,d,d2sum);
-				itpt++;
-				if (itpt == NDATAPTS) break;
-				reached = 0;
-			}
-//			} else {
-//				t += dt;
-//			}
-			int kv1 = fibre[ifib].kv[jdir];
-			POINT p1 = net->vertex[kv1].point;
-			dx = p1.x - p0.x;
-			dy = p1.y - p0.y;
-			dz = p1.z - p0.z;
-			if (save_paths && np < npaths && istep+1 < NTIMES) {
-				pathcnt[np]++;
-				path[np][istep+1].x = dx;
-				path[np][istep+1].y = dy;
-				path[np][istep+1].z = dz;
-			}
-			int ifib1 = ifib;
-			int iend1= jdir;
-			ifib = next_fibre(ifib,&jdir);
-
-			if (ifib == ifib1 && jdir == iend1) {
-				printf("No movement! %d %d\n",ifib,jdir);
-				exit(1);
-			}
-
-			nvisits[ifib]++;
+	}
+	*dist = d;
+//	printf("d: %f\n",d);
+	nearpt = net->point[ip].nearestpt;	// this is the index in net->point[]
+//	printf("nearpt: %d\n",nearpt);
+	*jfib = net->point[nearpt].iedge;	// the pt nearpt on fibre jfib is nearest to the jumpable pt on ifib
+//	printf("jfib: %d  nearpt: %d\n",*jfib,nearpt);
+	// need the index jpt in the pt list for jfib
+	edge2 = net->edgeList[*jfib];
+	npts = edge2.npts;
+	*jpt = -1;
+	for (i=0; i<npts; i++) {
+		if (edge2.pt[i] == nearpt) {
+			*jpt = i;
+			break;
 		}
-		np++;
-		printf("Did path: %d  istep: %d\n",np, istep);
-		if (np == ntrials) break;
 	}
-	if (istep >= nsteps) {
-		printf("Used up all steps!  istep: %d\n",istep);
-		exit(1);
-	}
-	printf("Number of reversals: %d\n",ndead);
-	fprintf(fpout,"Number of reversals: %d\n",ndead);
-	printf("npaths: %d\n",np);
-//	*Cm = d2sum/(6*npaths*tmax);
-	for (itpt=0; itpt<NDATAPTS; itpt++) {
-		Cm[itpt] = res_d2tsum[itpt]/(6*np);		// this is with fixed time - actual t is used, not tmax
-	}
-	*nsims = np;
-	//for (i=0; i<nfibres; i++) {
-	//	if (nvisits[i] == 0) printf("No visit to fibre: %d\n",i);
-	//}
+//	printf("ifib: %d ij: %d ip: %d djump: %f prob: %f R: %f\n",ifib,ij,ip,djump,prob,R);
+//	fprintf(fpout,"ifib: %d ij: %d jfib: %d jpt: %d\n",ifib,ij,*jfib,*jpt);
+//	printf("jfib: %d  nearpt: %d  jpt: %d\n",*jfib,nearpt,*jpt);
+	return true;
 }
+
+//-----------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------
+bool check_vjump(NETWORK *net, int ifib1, int jdir1, int *ifib, int *jdir, int *kv, float *djump)
+{
+	njumpcalls++;
+	if (jumpprobfactor == 0) return false;
+	int kv1 = net->edgeList[ifib1].vert[jdir1];
+	VERTEX v1 = net->vertex[kv1];
+	int kv2 = v1.kvnearest;
+	if (kv2 < 0) return false;
+	double d = v1.dnearest;
+	djumpsum += d;
+	double prob = jumpprobfactor/(d*d);
+	double R = uni_dist(gen);
+	if (R > prob) {
+		return false;
+	}
+//	printf("kv1: %d kv2: %d d: %f prob: %f R: %f\n",kv1,kv2,d,prob,R);
+	VERTEX v2 = net->vertex[kv2];
+	int nlinks = v2.nlinks;
+	if (nlinks == 1) {
+		*ifib = v2.link[0];
+	} else {
+		// directional choice - choose the connected edge that is most in the same direction as the jump vj[] to the vertex v2
+		double vj[3], vf[3];
+		vj[0] = v2.point.x - v1.point.x;
+		vj[1] = v2.point.y - v1.point.y;
+		vj[2] = v2.point.z - v1.point.z;
+		double dotmax = -1.0e10;
+		int imax;
+		int kve;
+		for (int i=0; i<v2.nlinks; i++) {
+			int fib = v2.link[i];
+			EDGE e = net->edgeList[fib];
+			// kve is the vertex at the other end
+			if (e.vert[0] == kv2)
+				kve = e.vert[1];
+			else
+				kve = e.vert[0];
+			VERTEX ve = net->vertex[kve];
+			vf[0] = ve.point.x - v2.point.x;
+			vf[1] = ve.point.y - v2.point.y;
+			vf[2] = ve.point.z - v2.point.z;
+			double d2 = 0;
+			for (int j=0; j<3; j++) 
+				d2 += vf[j]*vf[j];
+			d = sqrt(d2);
+			double dot = 0;
+			for (int j=0; j<3; j++)
+				dot += vj[j]*vf[j]/d;
+			if (dot > dotmax) {
+				dotmax = dot;
+				imax = i;
+			}
+		}
+		*ifib = v2.link[imax];
+			
+		/*	random choice
+		prob = 1.0/nlinks;
+		R = uni_dist(gen);
+		double psum = 0;
+		for (int i=0; i<v2.nlinks; i++) {
+			psum += prob;
+			if (R < psum) {
+				*ifib = v2.link[i];
+				continue;
+			}
+		}
+		*/
+	}
+	if (net->edgeList[*ifib].vert[0] == kv2) {
+		*jdir = 1;
+	} else {
+		*jdir = 0;
+	}
+	*kv = kv2;
+
+	return true;
+}
+
 
 //-----------------------------------------------------------------------------------------------------
 // First set up a list of all fibres with an end inside the starting sphere, then restrict attention
 // to these.
 //-----------------------------------------------------------------------------------------------------
-void new_traverse(NETWORK *net, int nsteps, double *tpt, double *res_d2sum, double *Cm, int *nsims)
+void traverse(NETWORK *net, int nsteps, double *tpt, double *res_d2sum, double *Cm, int *nsims)
 {
-	int i, k, iR, istep, itpt, iseg, reached;
+	int i, istep, itpt;
+	bool reached;
 	int *nvisits=NULL;
 	double *res_d2tsum;
 	double *Lsum=NULL;
-	double Ltotal, R, sum;
+	double Ltotal, R, stepsum;
 	double t, dt, speed, std_speed;
+	bool dbug;
 
 	int nsphere_fibres;
 	int sphere_fibre[100000];
 
-	printf("traverse\n");
+	printf("traverse: jumpprobfactor: %f\n",jumpprobfactor);
 	mean_speed /= shrink_factor;	// the mean speed is scaled to account for the fact that the network description
 									// is based on the unscaled measurements - not compensated for shrinkage
 									// This is equivalent to scaling fibre lengths by multiplying by shrink_factor
@@ -1591,10 +2091,12 @@ void new_traverse(NETWORK *net, int nsteps, double *tpt, double *res_d2sum, doub
 		res_d2sum[i] = 0;
 		res_d2tsum[i] = 0;
 	}
+
 	nvisits = new int[nfibres];
 	Lsum = new double[nfibres];
 	nsphere_fibres = 0;
 	for (i=0; i<nfibres; i++) {
+		if (!net->edgeList[i].used) continue;
 		//if (i == 0)
 		//	Lsum[0] = fibre[0].L_actual;
 		//else
@@ -1618,35 +2120,36 @@ void new_traverse(NETWORK *net, int nsteps, double *tpt, double *res_d2sum, doub
 		else
 			Lsum[i] = Lsum[i-1] + fibre[sphere_fibre[i]].L_actual;
 	}
-//	Ltotal = Lsum[nfibres-1];
 	Ltotal = Lsum[nsphere_fibres-1];
 	printf("nsphere_fibres: %d\n",nsphere_fibres);
 
-//    std::normal_distribution<double> norm_dist( 0.0, 1.0 ) ;
     normal_distribution<double> norm_dist( 0.0, 1.0 ) ;
 	
-//	std::uniform_real_distribution<double> uni_dist( 0.0, 1.0 ) ;
-	double d, d2sum=0;
+	stepsum = 0;
+	njumpcalls = 0;
+	djumpsum = 0;
+	double d;
 	int np = 0;
-//	for (k=0; k<1000000; k++) {
 	for(;;) {
+		dbug = (np <= -1);
 		R = uni_dist(gen);
 		R *= Ltotal;
 		// Randomly choose initial direction on the fibre
 		int jdir = random_int(0,1);
 
 		// Randomly select a fibre i
-//		for (i=0; i<nfibres; i++) {
 		for (i=0; i<nsphere_fibres; i++) {
 			if (R <= Lsum[i]) {
 				break;
 			}
 		}
-//		int ifib = i;
 		int ifib = sphere_fibre[i];
 		int ifib0 = ifib;
-//		printf("i, ifib, jdir: %d %d %d\n",i, ifib, jdir);
 
+		if (ifib == 16 || ifib == 17) {
+			fprintf(fpout,"ifib: %d is unconnected\n",ifib);
+			continue;
+		}
 		int iend0;
 		if (jdir == 0)
 			iend0 = 1;
@@ -1676,71 +2179,260 @@ void new_traverse(NETWORK *net, int nsteps, double *tpt, double *res_d2sum, doub
 			}
 		}
 
+		if (dbug) fprintf(fpout,"np: %d\n",np);
+
 		speed = mean_speed;
 		R = norm_dist(gen);
 		speed += R*std_speed;
-		reached = 0;
+		bool jump = false;			// jump or not
+		int ipt, jpt, jfib;	// when jumpable pt is reached, where jump to jpt on jfib is possible (jpt indices on the edges)
+		double jdist;	// distance from the starting end of the current fibre
+		reached = false;
 		itpt = 0;
 		t = 0;
-		bool reversed = false;
-		for (istep=0; istep<nsteps; istep++) {
-			dt = fibre[ifib].L_actual/speed;
-//			printf("istep,dt: %d %f\n",istep,dt);
-			if (t + dt > tpt[itpt]) {
-//				if (itpt == NDATAPTS-1) {	// This is the last point, we can locate it more accurately on the fibre ifib
-				dt = tpt[itpt] - t;
-				// we need to find where the cell was dt after leaving the other end (not jdir) on fibre ifib
-				t += dt;
-				d = get_partial_distance(net,ifib0,iend0,ifib,1-jdir,dt*speed);
-				reached = 1;
-			} else {
-				t += dt;
-				d = get_distance(net,ifib0,iend0,ifib,jdir);	// d = distance from path start point p0
+		if (v_jumpy) {
+			for (istep=0; istep<nsteps; istep++) {
+				if (!net->edgeList[ifib].used) {
+					printf("Error: in traverse: unused edge: ifib: %d\n",ifib);
+					exit(1);
+				}
+				dt = fibre[ifib].L_actual/speed;	// time to reach next vertex
+				if (t + dt > tpt[itpt]) {
+					dt = tpt[itpt] - t;
+					// we need to find where the cell was dt after leaving the other end (not jdir) on fibre ifib
+					t += dt;
+					// ipt is the starting pt index
+					if (jdir == 0) {
+						ipt = net->edgeList[ifib].npts-1;
+					} else {
+						ipt = 0;
+					}
+					d = get_partial_distance(net,ifib0,iend0,ifib,ipt,jdir,dt*speed);	// distance of the time point location from p0
+					d *= shrink_factor;
+					reached = true;
+				} else {
+					t += dt;
+				}
+				if (reached) {	// reached the next time point
+					res_d2sum[itpt] += d*d;
+					res_d2tsum[itpt] += d*d/t;
+					itpt++;
+					if (itpt == NDATAPTS) break;
+					reached = false;
+				}
+				// check to see if we want to jump to a nearby vertex
+				int ifib1 = ifib;
+				int jdir1 = jdir;
+				int kv;
+				float djump;
+				jump = check_vjump(net,ifib1,jdir1,&ifib,&jdir,&kv, &djump);
+//				printf("istep: %d t: %f ifib1: %d ifib: %d jump: %d\n",istep,t,ifib1,ifib,jump);
+				// returns new fibre (ifib), direction (jdir), vertex (kv), jump distance (djump)
+				if (jump) {
+					dt = djump/speed;
+					t += dt;
+					if (t > tpt[itpt]) {	// assume the time point was reached when the next fibre was reached (small error at worst)
+						POINT p = net->point[kv];
+						//	d = dist from p to start pt p0
+						d = sqrt(pdist2(p,p0));
+						printf("time point reached: kv: %d d: %f\n",kv,d);
+						d *= shrink_factor;
+						res_d2sum[itpt] += d*d;
+						res_d2tsum[itpt] += d*d/t;
+						itpt++;
+						if (itpt == NDATAPTS) break;
+					}
+				} else {
+					ifib = ifib1;
+					jdir = jdir1;
+					ifib = next_fibre(ifib1,&jdir);
+				}
+				nvisits[ifib]++;
 			}
-			d *= shrink_factor;
-			d2sum += d*d;
-			if (reached) {	// reached the next time point
-				res_d2sum[itpt] += d*d;
-				res_d2tsum[itpt] += d*d/t;
-//				printf("istep: %d t: %f d: %f d2sum: %f\n",istep,t,d,d2sum);
-				itpt++;
-				if (itpt == NDATAPTS) break;
-				reached = 0;
-			}
-//			} else {
-//				t += dt;
-//			}
-			int kv1 = fibre[ifib].kv[jdir];
-			POINT p1 = net->vertex[kv1].point;
-			dx = p1.x - p0.x;
-			dy = p1.y - p0.y;
-			dz = p1.z - p0.z;
-			if (save_paths && np < npaths && istep+1 < NTIMES) {
-				pathcnt[np]++;
-				path[np][istep+1].x = dx;
-				path[np][istep+1].y = dy;
-				path[np][istep+1].z = dz;
-			}
-			int ifib1 = ifib;
-			int iend1= jdir;
-			ifib = next_fibre(ifib,&jdir);
+		} else {
+			for (istep=0; istep<nsteps; istep++) {
+				EDGE *edge1 = &net->edgeList[ifib];
+				if (dbug) {
+					int ip;
+					POINT p;
+					if (jdir == 1) {	// we are at end 0
+						ip = edge1->pt[0];
+						p = net->point[ip];
+					} else {			// we are at end 1
+						ip = edge1->pt[edge1->npts-1];
+						p = net->point[ip];
+					}
+					d = sqrt(pdist2(p,p0));
+					fprintf(fpout,"start istep: %d ifib: %d jdir: %d d: %f\n",istep,ifib,jdir,d);
+				}
+				if (!net->edgeList[ifib].used) {
+					printf("Error: in traverse: unused edge: ifib: %d\n",ifib);
+					exit(1);
+				}
+				jump = false;
+				int ij = edge1->jumpable_pt;			// index of the jumpable pt on edge
+				if (jumpy && (ij >= 0) ) {
+					jump = check_jump(net, ifib, jdir, &jpt, &jfib, &jdist);	// jdist = distance travelled on the fibre to the jump pt
+				}
+				if (jump) {
+					dt = jdist/speed;					// time to reach jump pt
+					if (dbug) {
+						int ip1 = edge1->pt[ij];
+						POINT p1 = net->point[ip1];
+						EDGE *edge2 = &net->edgeList[jfib];
+						int ip2 = edge2->pt[jpt];
+						POINT p2 = net->point[ip2];
+						d = sqrt(pdist2(p1,p2));
+						fprintf(fpout,"jump: from ifib: %d ij: %d --> jfib: %d jpt: %d distance: %f\n",ifib,ij,jfib,jpt,d);
+					}
+				} else {
+					dt = fibre[ifib].L_actual/speed;	// time to reach next vertex
+				}
+	//			printf("istep,dt: %d %f\n",istep,dt);
+				if (t + dt > tpt[itpt]) {
+					dt = tpt[itpt] - t;
+					// we need to find where the cell was dt after leaving the other end (not jdir) on fibre ifib
+					t += dt;
+					// ipt is the starting pt index
+					if (jdir == 0) {
+						ipt = net->edgeList[ifib].npts-1;
+					} else {
+						ipt = 0;
+					}
+					d = get_partial_distance(net,ifib0,iend0,ifib,ipt,jdir,dt*speed);	// distance of the time point location from p0
+					d *= shrink_factor;
+					reached = true;
+				} else {
+					t += dt;
+				}
+				if (reached) {	// reached the next time point
+					if (dbug) {
+						if (jump) 
+							fprintf(fpout,"itpt: %d d: %f (before jump pt)\n",itpt,d);
+						else
+							fprintf(fpout,"itpt: %d d: %f (before vertex)\n",itpt,d);
+					}
 
-			if (ifib == ifib1 && jdir == iend1) {
-				printf("No movement! %d %d\n",ifib,jdir);
-				exit(1);
-			}
-//			if (ifib == ifib1) {
-//				reversed = true;
-//				break;
-//			}
+					res_d2sum[itpt] += d*d;
+					res_d2tsum[itpt] += d*d/t;
+					itpt++;
+					if (itpt == NDATAPTS) break;
+					reached = false;
+				}
+				// either arrived at the vertex, or, if jump, at the jump pt
+				// if jump, need to progress to the vertex on the next fibre, otherwise continue as usual
+				if (jump) {
+//					EDGE *edge1 = &net->edgeList[ifib];
+//					int ij = edge1->jumpable_pt;			// index of the jumpable pt on edge ( = ipt)
+					double djump = sqrt(edge1->dnearest);	// jump distance
+//					printf("jfib: %d jpt: %d djump: %f\n",jfib,jpt,djump);
+					// new fibre
+					ifib = jfib;
+					// note: jpt is the index of pt in jfib list.  
+					// check if time point has been reached
+					dt = djump/speed;
+					t += dt;
+					if (t > tpt[itpt]) {	// assume the time point was reached when the next fibre was reached (small error at worst)
+						// Let the point[] index be kp
+						int kp = net->edgeList[ifib].pt[jpt];
+						POINT p = net->point[kp];
+						//	d = dist from p to start pt p0
+						d = sqrt(pdist2(p,p0));
+//						printf("time point reached: kp: %d d: %f\n",kp,d);
+						d *= shrink_factor;
+						if (dbug) fprintf(fpout,"itpt: %d d: %f (in jump)\n",itpt,d);
+						res_d2sum[itpt] += d*d;
+						res_d2tsum[itpt] += d*d/t;
+						itpt++;
+						if (itpt == NDATAPTS) break;
+					}
+					EDGE *edge2 = &net->edgeList[ifib];
+					int npts = edge2->npts;
+					// motion continues along fibre ifib (edge2) in direction jdir, to the vertex
+					// need to compute remaining distance to the vertex
+					// don't allow another jump
+					// note: if jpt = 0 or npts-1, we are already at a vertex, must set jdir appropriately
+					// to correspond to motion towards that vertex
+					if (jpt == 0) {
+						jdir = 0;
+						if (dbug) fprintf(fpout,"at end 0\n");
+						continue;	// really should goto where path is recorded
+					} else if (jpt == npts-1) {
+						jdir = 1;
+						if (dbug) fprintf(fpout,"at end 1\n");
+						continue;	// really should goto where path is recorded
+					} else {
+//						printf("random jdir\n");
+						jdir = random_int(0,1);
+					}
+//					printf("set jdir: %d\n",jdir);
+					double dleft = 0;
+					POINT p1, p2;
+					if (jdir == 1) {	// travel from jpt towards end 1
+						p1 = net->point[edge2->pt[jpt]];
+						for (i=jpt+1; i<=npts-1; i++) {
+							p2 = net->point[edge2->pt[i]];
+							dleft += sqrt(pdist2(p1,p2));
+							p1 = p2;
+						}
+					} else {			// travel from jpt towards end 0
+						p1 = net->point[edge2->pt[jpt]];
+						for (i=jpt-1; i>=0; i--) {
+							p2 = net->point[edge2->pt[i]];
+							dleft += sqrt(pdist2(p1,p2));
+							p1 = p2;
+						}
+					}
+					dt = dleft/speed;
+					if (dbug) fprintf(fpout,"jdir: %d jpt: %d npts: %d dleft: %f dt: %f\n",jdir,jpt,npts,dleft,dt);
+					if (t + dt > tpt[itpt]) {
+//						printf("time point reached: dt: %f t+dt: %f tpt[itpt]: %f\n",dt,t+dt,tpt[itpt]);
+						dt = tpt[itpt] - t;
+//						printf("get_partial_distance with reduced dt: %f jpt: %d npts: %d\n",dt,jpt,npts);
+						// we need to find where the cell was dt after leaving the other end (not jdir) on fibre ifib
+						t += dt;
+						d = get_partial_distance(net,ifib0,iend0,ifib,jpt,jdir,dt*speed);	// distance of the time point location from p0
+//						printf("time point reached: itpt: %d  d: %f\n",itpt,d);
+						d *= shrink_factor;
+						reached = true;
+					} else {
+						t += dt;
+					}
+					if (reached) {	// reached the next time point
+						if (dbug) fprintf(fpout,"itpt: %d d: %f (after jump pt)\n",itpt,d);
+						res_d2sum[itpt] += d*d;
+						res_d2tsum[itpt] += d*d/t;
+						itpt++;
+						if (itpt == NDATAPTS) break;
+						reached = false;
+					}
+				}
+				if (save_paths && np < npaths && istep+1 < NTIMES) {
+					int kv1 = fibre[ifib].kv[jdir];
+					POINT p1 = net->vertex[kv1].point;
+					dx = p1.x - p0.x;
+					dy = p1.y - p0.y;
+					dz = p1.z - p0.z;
+					pathcnt[np]++;
+					path[np][istep+1].x = dx;
+					path[np][istep+1].y = dy;
+					path[np][istep+1].z = dz;
+				}
+				int ifib1 = ifib;
+				int iend1= jdir;
+				ifib = next_fibre(ifib,&jdir);
 
-			nvisits[ifib]++;
+				if (ifib == ifib1 && jdir == iend1) {
+					printf("No movement! %d %d\n",ifib,jdir);
+					exit(1);
+				}
+				nvisits[ifib]++;
+			}
 		}
-		if (!reversed) {
-			np++;
-			printf("Did path: %d  istep: %d\n",np, istep);
-			if (np == ntrials) break;
-		} 
+		np++;
+		if (np%1000 == 0) printf("Did path: %d  istep: %d\n",np, istep);
+		stepsum += istep;
+		if (np == ntrials) break;
 	}
 	if (istep >= nsteps) {
 		printf("Used up all steps!  istep: %d\n",istep);
@@ -1749,11 +2441,13 @@ void new_traverse(NETWORK *net, int nsteps, double *tpt, double *res_d2sum, doub
 	printf("Number of reversals: %d\n",ndead);
 	fprintf(fpout,"Number of reversals: %d\n",ndead);
 	printf("npaths: %d\n",np);
-//	*Cm = d2sum/(6*npaths*tmax);
 	for (itpt=0; itpt<NDATAPTS; itpt++) {
 		Cm[itpt] = res_d2tsum[itpt]/(6*np);		// this is with fixed time - actual t is used, not tmax
 	}
 	*nsims = np;
+	printf("Number of jump calls: %d\n",njumpcalls);
+	printf("Average djump: %f\n",djumpsum/njumpcalls);
+	printf("Average number of steps: %d\n",(int)(stepsum/np));
 	//for (i=0; i<nfibres; i++) {
 	//	if (nvisits[i] == 0) printf("No visit to fibre: %d\n",i);
 	//}
@@ -1815,9 +2509,9 @@ int NumberOfDeadends(NETWORK *net)
 //-----------------------------------------------------------------------------------------------------
 void connect(NETWORK *NP1)
 {
-	int i, j, j0, j1, k, kdead, k1, k2;
-	int deadend[2], nd, nfibres_temp, kv0, kv1, kmax, kv, pt0, pt1, ptmax, ntdead, njoins, npts, nshort, nfree;
-	double v[3], w[3], dv, dw, cosa, value, valuemax, len;
+	int i, j, j0, j1, k, kdead;
+	int deadend[2], nd, nfibres_temp, kv0, kv1, kmax, kv, pt0, pt1, ntdead, njoins, npts, nshort, nfree;
+	double v[3], w[3], dv, dw, cosa, value, valuemax;
 	POINT p0, p1, q;
 	double a = 0.5;
 	bool joined;
@@ -1873,6 +2567,10 @@ void connect(NETWORK *NP1)
 		if (nd == 0) continue;	// fibre has no deadend
 		if (nd == 2) {
 			printf("Fibre unconnected at both ends! %d\n",i);
+			printf("Error exit\n");
+			fprintf(fpout,"Fibre unconnected at both ends! %d\n",i);
+			fprintf(fpout,"Error exit\n");
+			fclose(fpout);
 			exit(1);
 		}
 		if (!do_join) continue;
@@ -1894,7 +2592,7 @@ void connect(NETWORK *NP1)
 			//p0 = NP1->vertex[kv0].point;
 			int npts = NP1->edgeList[i].npts;
 			if (ntdead%100 == 0)
-				printf("fibre: %d npts: %d len: %4.1f nlinks: %d %d  kv1: %d  ntdead: %d\n",i,npts,len,fibre[i].nlinks[0],fibre[i].nlinks[1],kv1,ntdead);
+				printf("fibre: %d npts: %d nlinks: %d %d  kv1: %d  ntdead: %d\n",i,npts,fibre[i].nlinks[0],fibre[i].nlinks[1],kv1,ntdead);
 			// To estimate v[], unit vector in the direction of the deadend fibre, now use pts separated by 2 pts, if possible
 			if (deadend[kdead] == 0) {
 				if (npts >= 4)
@@ -1973,7 +2671,8 @@ void connect(NETWORK *NP1)
 				join[njoins].pt[0] = pt1;
 //				join[njoins].pt[1] = ?;	// what is the point index corresponding to vertex index kmax?
 				// need to look at any fibre connected to the vertex.  Choose #0
-				int kf = NP1->vertex[kmax].fib[0];
+//				int kf = NP1->vertex[kmax].fib[0];
+				int kf = NP1->vertex[kmax].link[0];
 				if (fibre[kf].kv[0] == kmax) {
 					join[njoins].pt[1] = fibre[kf].pt[0];
 				} else {
@@ -2081,6 +2780,7 @@ void connect(NETWORK *NP1)
 		NP1->edgeList[i].vert[1] = temp_edgeList[i].vert[1];
 		NP1->edgeList[i].segavediam = temp_edgeList[i].segavediam;
 		NP1->edgeList[i].length_um = temp_edgeList[i].length_um;
+		NP1->edgeList[i].used = true;
 	}
 	free(temp_edgeList);
 	printf("Copied temp_edgelist to edgelist\n");
@@ -2133,6 +2833,238 @@ void connect(NETWORK *NP1)
 }
 
 //-----------------------------------------------------------------------------------------------------
+// Check how vertex and point are related
+//-----------------------------------------------------------------------------------------------------
+void check_vertex(NETWORK *net)
+{
+	printf("check_vertex\n");
+	for (int kv=0; kv<100; kv++) {
+		POINT pv = net->vertex[kv].point;
+		printf("vertex kv: %d at: %f %f %f\n",kv,pv.x,pv.y,pv.z);
+//		int ipt = net->vertex[kv].pt;
+//		POINT p = net->point[ipt];
+//		printf("pt: %d %f %f %f\n",ipt,p.x,p.y,p.z);
+		int nlinks = net->vertex[kv].nlinks;
+//		int nf = net->vertex[kv].nf;
+		printf("nlinks: %d\n",nlinks);
+		for (int i=0; i<nlinks; i++) {
+//			int ifib = net->vertex[kv].fib[i];
+			int ilink = net->vertex[kv].link[i];
+			FIBRE fib = fibre[ilink];
+			printf("fibre: %d  kv[2]: %d %d pt[2]: %d %d\n",ilink,fib.kv[0],fib.kv[1],fib.pt[0],fib.pt[1]);
+		}
+	}
+	exit(1);
+}
+
+//-----------------------------------------------------------------------------------------------------
+// Check jump distances
+//-----------------------------------------------------------------------------------------------------
+void check_dist(NETWORK *net)
+{
+	int i, j, ie, ip, iv;
+	float dd = 1;
+	float nbin[20];
+	int n = 20;
+	printf("min edge distances\n");
+	for (j=0; j<n; j++)
+		nbin[j] = 0;
+	int ntot = 0;
+	float dsum = 0;
+	for (ie=0; ie<net->ne; ie++) {
+		float d = net->edgeList[ie].dnearest;
+		if (d == 0) continue;
+//		i = net->edgeList[ie].jumpable_pt;
+//		ip = net->edgeList[ie].pt[i];
+//		float dj = sqrt(net->point[ip].d2near);
+//		if (dj != d) printf("ie: %d i: %d ip: %d d: %f dj: %f\n",ie,i,ip,d,dj);
+		ntot++;
+		dsum += d;
+		j = (int)(d/dd);
+		if (j > n-1) j = n-1;
+		nbin[j]++;
+	}
+	for (j=0; j<n; j++) {
+		printf("j: %d fraction: %f\n",j,nbin[j]/ntot);
+	}
+	printf("average d: %f\n",dsum/ntot);
+	printf("min point distances\n");
+	for (j=0; j<n; j++)
+		nbin[j] = 0;
+	ntot = 0;
+	for (ip=0; ip<net->np; ip++) {
+		float d = net->point[ip].d2near;
+		if (d == 0) continue;
+		ntot++;
+		d = sqrt(d);
+		j = (int)(d/dd);
+		if (j > n-1) j = n-1;
+		nbin[j]++;
+	}
+	for (j=0; j<n; j++) {
+		printf("j: %d fraction: %f\n",j,nbin[j]/ntot);
+	}
+	printf("min vertex distances\n");
+	dsum = 0;
+	for (j=0; j<n; j++)
+		nbin[j] = 0;
+	ntot = 0;
+	for (iv=0; iv<net->nv; iv++) {
+		float d = net->vertex[iv].dnearest;
+		if (d <= 0) continue;
+		ntot++;
+		dsum += d;
+		j = (int)(d/dd);
+		if (j > n-1) j = n-1;
+		nbin[j]++;
+	}
+	for (j=0; j<n; j++) {
+		printf("j: %d fraction: %f\n",j,nbin[j]/ntot);
+	}
+	printf("average d: %f\n",dsum/ntot);
+
+	fprintf(fpout,"\nVertexes with 2 links:\n");
+	n=0;
+	for (int iv=0; iv<net->nv; iv++) {
+		VERTEX v = net->vertex[iv];
+		if (v.nlinks == 2) {
+			n++;
+//			fprintf(fpout,"iv: %d\n",iv);
+		}
+	}
+	fprintf(fpout,"n: %d nv: %d\n",n,net->nv);
+
+	// check fibres 16,17
+	for (int ifib=16; ifib<=17; ifib++) {
+		fprintf(fpout,"\n");
+		EDGE e = net->edgeList[ifib];
+		int npts = e.npts;
+		fprintf(fpout,"ifib: %d npts: %d ij: %d\n",ifib,npts,e.jumpable_pt);
+		for (i=0; i<npts; i++)
+			fprintf(fpout,"i: %d pt: %d\n",i,e.pt[i]);
+
+		VERTEX v = net->vertex[e.vert[0]];
+		int nlinks = v.nlinks;
+		fprintf(fpout,"vert[0]: %d nlinks: %d\n",e.vert[0],nlinks);
+		for (i=0; i<nlinks; i++)
+			fprintf(fpout,"i: %d link: %d\n",i,v.link[i]);
+		v = net->vertex[e.vert[1]];
+		nlinks = v.nlinks;
+		fprintf(fpout,"vert[1]: %d nlinks: %d\n",e.vert[1],nlinks);
+		for (i=0; i<nlinks; i++)
+			fprintf(fpout,"i: %d link: %d\n",i,v.link[i]);
+	}
+}
+
+//-----------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------
+bool inlist(int ie, int n, int *list)
+{
+	for (int i=0; i<n; i++) {
+		if (list[i] == ie) 
+			return true;
+	}
+	return false;
+}
+
+//-----------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------
+void Fragments(NETWORK *net)
+{
+	int list[10000], badlist[10000];
+	int n, ie0, ie, iv, nlinks, nt, i, j, nadded;
+	EDGE *e;
+	VERTEX *v;
+	bool dbug;
+
+	printf("Fragments: ne: %d\n",net->ne);
+	nt = 10;
+	int nbad = 0;
+	for (ie0=0; ie0<net->ne; ie0++) {
+//	for (ie0=0; ie0<1; ie0++) {
+		dbug = false; //(ie0 == -34282);
+		if (dbug) printf("ie0: %d\n",ie0);
+		e = &net->edgeList[ie0];
+		if (!e->used) continue;
+		n = 0;
+		list[n] = ie0;
+		n++;
+
+		for (int k=0; k<30; k++) {
+			if (dbug) printf("k: %d n: %d\n",k,n);
+			int nold = n;
+			if (n > 200) break;
+			nadded = 0;
+			for (i=0; i<nold; i++) {
+				ie = list[i];
+				e = &net->edgeList[ie];
+				if (dbug) printf("    i: %d ie: %d\n",i,ie);
+				for (int iend=0; iend<2; iend++) {
+					iv = e->vert[iend];
+					v = &net->vertex[iv];
+					nlinks = v->nlinks;
+					if (dbug) printf("    iend: %d iv: %d\n",iend,iv);
+					for (j=0; j<nlinks; j++) {
+						int ie1 = v->link[j];
+						if (dbug) printf("      j: %d ie1: %d\n",j,ie1);
+						if (!inlist(ie1,n,list)) {
+							list[n] = ie1;
+							n++;
+							if (dbug) printf("add: %d\n",ie1);
+							nadded++;
+						}
+					}
+				}
+			}
+			if (dbug) printf("        nadded: %d\n",nadded);
+			if (nadded == 0) break;
+		}
+		if (n < 190) {
+			if (nadded != 0) printf("nadded != 0: nadded: %d\n",nadded);
+			badlist[nbad] = ie0;
+			nbad++;
+			if (n > 10) printf("ie0: %d n: %d\n",ie0,n);
+			if (dbug) {
+			for (i=0; i<n; i++)
+				printf("ie0: %d i: %d list[i]: %d\n",ie0,i,list[i]);
+			}
+		}
+	}
+	printf("nbad: %d ne: %d\n",nbad,net->ne);
+	fprintf(fpout,"\nFragments: nbad: %d out of ne: %d\n",nbad,net->ne);
+	// Now mark bad edges and all points and vertexes as unused
+	for (i=0; i<nbad; i++) {
+		ie = badlist[i];
+		e = &net->edgeList[ie];
+		e->used = false;
+		for (j=0; j<2; j++) {
+			iv = e->vert[j];
+			v = &net->vertex[iv];
+			v->used = false;
+		}
+		fprintf(fpout,"dropped edge: %d vertexes: %d %d\n",ie,e->vert[0],e->vert[1]);
+		for (j=0; j<e->npts; j++) {
+			int ip = e->pt[j];
+			net->point[ip].used = false;
+		}
+	}
+
+	// Redo association of edges and vertexes
+	int kv;
+	for (kv=0; kv<net->nv; kv++)
+		net->vertex[kv].nlinks = 0;
+	for (int k=0; k<net->ne; k++) {
+		if (!net->edgeList[k].used) continue;
+		for (int iv=0; iv<2; iv++) {							// edge ends
+			kv = net->edgeList[k].vert[iv];						// end vertexes
+			net->vertex[kv].link[net->vertex[kv].nlinks] = k;	// end vertex is connected to edge k
+			net->vertex[kv].nlinks++;
+		}
+	}
+
+}
+
+//-----------------------------------------------------------------------------------------------------
 // OLD PURPOSE
 // This code assumes that the selection of a region of interest (a cube) is carried out on the 3D image.
 // This means that the cube centre (xc,yc,zc) and the width (diameter) are all specified in voxel
@@ -2155,10 +3087,11 @@ int main(int argc, char **argv)
 {
 	int err;
 	char *input_amfile, *output_file;
-	char drive[32], dir[128],filename[256], ext[32];
-	char errfilename[256], output_amfile[256];
-	char output_basename[256];
-	int do_connect;
+	char output_amfile[256];
+//	char drive[32], dir[128],filename[256], ext[32];
+//	char errfilename[256];
+//	char output_basename[256];
+	int do_connect, ijumpy;
 	float origin_shift[3];
 	int limit_mode;
 	float limit_value;
@@ -2169,30 +3102,36 @@ int main(int argc, char **argv)
 	double res_d2sum[NDATAPTS];
 	double Cm[NDATAPTS];
 	int cmgui_flag=1;
-	NETWORK *NP0, *NP1;
+	NETWORK *NP0;
 
-	printf("Two functions: (1) To join dead ends in the network (if possible), \n                   and trim unconnected dead ends\n");
-	printf("               (2) To estimate the coefficient of motility Cm\n");
+	printf("Three functions: (1) To strip unconnected edges out of the network\n");
+	printf("                 (2) To join dead ends in the network (if possible), \n                   and trim unconnected dead ends\n");
+	printf("                 (3) To estimate the coefficient of motility Cm\n");
 	printf("\n");
-	printf("These two functions are carried out by separate program executions.  \nThe network should be healed (joined, trimmed) before Cm estimation.\n");
+	printf("These three functions are carried out by separate program executions.  \nThe network should be cleaned up and healed (joined, trimmed) before Cm estimation.\n");
 	printf("For the healing pass, set max_len \n(unscaled upper limit on length of an added connection).\n");
 	printf("The shrinkage compensation factor must be specified\n(Note that the dimensions in the am file are left unscaled)\n");
 	printf("\n");
 
 	printf("argc: %d\n", argc);
-	if (argc != 9 && argc != 18) {
-		printf("To perform joining and trimming of dead ends:\n");
+	if (argc != 3 && argc != 9 && argc != 20) {
+		printf("To strip out unconnected edges:\n");
+		printf("Usage: conduit_analyse input_amfile output_file\n");
+		printf("       (the cleaned network file will be created as clean.am)\n");
+		printf("\nTo perform joining and trimming of dead ends:\n");
 		printf("Usage: conduit_analyse input_amfile output_file sfactor max_len limit_mode limit_value ddiam dlen\n");
 		printf("       sfactor     = shrinkage compensation factor e.g. 1.25\n");
 		printf("       max_len     = upper limit on (unscaled) connecting fibre length (um)\n");
-		printf("       limit_mode  = restriction for computing fibre statistics:\n                     0 = no limit, 1 = len limit, 2 =  len/diam limit\n");
+		printf("       limit_mode  = restriction for computing fibre statistics:\n");
+		printf("                     0 = no limit, 1 = len limit, 2 =  len/diam limit\n");
 		printf("       limit_value = value of limit for the chosen mode\n");
 		printf("       ddiam       = bin size for diameter distribution\n");
 		printf("       dlen        = bin size for length distribution\n");
 		printf("\nTo simulate cell paths and estimate Cm:\n");
-		printf("Usage: conduit_analyse input_amfile output_file sfactor npow ntrials x0 y0 z0 radius deadend_radius speed CV npaths limit_mode limit_value ddiam dlen\n");
+		printf("Usage: conduit_analyse input_amfile output_file sfactor npow ntrials x0 y0 z0 radius deadend_radius speed CV npaths limit_mode limit_value ddiam dlen jpfactor\n");
 		printf("       sfactor     = shrinkage compensation factor e.g. 1.25\n");
-		printf("       npow        = power of cos(theta) in weighting function for prob. of \n                     taking a branch (theta = turning angle)\n");
+		printf("       npow        = power of cos(theta) in weighting function for probability\n");
+		printf("                     of taking a branch (theta = turning angle)\n");
 		printf("       ntrials     = number of cell paths simulated\n");
 		printf("       x0,y0,z0    = centre of sphere within which the cell paths start (um)\n");
 		printf("       radius      = radius of sphere within which the cell paths start (um)\n");
@@ -2200,35 +3139,48 @@ int main(int argc, char **argv)
 		printf("       speed       = mean cell speed (um/min)\n");
 		printf("       CV          = coefficient of variation of speed (std dev/mean)\n");
 		printf("       npaths      = number of cell paths to save\n");
-		printf("       limit_mode  = restriction for computing fibre statistics:\n                     0 = no limit, 1 = len limit, 2 =  len/diam limit\n");
+		printf("       limit_mode  = restriction for computing fibre statistics:\n");
+		printf("                     0 = no limit, 1 = len limit, 2 =  len/diam limit\n");
 		printf("       limit_value = value of limit for the chosen mode\n");
 		printf("       ddiam       = bin size for diameter distribution\n");
 		printf("       dlen        = bin size for length distribution\n");
+		printf("       ijumpy      = controls jumping:\n");
+		printf("                     0=no jumps, 1=jump along edge, 2=jump at vertex\n");
+		printf("       jpfactor    = jump probability factor\n");
 		printf("\n");
-		fpout = fopen("\conduit_analyse_error.log","w");
-		fprintf(fpout,"To perform joining and trimming of dead ends:\n");
+		printf("Writing conduit_analyse_error.log\n");
+		fpout = fopen("conduit_analyse_error.log","w");
+		fprintf(fpout,"To strip out unconnected edges:\n");
+		fprintf(fpout,"Usage: conduit_analyse input_amfile output_file\n");
+		fprintf(fpout,"       (the cleaned network file will be created as clean.am)\n");
+		fprintf(fpout,"\nTo perform joining and trimming of dead ends:\n");
 		fprintf(fpout,"Usage: conduit_analyse input_amfile output_file sfactor max_len limit_mode limit_value ddiam dlen\n");
 		fprintf(fpout,"       sfactor     = shrinkage compensation factor e.g. 1.25\n");
 		fprintf(fpout,"       max_len     = upper limit on (unscaled) connecting fibre length (um)\n");
-		fprintf(fpout,"       limit_mode  = restriction for computing fibre statistics:\n                     0 = no limit, 1 = len limit, 2 =  len/diam limit\n");
+		fprintf(fpout,"       limit_mode  = restriction for computing fibre statistics:\n");
+		fprintf(fpout,"                     0 = no limit, 1 = len limit, 2 =  len/diam limit\n");
 		fprintf(fpout,"       limit_value = value of limit for the chosen mode\n");
 		fprintf(fpout,"       ddiam       = bin size for diameter distribution\n");
 		fprintf(fpout,"       dlen        = bin size for length distribution\n");
 		fprintf(fpout,"\nTo simulate cell paths and estimate Cm:\n");
 		fprintf(fpout,"Usage: conduit_analyse input_amfile output_file sfactor npow ntrials x0 y0 z0 radius speed CV npaths limit_mode limit_value ddiam dlen\n");
 		fprintf(fpout,"       sfactor     = shrinkage compensation factor e.g. 1.25\n");
-		fprintf(fpout,"       npow        = power of cos(theta) in weighting function for prob. of \n                     taking a branch (theta = turning angle)\n");
+		fprintf(fpout,"       npow        = power of cos(theta) in weighting function for probability\n");
+		fprintf(fpout,"                     of taking a branch (theta = turning angle)\n");
 		fprintf(fpout,"       ntrials     = number of cell paths simulated\n");
 		fprintf(fpout,"       x0,y0,z0    = centre of sphere within which the cell paths start (um)\n");
 		fprintf(fpout,"       radius      = radius of sphere within which the cell paths start (um)\n");
-		fprintf(fpout,"       deadend_radius = radius of sphere within which deadends are counted (um)\n");
 		fprintf(fpout,"       speed       = mean cell speed (um/min)\n",CV);
 		fprintf(fpout,"       CV          = coefficient of variation of speed (std dev/mean)\n");
 		fprintf(fpout,"       npaths      = number of cell paths to save\n");
-		fprintf(fpout,"       limit_mode  = restriction for computing fibre statistics:\n                     0 = no limit, 1 = len limit, 2 =  len/diam limit\n");
+		fprintf(fpout,"       limit_mode  = restriction for computing fibre statistics:\n");
+		fprintf(fpout,"                     0 = no limit, 1 = len limit, 2 =  len/diam limit\n");
 		fprintf(fpout,"       limit_value = value of limit for the chosen mode\n");
 		fprintf(fpout,"       ddiam       = bin size for diameter distribution\n");
 		fprintf(fpout,"       dlen        = bin size for length distribution\n");
+		fprintf(fpout,"       ijumpy      = controls jumping:\n");
+		fprintf(fpout,"                     0=no jumps, 1=jump along edge, 2=jump at vertex\n");
+		fprintf(fpout,"       jpfactor    = jump probability factor\n");
 		fprintf(fpout,"\n");
 		fprintf(fpout,"Submitted command line: argc: %d\n",argc);
 		for (int i=0; i<argc; i++) {
@@ -2240,8 +3192,24 @@ int main(int argc, char **argv)
 	input_amfile = argv[1];
 	output_file = argv[2];
 	fpout = fopen(output_file,"w");	
-	sscanf(argv[3],"%lf",&shrink_factor);
-	if (argc == 9) {
+	NP0 = (NETWORK *)malloc(sizeof(NETWORK));
+//	NP1 = (NETWORK *)malloc(sizeof(NETWORK));
+	err = ReadAmiraFile(input_amfile,NP0);
+	if (err != 0) return 2;
+	printf("Read Amira file\n");
+
+	origin_shift[0] = 0;
+	origin_shift[1] = 0;
+	origin_shift[2] = 0;
+
+	if (argc == 3) {
+		SetupVertexLists(NP0);
+		// To look for unconnected fragments and create a network with all edges used.
+		Fragments(NP0);
+		WriteAmiraFile_used("clean.am",input_amfile,NP0,origin_shift);
+		return 0;
+	} else if (argc == 9) {
+		sscanf(argv[3],"%lf",&shrink_factor);
 		sscanf(argv[4],"%lf",&max_len);
 		sscanf(argv[5],"%d",&limit_mode);
 		sscanf(argv[6],"%f",&limit_value);
@@ -2263,7 +3231,8 @@ int main(int argc, char **argv)
 		//fprintf(fpout,"\noutput_amfile: %s\n",output_amfile);
 		//return 0;
 
-	} else if (argc == 18) {
+	} else if (argc == 20) {
+		sscanf(argv[3],"%lf",&shrink_factor);
 		sscanf(argv[4],"%d",&npow);
 		sscanf(argv[5],"%d",&ntrials);
 		sscanf(argv[6],"%f",&centre.x);
@@ -2278,6 +3247,21 @@ int main(int argc, char **argv)
 		sscanf(argv[15],"%f",&limit_value);
 		sscanf(argv[16],"%f",&ddiam);
 		sscanf(argv[17],"%f",&dlen);
+		sscanf(argv[18],"%d",&ijumpy);
+		sscanf(argv[19],"%lf",&jumpprobfactor);
+		if (ijumpy == 0) {
+			jumpy = false;
+			v_jumpy = false;
+		} else if (ijumpy == 1) {
+			jumpy = true;
+			v_jumpy = false;
+		} else if (ijumpy == 2) {
+			jumpy = false;
+			v_jumpy = true;
+		} else {
+			printf("Error: ijumpy: %d must be 0,1,2\n",ijumpy);
+			exit(1);
+		}
 		do_connect = false;
 		save_paths = (npaths > 0);
 		if (save_paths) {
@@ -2303,38 +3287,22 @@ int main(int argc, char **argv)
 		len_diam_limit = limit_value;
 	}
 
-	/*
-	_splitpath(input_amfile,drive,dir,filename,ext);
-	strcpy(output_basename,drive);
-	strcat(output_basename,dir);
-	strcat(output_basename,filename);
-	sprintf(result_file,"%s_fd.out",output_basename);
-	printf("output_basename: %s\n",output_basename);
-	*/
-	NP0 = (NETWORK *)malloc(sizeof(NETWORK));
-	NP1 = (NETWORK *)malloc(sizeof(NETWORK));
-	err = ReadAmiraFile(input_amfile,NP0);
-	if (err != 0) return 2;
-	printf("Read Amira file\n");
-
-//	for (int ie=0; ie<NP0->ne; ie++) {
-//		printf("fibre: %d npts: %d\n",ie,NP0->edgeList[ie].npts);
-//	}
-//	exit(0);
-
-	origin_shift[0] = 0;
-	origin_shift[1] = 0;
-	origin_shift[2] = 0;
-//	printf("ne: %d\n",NP0->ne);
-	err = CreateDistributions(NP0);
-	if (err != 0) return 4;
-
-	makeFibreList(NP0);
+	if (ddiam > 0) {
+		err = CreateDistributions(NP0);
+		if (err != 0) return 4;
+	}
+	SetupVertexLists(NP0);
+	MakeFibreList(NP0);
+//	check_vertex(NP0);
 	ndead = NumberOfDeadends(NP0);
 	fprintf(fpout,"Number of fibres, deadends in the network: %d  %d\n",nfibres,ndead);
 	fflush(fpout);
+	SetupPointLists(NP0);
+	check_dist(NP0);
 
 	if (do_connect) {
+		printf("do_connect\n");
+		fprintf(fpout,"do_connect\n");
 		char add_str[13];
 		if (max_len < 10)
 			sprintf(add_str,"_jt_max%3.1f.am",max_len);
@@ -2342,7 +3310,7 @@ int main(int argc, char **argv)
 			sprintf(add_str,"_jt_max%4.1f.am",max_len);
 		strcpy(output_amfile,input_amfile);
 		int len;
-		for(len=strlen(output_amfile);len >= 0 && output_amfile[len] != '.';len--);
+		for(len=(int)strlen(output_amfile);len >= 0 && output_amfile[len] != '.';len--);
 		output_amfile[len] = '\0';
 		strcat(output_amfile,add_str);
 		connect(NP0);
@@ -2358,11 +3326,13 @@ int main(int argc, char **argv)
 			for (int k=0;k<edge.npts;k++) {
 				int j = edge.pt[k];
 				dave += NP0->point[j].d;
-				NP0->edgeList[i].segavediam = dave/edge.npts;
+				NP0->edgeList[i].segavediam = (float)(dave/edge.npts);
 			}
 		}
-		err = CreateDistributions(NP0);
-		if (err != 0) return 4;
+		if (ddiam > 0) {
+			err = CreateDistributions(NP0);
+			if (err != 0) return 4;
+		}
 		return 0;
 	}
 
@@ -2384,7 +3354,7 @@ int main(int argc, char **argv)
 		fprintf(fpout,"\n");
 	ndead = 0;
 	int nsims;		// this is the actual number of paths simulated, possibly less than the requested number: ntrials
-	new_traverse(NP0,1000,tpt,res_d2sum,Cm,&nsims);
+	traverse(NP0,1000,tpt,res_d2sum,Cm,&nsims);
 	printf("# of deadends encountered: %d\n",ndead);
 	printf("\nCm estimation results:\n");
 	fprintf(fpout,"# of paths simulated: %d\n",nsims);
@@ -2410,6 +3380,7 @@ int main(int argc, char **argv)
 			}
 		}
 	}
+
 	fclose(fpout);
 	return 0;
 	/*
