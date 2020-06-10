@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>1370</width>
-    <height>611</height>
+    <height>645</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -46,11 +46,17 @@
    <widget class="QPushButton" name="pushButtonAnalyse">
     <property name="geometry">
      <rect>
-      <x>220</x>
-      <y>500</y>
+      <x>350</x>
+      <y>550</y>
       <width>75</width>
       <height>23</height>
      </rect>
+    </property>
+    <property name="font">
+     <font>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
     </property>
     <property name="text">
      <string>Go</string>
@@ -60,7 +66,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>530</y>
+      <y>580</y>
       <width>41</width>
       <height>16</height>
      </rect>
@@ -73,7 +79,7 @@
     <property name="geometry">
      <rect>
       <x>50</x>
-      <y>530</y>
+      <y>580</y>
       <width>1311</width>
       <height>16</height>
      </rect>
@@ -85,10 +91,10 @@
    <widget class="QTextEdit" name="textEdit">
     <property name="geometry">
      <rect>
-      <x>570</x>
-      <y>90</y>
-      <width>791</width>
-      <height>421</height>
+      <x>530</x>
+      <y>70</y>
+      <width>831</width>
+      <height>501</height>
      </rect>
     </property>
    </widget>
@@ -96,7 +102,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>50</y>
+      <y>40</y>
       <width>91</width>
       <height>23</height>
      </rect>
@@ -109,7 +115,7 @@
     <property name="geometry">
      <rect>
       <x>110</x>
-      <y>50</y>
+      <y>40</y>
       <width>1251</width>
       <height>21</height>
      </rect>
@@ -121,9 +127,9 @@
    <widget class="QLineEdit" name="lineEdit_sfactor">
     <property name="geometry">
      <rect>
-      <x>150</x>
-      <y>100</y>
-      <width>41</width>
+      <x>100</x>
+      <y>270</y>
+      <width>31</width>
       <height>20</height>
      </rect>
     </property>
@@ -137,8 +143,8 @@
    <widget class="QLabel" name="label_sfactor">
     <property name="geometry">
      <rect>
-      <x>60</x>
-      <y>100</y>
+      <x>10</x>
+      <y>270</y>
       <width>91</width>
       <height>21</height>
      </rect>
@@ -147,87 +153,13 @@
      <string>Shrinkage factor</string>
     </property>
    </widget>
-   <widget class="QCheckBox" name="checkBox_join">
-    <property name="enabled">
-     <bool>true</bool>
-    </property>
-    <property name="geometry">
-     <rect>
-      <x>310</x>
-      <y>100</y>
-      <width>161</width>
-      <height>18</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Join and trim dead ends</string>
-    </property>
-   </widget>
-   <widget class="QGroupBox" name="groupBox_join">
-    <property name="enabled">
-     <bool>false</bool>
-    </property>
-    <property name="geometry">
-     <rect>
-      <x>310</x>
-      <y>120</y>
-      <width>221</width>
-      <height>41</height>
-     </rect>
-    </property>
-    <property name="title">
-     <string/>
-    </property>
-    <widget class="QLineEdit" name="lineEdit_maxlen">
-     <property name="geometry">
-      <rect>
-       <x>150</x>
-       <y>10</y>
-       <width>31</width>
-       <height>20</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>0</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_um1">
-     <property name="geometry">
-      <rect>
-       <x>190</x>
-       <y>10</y>
-       <width>21</width>
-       <height>21</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>(um)</string>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_maxlen">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>10</y>
-       <width>131</width>
-       <height>21</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>Maximum length (unscaled)</string>
-     </property>
-    </widget>
-   </widget>
    <widget class="QGroupBox" name="groupBox_traverse">
     <property name="geometry">
      <rect>
-      <x>300</x>
-      <y>200</y>
+      <x>270</x>
+      <y>160</y>
       <width>241</width>
-      <height>271</height>
+      <height>381</height>
      </rect>
     </property>
     <property name="title">
@@ -236,11 +168,17 @@
     <widget class="QLabel" name="label_sphere">
      <property name="geometry">
       <rect>
-       <x>90</x>
+       <x>40</x>
        <y>10</y>
-       <width>81</width>
+       <width>101</width>
        <height>16</height>
       </rect>
+     </property>
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
      </property>
      <property name="text">
       <string>Starting sphere</string>
@@ -295,7 +233,7 @@
      <property name="geometry">
       <rect>
        <x>40</x>
-       <y>60</y>
+       <y>50</y>
        <width>41</width>
        <height>21</height>
       </rect>
@@ -308,7 +246,7 @@
      <property name="geometry">
       <rect>
        <x>120</x>
-       <y>60</y>
+       <y>50</y>
        <width>31</width>
        <height>20</height>
       </rect>
@@ -324,8 +262,8 @@
      <property name="geometry">
       <rect>
        <x>160</x>
-       <y>60</y>
-       <width>21</width>
+       <y>50</y>
+       <width>31</width>
        <height>21</height>
       </rect>
      </property>
@@ -352,7 +290,7 @@
     <widget class="QLabel" name="label_um3">
      <property name="geometry">
       <rect>
-       <x>170</x>
+       <x>160</x>
        <y>90</y>
        <width>41</width>
        <height>21</height>
@@ -379,7 +317,7 @@
      <property name="geometry">
       <rect>
        <x>40</x>
-       <y>150</y>
+       <y>140</y>
        <width>71</width>
        <height>21</height>
       </rect>
@@ -392,7 +330,7 @@
      <property name="geometry">
       <rect>
        <x>120</x>
-       <y>150</y>
+       <y>140</y>
        <width>31</width>
        <height>20</height>
       </rect>
@@ -408,7 +346,7 @@
      <property name="geometry">
       <rect>
        <x>130</x>
-       <y>190</y>
+       <y>300</y>
        <width>41</width>
        <height>20</height>
       </rect>
@@ -424,7 +362,7 @@
      <property name="geometry">
       <rect>
        <x>40</x>
-       <y>190</y>
+       <y>300</y>
        <width>81</width>
        <height>21</height>
       </rect>
@@ -437,7 +375,7 @@
      <property name="geometry">
       <rect>
        <x>40</x>
-       <y>220</y>
+       <y>330</y>
        <width>81</width>
        <height>18</height>
       </rect>
@@ -450,7 +388,7 @@
      <property name="geometry">
       <rect>
        <x>40</x>
-       <y>240</y>
+       <y>350</y>
        <width>91</width>
        <height>21</height>
       </rect>
@@ -466,7 +404,7 @@
      <property name="geometry">
       <rect>
        <x>130</x>
-       <y>240</y>
+       <y>350</y>
        <width>31</width>
        <height>20</height>
       </rect>
@@ -498,7 +436,7 @@
      <property name="geometry">
       <rect>
        <x>40</x>
-       <y>120</y>
+       <y>110</y>
        <width>81</width>
        <height>21</height>
       </rect>
@@ -511,7 +449,100 @@
      <property name="geometry">
       <rect>
        <x>120</x>
-       <y>120</y>
+       <y>110</y>
+       <width>31</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>0.1</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_jump">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>170</y>
+       <width>46</width>
+       <height>13</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Jumping</string>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="radioButton_nojump">
+     <property name="geometry">
+      <rect>
+       <x>60</x>
+       <y>190</y>
+       <width>82</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>No jumping</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+     <attribute name="buttonGroup">
+      <string>buttonGroup_jump</string>
+     </attribute>
+    </widget>
+    <widget class="QRadioButton" name="radioButton_ejump">
+     <property name="geometry">
+      <rect>
+       <x>60</x>
+       <y>210</y>
+       <width>82</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Edge jumps</string>
+     </property>
+     <attribute name="buttonGroup">
+      <string>buttonGroup_jump</string>
+     </attribute>
+    </widget>
+    <widget class="QRadioButton" name="radioButton_vjump">
+     <property name="geometry">
+      <rect>
+       <x>60</x>
+       <y>230</y>
+       <width>81</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Vertex jumps</string>
+     </property>
+     <attribute name="buttonGroup">
+      <string>buttonGroup_jump</string>
+     </attribute>
+    </widget>
+    <widget class="QLabel" name="label_jumpprob">
+     <property name="geometry">
+      <rect>
+       <x>60</x>
+       <y>260</y>
+       <width>91</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Jump prob factor</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="lineEdit_jumpprob">
+     <property name="geometry">
+      <rect>
+       <x>150</x>
+       <y>260</y>
        <width>31</width>
        <height>20</height>
       </rect>
@@ -524,11 +555,11 @@
      </property>
     </widget>
    </widget>
-   <widget class="QLabel" name="label_Cm">
+   <widget class="QLabel" name="label_CM">
     <property name="geometry">
      <rect>
-      <x>400</x>
-      <y>180</y>
+      <x>270</x>
+      <y>140</y>
       <width>81</width>
       <height>16</height>
      </rect>
@@ -540,200 +571,348 @@
      </font>
     </property>
     <property name="text">
-     <string>Cm Estimation</string>
+     <string>CM estimation</string>
     </property>
    </widget>
-   <widget class="QRadioButton" name="radioButton_len_limit">
+   <widget class="QGroupBox" name="groupBox_statistics">
     <property name="geometry">
      <rect>
-      <x>50</x>
-      <y>260</y>
-      <width>61</width>
-      <height>18</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>length</string>
-    </property>
-    <attribute name="buttonGroup">
-     <string>buttonGroup_limits</string>
-    </attribute>
-   </widget>
-   <widget class="QLineEdit" name="lineEdit_len_limit">
-    <property name="enabled">
-     <bool>false</bool>
-    </property>
-    <property name="geometry">
-     <rect>
-      <x>160</x>
-      <y>260</y>
-      <width>41</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>3</string>
-    </property>
-    <property name="alignment">
-     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-    </property>
-   </widget>
-   <widget class="QRadioButton" name="radioButton_len_diam_limit">
-    <property name="geometry">
-     <rect>
-      <x>50</x>
-      <y>290</y>
-      <width>101</width>
-      <height>18</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>length/diameter</string>
-    </property>
-    <attribute name="buttonGroup">
-     <string>buttonGroup_limits</string>
-    </attribute>
-   </widget>
-   <widget class="QRadioButton" name="radioButton_no_limit">
-    <property name="geometry">
-     <rect>
-      <x>50</x>
-      <y>230</y>
-      <width>61</width>
-      <height>18</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>no limit</string>
-    </property>
-    <property name="checked">
-     <bool>true</bool>
-    </property>
-    <attribute name="buttonGroup">
-     <string>buttonGroup_limits</string>
-    </attribute>
-   </widget>
-   <widget class="QLabel" name="label_limits">
-    <property name="geometry">
-     <rect>
-      <x>50</x>
-      <y>210</y>
-      <width>231</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <weight>75</weight>
-      <bold>true</bold>
-     </font>
-    </property>
-    <property name="text">
-     <string>Vessel limits for statistics computation</string>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="lineEdit_len_diam_limit">
-    <property name="enabled">
-     <bool>false</bool>
-    </property>
-    <property name="geometry">
-     <rect>
-      <x>160</x>
-      <y>290</y>
-      <width>41</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>1</string>
-    </property>
-    <property name="alignment">
-     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_ddiam">
-    <property name="geometry">
-     <rect>
-      <x>100</x>
-      <y>360</y>
-      <width>151</width>
-      <height>21</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Vessel diameter box width (um)</string>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="lineEdit_ddiam">
-    <property name="geometry">
-     <rect>
-      <x>50</x>
-      <y>360</y>
-      <width>41</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>0.5</string>
-    </property>
-    <property name="alignment">
-     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_histogram">
-    <property name="geometry">
-     <rect>
-      <x>50</x>
+      <x>10</x>
       <y>330</y>
-      <width>141</width>
-      <height>21</height>
+      <width>231</width>
+      <height>211</height>
      </rect>
     </property>
-    <property name="font">
-     <font>
-      <weight>75</weight>
-      <bold>true</bold>
-     </font>
+    <property name="title">
+     <string/>
     </property>
-    <property name="text">
-     <string>Histogram parameters</string>
-    </property>
+    <widget class="QLineEdit" name="lineEdit_len_limit">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>120</x>
+       <y>60</y>
+       <width>41</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>3</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="radioButton_len_diam_limit">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>90</y>
+       <width>101</width>
+       <height>18</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>length/diameter</string>
+     </property>
+     <attribute name="buttonGroup">
+      <string>buttonGroup_limits</string>
+     </attribute>
+    </widget>
+    <widget class="QLineEdit" name="lineEdit_len_diam_limit">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>120</x>
+       <y>90</y>
+       <width>41</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>1</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="radioButton_len_limit">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>60</y>
+       <width>61</width>
+       <height>18</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>length</string>
+     </property>
+     <attribute name="buttonGroup">
+      <string>buttonGroup_limits</string>
+     </attribute>
+    </widget>
+    <widget class="QLabel" name="label_limits">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>231</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Vessel limits</string>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="radioButton_no_limit">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>30</y>
+       <width>61</width>
+       <height>18</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>no limit</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+     <attribute name="buttonGroup">
+      <string>buttonGroup_limits</string>
+     </attribute>
+    </widget>
+    <widget class="QLabel" name="label_dlen">
+     <property name="geometry">
+      <rect>
+       <x>60</x>
+       <y>180</y>
+       <width>141</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Vessel length box width (um)</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="lineEdit_dlen">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>180</y>
+       <width>41</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>1.0</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_ddiam">
+     <property name="geometry">
+      <rect>
+       <x>60</x>
+       <y>150</y>
+       <width>151</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Vessel diameter box width (um)</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_histogram">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>120</y>
+       <width>141</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Histogram parameters</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="lineEdit_ddiam">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>150</y>
+       <width>41</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>0.5</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_um1_3">
+     <property name="geometry">
+      <rect>
+       <x>170</x>
+       <y>60</y>
+       <width>21</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>(um)</string>
+     </property>
+    </widget>
    </widget>
-   <widget class="QLabel" name="label_dlen">
+   <widget class="QGroupBox" name="groupBox_modes">
     <property name="geometry">
      <rect>
-      <x>100</x>
-      <y>390</y>
-      <width>141</width>
-      <height>21</height>
+      <x>10</x>
+      <y>110</y>
+      <width>241</width>
+      <height>141</height>
      </rect>
     </property>
-    <property name="text">
-     <string>Vessel length box width (um)</string>
+    <property name="title">
+     <string/>
     </property>
+    <widget class="QRadioButton" name="radioButton_clean">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>161</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Remove unconnected fibres</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+     <attribute name="buttonGroup">
+      <string>buttonGroup_mode</string>
+     </attribute>
+    </widget>
+    <widget class="QRadioButton" name="radioButton_connect">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>60</y>
+       <width>121</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Connect dead ends</string>
+     </property>
+     <attribute name="buttonGroup">
+      <string>buttonGroup_mode</string>
+     </attribute>
+    </widget>
+    <widget class="QRadioButton" name="radioButton_cm">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>110</y>
+       <width>91</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Estimate CM</string>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+     <attribute name="buttonGroup">
+      <string>buttonGroup_mode</string>
+     </attribute>
+    </widget>
+    <widget class="QLabel" name="label_um1">
+     <property name="geometry">
+      <rect>
+       <x>210</x>
+       <y>80</y>
+       <width>21</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>(um)</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="lineEdit_maxlen">
+     <property name="geometry">
+      <rect>
+       <x>170</x>
+       <y>80</y>
+       <width>31</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>10</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_maxlen">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>80</y>
+       <width>141</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Maximum length (unscaled)</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_clean">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>30</y>
+       <width>101</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>(creating clean.am)</string>
+     </property>
+    </widget>
    </widget>
-   <widget class="QLineEdit" name="lineEdit_dlen">
+   <widget class="QLabel" name="label_mode">
     <property name="geometry">
      <rect>
-      <x>50</x>
-      <y>390</y>
-      <width>41</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>1.0</string>
-    </property>
-    <property name="alignment">
-     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_count">
-    <property name="geometry">
-     <rect>
-      <x>50</x>
-      <y>430</y>
-      <width>121</width>
+      <x>10</x>
+      <y>90</y>
+      <width>111</width>
       <height>16</height>
      </rect>
     </property>
@@ -744,15 +923,47 @@
      </font>
     </property>
     <property name="text">
-     <string>Counting deadends</string>
+     <string>Mode of operation</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_statistics">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>310</y>
+      <width>111</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string>Network statistics</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_deadend_radius">
+    <property name="geometry">
+     <rect>
+      <x>270</x>
+      <y>110</y>
+      <width>91</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Dead end radiius</string>
     </property>
    </widget>
    <widget class="QLineEdit" name="lineEdit_deadend_radius">
     <property name="geometry">
      <rect>
-      <x>50</x>
-      <y>450</y>
-      <width>41</width>
+      <x>360</x>
+      <y>110</y>
+      <width>31</width>
       <height>20</height>
      </rect>
     </property>
@@ -763,17 +974,17 @@
      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
     </property>
    </widget>
-   <widget class="QLabel" name="label_deadend_radius">
+   <widget class="QLabel" name="label_um1_2">
     <property name="geometry">
      <rect>
-      <x>100</x>
-      <y>450</y>
-      <width>211</width>
+      <x>400</x>
+      <y>110</y>
+      <width>21</width>
       <height>21</height>
      </rect>
     </property>
     <property name="text">
-     <string>Radius of sphere to count deadends (um)</string>
+     <string>(um)</string>
     </property>
    </widget>
   </widget>
@@ -839,28 +1050,12 @@
    <slot>conduit_analyser()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>387</x>
-     <y>544</y>
+     <x>374</x>
+     <y>565</y>
     </hint>
     <hint type="destinationlabel">
      <x>503</x>
      <y>306</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>checkBox_join</sender>
-   <signal>clicked()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>join_checkbox()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>426</x>
-     <y>140</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>345</x>
-     <y>157</y>
     </hint>
    </hints>
   </connection>
@@ -871,8 +1066,8 @@
    <slot>savepaths_checkbox()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>289</x>
-     <y>432</y>
+     <x>310</x>
+     <y>465</y>
     </hint>
     <hint type="destinationlabel">
      <x>150</x>
@@ -890,5 +1085,7 @@
  </slots>
  <buttongroups>
   <buttongroup name="buttonGroup_limits"/>
+  <buttongroup name="buttonGroup_mode"/>
+  <buttongroup name="buttonGroup_jump"/>
  </buttongroups>
 </ui>

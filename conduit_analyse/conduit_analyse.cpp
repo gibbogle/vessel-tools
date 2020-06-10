@@ -45,7 +45,6 @@ FIBRE *fibre;
 float uvec[26][3];
 POINT centre;
 
-//#define NPATHS 200
 #define NTIMES 600
 #define NDATAPTS 24
 
@@ -100,7 +99,7 @@ int *vertexList[NX][NY][NZ];
 
 bool jumpy = true;		// jumping between fibres
 bool v_jumpy = false;	// jumping vertex -> vertex
-double jumpprobfactor = 1;
+float jumpprobfactor = 1;
 int njumpcalls;
 double djumpsum;
 
@@ -732,14 +731,14 @@ int WriteAmiraFile(char *amFileOut, char *amFileIn, NETWORK *net, float origin_s
 //-----------------------------------------------------------------------------------------------------
 // Write Amira SpatialGraph file with some edges tagged as unused
 //-----------------------------------------------------------------------------------------------------
-int WriteAmiraFile_used(char *amFileOut, char *amFileIn, NETWORK *net, float origin_shift[])
+int WriteAmiraFile_clean(char *amFileOut, char *amFileIn, NETWORK *net, float origin_shift[])
 {
 	int i, k, j, new_np, new_nv, new_ne, iv;
 	int *new_iv, *old_iv;
 	EDGE edge;
 
-	printf("\nWriteAmiraFile_used: %s\n",amFileOut);
-	fprintf(fpout,"\nWriteAmiraFile_used: %s\n",amFileOut);
+	printf("\nWriteAmiraFile_clean: %s\n",amFileOut);
+	fprintf(fpout,"\nWriteAmiraFile_clean: %s\n",amFileOut);
 	new_iv = (int *)malloc(net->nv*sizeof(int));
 	old_iv = (int *)malloc(net->nv*sizeof(int));
 	
@@ -870,7 +869,7 @@ int WriteAmiraFile_used(char *amFileOut, char *amFileIn, NETWORK *net, float ori
 	}
 	printf("did diameters\n");
 	fclose(fpam);
-	printf("Completed WriteAmiraFile_used\n");
+	printf("Completed WriteAmiraFile_clean\n");
 	return 0;
 }
 
@@ -1446,16 +1445,6 @@ void MakeFibreList(NETWORK *net)
 		fibre[k].u[1] = (p2.y - p1.y)/fibre[k].L_direct;
 		fibre[k].u[2] = (p2.z - p1.z)/fibre[k].L_direct;
 	}
-#if 0
-	MAXBLOCK = (50*nfibres)/(NX*NY*NZ*2);
-	MAXBLOCK = max(MAXBLOCK,300);
-	printf("MAXBLOCK: %d\n",MAXBLOCK);
-	blocks = (int *)malloc(NX*NY*NZ*2*MAXBLOCK*sizeof(int));
-	setupBlockLists(net);
-	printf("did setupBlockLists\n");
-//	fprintf(fpout,"did setupBlockLists\n");
-//	fflush(fpout);
-#endif
 	printf("\nShrinkage compensation factor: %6.2f\n\n",shrink_factor);
 	printf("Average L_actual: %6.2f  scaled: %6.2f\n",L_actual_sum/nfibres,shrink_factor*L_actual_sum/nfibres);
 	printf("Average L_direct: %6.2f  scaled: %6.2f\n",L_direct_sum/nfibres,shrink_factor*L_direct_sum/nfibres);
@@ -1642,7 +1631,6 @@ void MakeFibreList(NETWORK *net)
 		fprintf(fpout,"%2d %12.4e\n",i,float(NBbin[i])/nvbin);
 	}
 
-//	if (!v_jumpy) return;
 	// Now set up nearest vertex for each vertex
 	for (int kv1=0; kv1<net->nv; kv1++) {
 		VERTEX *v1 = &net->vertex[kv1];
@@ -1924,7 +1912,6 @@ bool check_jump(NETWORK *net, int ifib, int jdir, int *jpt, int *jfib, double *d
 	ip = edge1.pt[ij];
 	djump = edge1.dnearest;			// jump distance
 	djumpsum += djump;
-//	printf("ij: %d djump: %f\n",ij,djump);
 	if (ij == 0) exit(1);
 	if (ij < 0 || djump == 0) {
 		printf("ij: %d djump: %f\n",ij,djump);
@@ -2082,6 +2069,8 @@ void traverse(NETWORK *net, int nsteps, double *tpt, double *res_d2sum, double *
 	int sphere_fibre[100000];
 
 	printf("traverse: jumpprobfactor: %f\n",jumpprobfactor);
+	fprintf(fpout,"traverse: jumpy: %d v_jumpy: %d\n",jumpy,v_jumpy);
+	fprintf(fpout,"traverse: jumpprobfactor: %f\n",jumpprobfactor);
 	mean_speed /= shrink_factor;	// the mean speed is scaled to account for the fact that the network description
 									// is based on the unscaled measurements - not compensated for shrinkage
 									// This is equivalent to scaling fibre lengths by multiplying by shrink_factor
@@ -2146,10 +2135,6 @@ void traverse(NETWORK *net, int nsteps, double *tpt, double *res_d2sum, double *
 		int ifib = sphere_fibre[i];
 		int ifib0 = ifib;
 
-		if (ifib == 16 || ifib == 17) {
-			fprintf(fpout,"ifib: %d is unconnected\n",ifib);
-			continue;
-		}
 		int iend0;
 		if (jdir == 0)
 			iend0 = 1;
@@ -2248,6 +2233,17 @@ void traverse(NETWORK *net, int nsteps, double *tpt, double *res_d2sum, double *
 					ifib = next_fibre(ifib1,&jdir);
 				}
 				nvisits[ifib]++;
+				if (save_paths && np < npaths && istep+1 < NTIMES) {
+					int kv1 = fibre[ifib1].kv[jdir1];
+					POINT p1 = net->vertex[kv1].point;
+					dx = p1.x - p0.x;
+					dy = p1.y - p0.y;
+					dz = p1.z - p0.z;
+					pathcnt[np]++;
+					path[np][istep+1].x = dx;
+					path[np][istep+1].y = dy;
+					path[np][istep+1].z = dz;
+				}
 			}
 		} else {
 			for (istep=0; istep<nsteps; istep++) {
@@ -2438,19 +2434,15 @@ void traverse(NETWORK *net, int nsteps, double *tpt, double *res_d2sum, double *
 		printf("Used up all steps!  istep: %d\n",istep);
 		exit(1);
 	}
-	printf("Number of reversals: %d\n",ndead);
-	fprintf(fpout,"Number of reversals: %d\n",ndead);
 	printf("npaths: %d\n",np);
 	for (itpt=0; itpt<NDATAPTS; itpt++) {
 		Cm[itpt] = res_d2tsum[itpt]/(6*np);		// this is with fixed time - actual t is used, not tmax
 	}
 	*nsims = np;
 	printf("Number of jump calls: %d\n",njumpcalls);
-	printf("Average djump: %f\n",djumpsum/njumpcalls);
+	if (njumpcalls > 0) 
+		printf("Average djump: %f\n",djumpsum/njumpcalls);
 	printf("Average number of steps: %d\n",(int)(stepsum/np));
-	//for (i=0; i<nfibres; i++) {
-	//	if (nvisits[i] == 0) printf("No visit to fibre: %d\n",i);
-	//}
 }
 
 //-----------------------------------------------------------------------------------------------------
@@ -2507,7 +2499,7 @@ int NumberOfDeadends(NETWORK *net)
 //-----------------------------------------------------------------------------------------------------
 // Try to find a vertex to connect a dead end to.
 //-----------------------------------------------------------------------------------------------------
-void connect(NETWORK *NP1)
+void Connect(NETWORK *NP1)
 {
 	int i, j, j0, j1, k, kdead;
 	int deadend[2], nd, nfibres_temp, kv0, kv1, kmax, kv, pt0, pt1, ntdead, njoins, npts, nshort, nfree;
@@ -2528,7 +2520,7 @@ void connect(NETWORK *NP1)
 	typedef join_str JOIN;	
 	JOIN *join;
 
-	printf("\nconnect\n");
+	printf("\nConnect\n");
 	double dwmin, dwmax, dwmin_max = 0, dmax = 0;
 
 	// Determine nlinks for each vertex
@@ -3088,10 +3080,10 @@ int main(int argc, char **argv)
 	int err;
 	char *input_amfile, *output_file;
 	char output_amfile[256];
-//	char drive[32], dir[128],filename[256], ext[32];
+	char drive[32], dir[128],filename[256], ext[32];
 //	char errfilename[256];
 //	char output_basename[256];
-	int do_connect, ijumpy;
+	int mode, do_connect, ijumpy;
 	float origin_shift[3];
 	int limit_mode;
 	float limit_value;
@@ -3128,7 +3120,7 @@ int main(int argc, char **argv)
 		printf("       ddiam       = bin size for diameter distribution\n");
 		printf("       dlen        = bin size for length distribution\n");
 		printf("\nTo simulate cell paths and estimate Cm:\n");
-		printf("Usage: conduit_analyse input_amfile output_file sfactor npow ntrials x0 y0 z0 radius deadend_radius speed CV npaths limit_mode limit_value ddiam dlen jpfactor\n");
+		printf("Usage: conduit_analyse input_amfile output_file sfactor npow ntrials x0 y0 z0 radius deadend_radius speed CV npaths ijumpy jpfactor limit_mode limit_value ddiam dlen\n");
 		printf("       sfactor     = shrinkage compensation factor e.g. 1.25\n");
 		printf("       npow        = power of cos(theta) in weighting function for probability\n");
 		printf("                     of taking a branch (theta = turning angle)\n");
@@ -3139,14 +3131,14 @@ int main(int argc, char **argv)
 		printf("       speed       = mean cell speed (um/min)\n");
 		printf("       CV          = coefficient of variation of speed (std dev/mean)\n");
 		printf("       npaths      = number of cell paths to save\n");
+		printf("       ijumpy      = controls jumping:\n");
+		printf("                     0=no jumps, 1=jump along edge, 2=jump at vertex\n");
+		printf("       jpfactor    = jump probability factor\n");
 		printf("       limit_mode  = restriction for computing fibre statistics:\n");
 		printf("                     0 = no limit, 1 = len limit, 2 =  len/diam limit\n");
 		printf("       limit_value = value of limit for the chosen mode\n");
 		printf("       ddiam       = bin size for diameter distribution\n");
 		printf("       dlen        = bin size for length distribution\n");
-		printf("       ijumpy      = controls jumping:\n");
-		printf("                     0=no jumps, 1=jump along edge, 2=jump at vertex\n");
-		printf("       jpfactor    = jump probability factor\n");
 		printf("\n");
 		printf("Writing conduit_analyse_error.log\n");
 		fpout = fopen("conduit_analyse_error.log","w");
@@ -3163,7 +3155,7 @@ int main(int argc, char **argv)
 		fprintf(fpout,"       ddiam       = bin size for diameter distribution\n");
 		fprintf(fpout,"       dlen        = bin size for length distribution\n");
 		fprintf(fpout,"\nTo simulate cell paths and estimate Cm:\n");
-		fprintf(fpout,"Usage: conduit_analyse input_amfile output_file sfactor npow ntrials x0 y0 z0 radius speed CV npaths limit_mode limit_value ddiam dlen\n");
+		fprintf(fpout,"Usage: conduit_analyse input_amfile output_file sfactor npow ntrials x0 y0 z0 radius speed CV npaths ijumpy jpfactor limit_mode limit_value ddiam dlen\n");
 		fprintf(fpout,"       sfactor     = shrinkage compensation factor e.g. 1.25\n");
 		fprintf(fpout,"       npow        = power of cos(theta) in weighting function for probability\n");
 		fprintf(fpout,"                     of taking a branch (theta = turning angle)\n");
@@ -3173,14 +3165,14 @@ int main(int argc, char **argv)
 		fprintf(fpout,"       speed       = mean cell speed (um/min)\n",CV);
 		fprintf(fpout,"       CV          = coefficient of variation of speed (std dev/mean)\n");
 		fprintf(fpout,"       npaths      = number of cell paths to save\n");
+		fprintf(fpout,"       ijumpy      = controls jumping:\n");
+		fprintf(fpout,"                     0=no jumps, 1=jump along edge, 2=jump at vertex\n");
+		fprintf(fpout,"       jpfactor    = jump probability factor\n");
 		fprintf(fpout,"       limit_mode  = restriction for computing fibre statistics:\n");
 		fprintf(fpout,"                     0 = no limit, 1 = len limit, 2 =  len/diam limit\n");
 		fprintf(fpout,"       limit_value = value of limit for the chosen mode\n");
 		fprintf(fpout,"       ddiam       = bin size for diameter distribution\n");
 		fprintf(fpout,"       dlen        = bin size for length distribution\n");
-		fprintf(fpout,"       ijumpy      = controls jumping:\n");
-		fprintf(fpout,"                     0=no jumps, 1=jump along edge, 2=jump at vertex\n");
-		fprintf(fpout,"       jpfactor    = jump probability factor\n");
 		fprintf(fpout,"\n");
 		fprintf(fpout,"Submitted command line: argc: %d\n",argc);
 		for (int i=0; i<argc; i++) {
@@ -3192,6 +3184,11 @@ int main(int argc, char **argv)
 	input_amfile = argv[1];
 	output_file = argv[2];
 	fpout = fopen(output_file,"w");	
+
+	_splitpath(output_file,drive,dir,filename,ext);
+	fprintf(fpout,"output_file: %s\n",output_file);
+//	fprintf(fpout,"drive: %s dir: %s filename: %s ext: %s\n",drive,dir,filename,ext);
+
 	NP0 = (NETWORK *)malloc(sizeof(NETWORK));
 //	NP1 = (NETWORK *)malloc(sizeof(NETWORK));
 	err = ReadAmiraFile(input_amfile,NP0);
@@ -3203,12 +3200,18 @@ int main(int argc, char **argv)
 	origin_shift[2] = 0;
 
 	if (argc == 3) {
+		mode = 1;
 		SetupVertexLists(NP0);
 		// To look for unconnected fragments and create a network with all edges used.
 		Fragments(NP0);
-		WriteAmiraFile_used("clean.am",input_amfile,NP0,origin_shift);
+		strcpy(filename,"clean.am");
+		sprintf(output_amfile,"%s%s%s",drive,dir,filename);
+		printf("output_amfile: %s\n",output_amfile);
+		fprintf(fpout,"output_amfile: %s\n",output_amfile);
+		WriteAmiraFile_clean(output_amfile,input_amfile,NP0,origin_shift);
 		return 0;
 	} else if (argc == 9) {
+		mode = 2;
 		sscanf(argv[3],"%lf",&shrink_factor);
 		sscanf(argv[4],"%lf",&max_len);
 		sscanf(argv[5],"%d",&limit_mode);
@@ -3216,10 +3219,10 @@ int main(int argc, char **argv)
 		sscanf(argv[7],"%f",&ddiam);
 		sscanf(argv[8],"%f",&dlen);
 		do_connect = true;
-
+		deadend_radius = 0;
 		//char add_str[13];
 		//if (max_len < 10)
-		//	sprintf(add_str,"_jt_max%3.1f.am",max_len);
+		//	sprintf(a/dd_str,"_jt_max%3.1f.am",max_len);
 		//else
 		//	sprintf(add_str,"_jt_max%4.1f.am",max_len);
 		//strcpy(output_amfile,input_amfile);
@@ -3232,6 +3235,7 @@ int main(int argc, char **argv)
 		//return 0;
 
 	} else if (argc == 20) {
+		mode = 3;
 		sscanf(argv[3],"%lf",&shrink_factor);
 		sscanf(argv[4],"%d",&npow);
 		sscanf(argv[5],"%d",&ntrials);
@@ -3243,21 +3247,23 @@ int main(int argc, char **argv)
 		sscanf(argv[11],"%lf",&mean_speed);
 		sscanf(argv[12],"%lf",&CV);
 		sscanf(argv[13],"%d",&npaths);
-		sscanf(argv[14],"%d",&limit_mode);
-		sscanf(argv[15],"%f",&limit_value);
-		sscanf(argv[16],"%f",&ddiam);
-		sscanf(argv[17],"%f",&dlen);
-		sscanf(argv[18],"%d",&ijumpy);
-		sscanf(argv[19],"%lf",&jumpprobfactor);
+		sscanf(argv[14],"%d",&ijumpy);
+		sscanf(argv[15],"%f",&jumpprobfactor);
+		sscanf(argv[16],"%d",&limit_mode);
+		sscanf(argv[17],"%f",&limit_value);
+		sscanf(argv[18],"%f",&ddiam);
+		sscanf(argv[19],"%f",&dlen);
 		if (ijumpy == 0) {
 			jumpy = false;
 			v_jumpy = false;
 		} else if (ijumpy == 1) {
 			jumpy = true;
 			v_jumpy = false;
+			fprintf(fpout,"\nedge jumping\n");
 		} else if (ijumpy == 2) {
 			jumpy = false;
 			v_jumpy = true;
+			fprintf(fpout,"\nvertex jumping\n");
 		} else {
 			printf("Error: ijumpy: %d must be 0,1,2\n",ijumpy);
 			exit(1);
@@ -3293,12 +3299,16 @@ int main(int argc, char **argv)
 	}
 	SetupVertexLists(NP0);
 	MakeFibreList(NP0);
-//	check_vertex(NP0);
+//	check_vertex(NP0); 
 	ndead = NumberOfDeadends(NP0);
-	fprintf(fpout,"Number of fibres, deadends in the network: %d  %d\n",nfibres,ndead);
-	fflush(fpout);
-	SetupPointLists(NP0);
-	check_dist(NP0);
+	if (mode == 2 || (mode == 3 && deadend_radius == 0)) {
+		fprintf(fpout,"Number of dead ends in the whole network: %d\n",ndead);
+	} else {
+		fprintf(fpout,"Number of dead ends in a sphere of radius: %f  %d\n",deadend_radius,ndead);
+	}
+	if (mode ==3 && jumpy)
+		SetupPointLists(NP0);
+//	check_dist(NP0);
 
 	if (do_connect) {
 		printf("do_connect\n");
@@ -3311,15 +3321,13 @@ int main(int argc, char **argv)
 		strcpy(output_amfile,input_amfile);
 		int len;
 		for(len=(int)strlen(output_amfile);len >= 0 && output_amfile[len] != '.';len--);
-		output_amfile[len] = '\0';
+		filename[len] = '\0';
 		strcat(output_amfile,add_str);
-		connect(NP0);
-		printf("\noutput_amfile: %s\n",output_amfile);
-		fprintf(fpout,"\noutput_amfile: %s\n",output_amfile);
+		Connect(NP0);
 		err = WriteAmiraFile(output_amfile,input_amfile,NP0,origin_shift);
 		if (err != 0) return 3;
 
-		fprintf(fpout,"/nRecompute distributions with connected network\n");
+		fprintf(fpout,"\nRecompute distributions with connected network\n");
 		for (int i=0;i<NP0->ne;i++) {
 			EDGE edge = NP0->edgeList[i];
 			double dave = 0;
@@ -3384,10 +3392,8 @@ int main(int argc, char **argv)
 	fclose(fpout);
 	return 0;
 	/*
-	err = WriteAmiraFile(output_amfile,input_amfile,NP1,origin_shift);
-	if (err != 0) return 4;
 	if (cmgui_flag == 1) {
-		err = WriteCmguiData(output_basename,NP1,origin_shift);
+		err = WriteCmguiData(output_basename,NP0,origin_shift);
 		if (err != 0) return 5;
 	}
 	return 0;

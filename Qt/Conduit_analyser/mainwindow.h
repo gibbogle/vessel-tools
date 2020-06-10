@@ -7,6 +7,8 @@
 #include <QtGui/QMainWindow>
 #endif
 
+#include <QAbstractButton>
+
 namespace Ui {
     class MainWindow;
 }
@@ -22,11 +24,12 @@ public:
 public slots:
 	void inputFileSelecter();
 	void outputFileSelecter();
-    void join_checkbox();
     void savepaths_checkbox();
     void on_radioButton_len_limit_toggled(bool checked);
     void on_radioButton_len_diam_limit_toggled(bool checked);
     void conduit_analyser();
+    void mode_radioButtonChanged(QAbstractButton *b);
+    void jump_radioButtonChanged(QAbstractButton *b);
 
 private:
     Ui::MainWindow *ui;
@@ -34,7 +37,8 @@ private:
 public:
 	QString inputFileName;
 	QString outputFileName;
-
+    int mode;
+    QString jumpstr;
 };
 
 #endif // MAINWINDOW_H

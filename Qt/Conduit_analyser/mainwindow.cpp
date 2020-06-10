@@ -26,6 +26,10 @@ MainWindow::MainWindow(QWidget *parent) :
 	}
 	file.close();
 	ui->textEdit->moveCursor(QTextCursor::Start);
+    connect(ui->buttonGroup_mode, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(mode_radioButtonChanged(QAbstractButton*)));
+    mode_radioButtonChanged(ui->radioButton_clean);
+    connect(ui->buttonGroup_jump, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(jump_radioButtonChanged(QAbstractButton*)));
+    jumpstr = "0";
 }
 
 MainWindow::~MainWindow()
@@ -49,17 +53,17 @@ void MainWindow::outputFileSelecter()
 	ui->labelOutputFile->setText(outputFileName);
 }
 
-void MainWindow::join_checkbox(){
-    if (ui->checkBox_join->isChecked()) {
-        ui->groupBox_traverse->setDisabled(true);
-        ui->groupBox_join->setEnabled(true);
-        ui->lineEdit_sfactor->setDisabled(true);
-    } else {
-        ui->groupBox_traverse->setEnabled(true);
-        ui->groupBox_join->setDisabled(true);
-        ui->lineEdit_sfactor->setEnabled(true);
-    }
-}
+//void MainWindow::join_checkbox(){
+//    if (ui->checkBox_join->isChecked()) {
+//        ui->groupBox_traverse->setDisabled(true);
+//        ui->groupBox_join->setEnabled(true);
+//        ui->lineEdit_sfactor->setDisabled(true);
+//    } else {
+//        ui->groupBox_traverse->setEnabled(true);
+//        ui->groupBox_join->setDisabled(true);
+//        ui->lineEdit_sfactor->setEnabled(true);
+//    }
+//}
 
 void MainWindow::savepaths_checkbox(){
     if (ui->checkBox_savepaths->isChecked()) {
@@ -77,6 +81,50 @@ void MainWindow::on_radioButton_len_limit_toggled(bool checked)
 void MainWindow::on_radioButton_len_diam_limit_toggled(bool checked)
 {
     ui->lineEdit_len_diam_limit->setEnabled(checked);
+}
+
+//------------------------------------------------------------------------------------------------------
+void MainWindow::mode_radioButtonChanged(QAbstractButton *b)
+{
+//    QString wtag = b->objectName();
+//    printf("radioButtonChanged: %s\n",wtag.toLocal8Bit().constData());
+    if (ui->radioButton_clean->isChecked()) {
+        mode = 1;
+        ui->label_CM->setEnabled(false);
+        ui->groupBox_statistics->setEnabled(false);
+        ui->label_statistics->setEnabled(false);
+        ui->groupBox_traverse->setEnabled(false);
+        ui->label_sfactor->setEnabled(false);
+        ui->lineEdit_sfactor->setEnabled(false);
+    } else if (ui->radioButton_connect->isChecked()) {
+        mode = 2;
+        ui->label_CM->setEnabled(false);
+        ui->groupBox_statistics->setEnabled(true);
+        ui->label_statistics->setEnabled(true);
+        ui->groupBox_traverse->setEnabled(false);
+        ui->label_sfactor->setEnabled(true);
+        ui->lineEdit_sfactor->setEnabled(true);
+    } else if (ui->radioButton_cm->isChecked()) {
+        mode = 3;
+        ui->label_CM->setEnabled(true);
+        ui->groupBox_statistics->setEnabled(true);
+        ui->label_statistics->setEnabled(true);
+        ui->groupBox_traverse->setEnabled(true);
+        ui->label_sfactor->setEnabled(true);
+        ui->lineEdit_sfactor->setEnabled(true);
+    }
+}
+
+//------------------------------------------------------------------------------------------------------
+void MainWindow::jump_radioButtonChanged(QAbstractButton *b)
+{
+    if (ui->radioButton_nojump->isChecked()) {
+        jumpstr = "0";
+    } else if (ui->radioButton_ejump->isChecked()) {
+        jumpstr = "1";
+    } else if (ui->radioButton_vjump->isChecked()) {
+        jumpstr = "2";
+    }
 }
 
 void MainWindow::conduit_analyser()
@@ -100,12 +148,17 @@ void MainWindow::conduit_analyser()
 	qstr += inputFileName;
 	qstr += " ";
 	qstr += outputFileName;
-    qstr += " ";
-    qstr += ui->lineEdit_sfactor->text();
-    qstr += " ";
-    if (ui->checkBox_join->isChecked()) {
+
+    if (mode == 2) {
+        qstr += " ";
+        qstr += ui->lineEdit_sfactor->text();
+        qstr += " ";
         qstr += ui->lineEdit_maxlen->text();
-    } else {
+        qstr += " ";
+    } else if (mode == 3) {
+        qstr += " ";
+        qstr += ui->lineEdit_sfactor->text();
+        qstr += " ";
         qstr += ui->lineEdit_pow->text();
         qstr += " ";
         qstr += ui->lineEdit_ntrials->text();
@@ -125,15 +178,21 @@ void MainWindow::conduit_analyser()
         qstr += ui->lineEdit_CV->text();
         qstr += " ";
         qstr += ui->lineEdit_npaths->text();
+        qstr += " ";
+        qstr += jumpstr;
+        qstr += " ";
+        qstr += ui->lineEdit_jumpprob->text();
     }
-    qstr += " ";
-    qstr += limitmodestr;
-    qstr += " ";
-    qstr += limitvaluestr;
-    qstr += " ";
-    qstr += ui->lineEdit_ddiam->text();
-    qstr += " ";
-    qstr += ui->lineEdit_dlen->text();
+    if (mode > 1) {
+        qstr += " ";
+        qstr += limitmodestr;
+        qstr += " ";
+        qstr += limitvaluestr;
+        qstr += " ";
+        qstr += ui->lineEdit_ddiam->text();
+        qstr += " ";
+        qstr += ui->lineEdit_dlen->text();
+    }
 
 	if (qstr.size()>(int)sizeof(cmdstr)-1) {
 		printf("Failed to convert qstr->cmdstr since qstr didn't fit\n");

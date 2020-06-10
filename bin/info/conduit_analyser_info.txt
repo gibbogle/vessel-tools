@@ -2,31 +2,39 @@ Conduit_analyser information
 -----------------------------------
 This program analyses a conduit (fibroreticular) network stored in Amira Spatialgraph format (.am file).
 
-The program has two functions: 
-(1) To join dead ends in the network (if possible) and trim unconnected dead ends.
-(2) To estimate the coefficient of motility Cm of cells moving on the network.
-These two functions are carried out by separate program executions.  The network should be healed (joined, trimmed), if desired, before Cm estimation.
+The program has three modes of operation: 
+(1) Cleaning.  To strip out unconnected network fragments (short lengths of fibre unconnected at both ends.) The cleaned Amira file created is clean.am.
+(2) Healing. To connect dead ends in the network (if possible).
+(3) CM estimation.  To estimate the coefficient of motility CM of cells moving on the network.
+These three functions are carried out by separate program executions.  The network should be cleaned and healed, if desired, before CM estimation.
 
-The shrinkage compensation factor is not applied when the "join" mode is selected, leaving dimensions in the .am file unscaled.
-Otherwise the shrinkage factor is applied to the network, influencing the dimension distributions and Cm estimates.
+The shrinkage compensation factor is applied in the calculation of dimension distributions in modes (2) and (3).  The network in the .am file created in modes (1) and (2) is always unscaled.
 
-For the healing pass, which is selected by checking "Join and trim dead ends", the user must set the (unscaled) upper limit on length of an added connection.
+Healing
+---------
+For the healing pass, which is selected by checking "Connect dead ends", the user must supply the (unscaled) upper limit on length of an added connection.
 This pass creates a new .am file, named like this: old-name_jt_max####.am, where #### is the maximum added connection length.
-To compute statistics for this new network, it must be specified as the input Amira file.
+The number of dead ends in the whole network is determined.
 
-The following parameters control the Cm estimation:
-
-Starting sphere centre and radius.  Cell paths have starting points within a sphere defined by the centre and radius.
-
-Average speed.  This is the average speed with which cells move along fibres.  
-A speed is assigned to each path as a random variate drawn from a Gaussian distribution with this mean and with standard deviation = 1/10 of this value.
-
+CM estimation
+-----------------
+The following parameters are used:
+Starting sphere centre and radius.  Cell paths have starting points within a sphere defined by the centre (voxel coords) and radius (um).
+Average speed.  This is the mean speed with which cells move along fibres. (In simulating cell paths, the input mean speed is divided by the shrinkage compensation factor, while the distance from the start point is multiplied by the same factor.)
+Coefficient of variation of speed: CoV = (std. deviation/mean).  A speed is assigned to each path as a random variate drawn from a Gaussian distribution with this mean and with standard deviation = CoV*mean
 Cosine power.  At a fibre junction probabilities are assigned to the various exit fibres.  The probability of taking a particular fibre is proportional to cos(theta)^n where theta is the turning angle and n = cosine power.
-
 Number of trials.  This is the number of cell paths that are generated.  The distance d from the starting point is calculated after one hour.  Cm = (1/6)*(average d^2).
+Dead end radius. The number of dead ends is determined within a sphere of the specified radius.  If the radius = 0 the number in the whole network is found. 
 
 Number of paths.  If "Save paths" is checked this is the number of paths that will be saved in the output file for displaying later.
 
+Jumping
+Edge jumps: jumping from a point along a fibre is possible - from the point that is closest to another fibre.
+Vertex jumps: jumps can occur only between vertexes.
+Jump prob factor: in each case, the probability of the jump is (jump prob factor)/(d*d), where d is the length of the jump.
+
+Statistics
+-----------
 In computing network statistics, there are three options concerning treatment of very short vessels:
 Option 1: all vessels are included
 Option 2: vessels less than the specified length limit are excluded
@@ -34,4 +42,3 @@ Option 3: vessels with length/diameter less than the specified limit are exclude
 
 The widths of the boxes used for counting vessels to compute the probability distributions must be specified.
 
-Counting deadends: If the counting sphere radius is non-zero, deadends are counted within a sphere of this radius with the starting sphere centre.  Otherwise the whole network is used.
