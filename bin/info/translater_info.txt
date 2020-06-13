@@ -14,7 +14,7 @@ The CMGUI files are generated if the box is ticked.
 
 The Amira file is written out, possibly using a more concise format.
 
-The names of all generated file are derived from the provided output file name (abcdef.out)
+The names of all generated files are derived from the provided output file name (abcdef.out)
 
 Importing distribution data into Excel:
 
