@@ -771,7 +771,7 @@ int WriteAmiraFile_clean(char *amFileOut, char *amFileIn, NETWORK *net, float or
 		edge = net->edgeList[i];
 		if (edge.used) {
 			new_ne++;
-			new_np += edge.npts-2;	// don't double-count the vertex pts
+			new_np += edge.npts;
 			for (j=0; j<2; j++) {
 				iv = edge.vert[j];
 				if (!net->vertex[iv].used) {
@@ -789,7 +789,7 @@ int WriteAmiraFile_clean(char *amFileOut, char *amFileIn, NETWORK *net, float or
 			}
 		}
 	}
-	new_np += new_nv;
+//	new_np += new_nv;
 	printf("new_ne: %d new_nv: %d new_np: %d\n",new_ne,new_nv,new_np);
 
 	FILE *fpam = fopen(amFileOut,"w");

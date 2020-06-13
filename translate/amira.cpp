@@ -285,6 +285,7 @@ int ReadAmiraFile(char *amFile, NETWORK *net)
 						kp++;
 					}
 				}
+				printf("Got edge pts\n");
 			} else if (k == 5) {
 				for (i=0;i<net->ne;i++) {
 					edge = net->edgeList[i];

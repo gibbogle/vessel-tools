@@ -174,7 +174,6 @@ int ReadAmiraFile1(char *amFile, NETWORK *net)
 	k = 0;
 	while (k < 3) {
 		fgets(line, STR_LEN, fpam);		// reads until newline character
-		printf("%s\n",line);
 		if (strncmp(line,"define VERTEX",13) == 0) {
 			sscanf(line+13,"%d",&net->nv);
 			k++;
@@ -252,7 +251,7 @@ int ReadAmiraFile1(char *amFile, NETWORK *net)
 				for (i=0;i<net->ne;i++) {
 					edge = net->edgeList[i];
 					float len = 0;
-//					printf("edge: %d  npts: %d\n",i,edge.npts);
+					printf("edge: %d  npts: %d\n",i,edge.npts);
 					for (k=0;k<edge.npts;k++) {
 						if (fgets(line, STR_LEN, fpam) == NULL) {
 							printf("ERROR reading section @4\n");

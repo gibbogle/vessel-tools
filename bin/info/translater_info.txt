@@ -12,7 +12,9 @@ The widths of the boxes used for counting vessels to compute the probability dis
 
 The CMGUI files are generated if the box is ticked.
 
-The Amira file is written out using a more concise format, as zzz.am.
+The Amira file is written out, possibly using a more concise format.
+
+The names of all generated file are derived from the provided output file name (abcdef.out)
 
 Importing distribution data into Excel:
 
