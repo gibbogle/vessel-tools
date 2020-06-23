@@ -893,17 +893,17 @@
       <string>Maximum length (unscaled)</string>
      </property>
     </widget>
-    <widget class="QLabel" name="label_clean">
+    <widget class="QCheckBox" name="checkBox_vertices_only">
      <property name="geometry">
       <rect>
        <x>30</x>
        <y>30</y>
-       <width>101</width>
-       <height>16</height>
+       <width>91</width>
+       <height>17</height>
       </rect>
      </property>
      <property name="text">
-      <string>(creating clean.am)</string>
+      <string>Vertices only</string>
      </property>
     </widget>
    </widget>
@@ -1084,8 +1084,8 @@
   <slot>savepaths_checkbox()</slot>
  </slots>
  <buttongroups>
-  <buttongroup name="buttonGroup_limits"/>
   <buttongroup name="buttonGroup_mode"/>
   <buttongroup name="buttonGroup_jump"/>
+  <buttongroup name="buttonGroup_limits"/>
  </buttongroups>
 </ui>

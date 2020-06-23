@@ -3,12 +3,17 @@ Conduit_analyser information
 This program analyses a conduit (fibroreticular) network stored in Amira Spatialgraph format (.am file).
 
 The program has three modes of operation: 
-(1) Cleaning.  To strip out unconnected network fragments (short lengths of fibre unconnected at both ends.) The cleaned Amira file created is clean.am.
+(1) Cleaning.  To strip out unconnected network fragments (short lengths of fibre unconnected at both ends.) 
 (2) Healing. To connect dead ends in the network (if possible).
 (3) CM estimation.  To estimate the coefficient of motility CM of cells moving on the network.
 These three functions are carried out by separate program executions.  The network should be cleaned and healed, if desired, before CM estimation.
 
 The shrinkage compensation factor is applied in the calculation of dimension distributions in modes (2) and (3).  The network in the .am file created in modes (1) and (2) is always unscaled.
+
+Cleaning
+----------
+The cleaned Amira file created, with no unconnected fragments, is clean.am.
+If the "Vertices only" checkbox is ticked, the generated am file contains only edges with all internal points removed.
 
 Healing
 ---------

@@ -81,6 +81,7 @@ int MAXBLOCK;
 int *blocks;
 int counter[NX][NY][NZ];
 int ndead;
+bool vertices_only = false;
 
 bool use_len_limit, use_len_diam_limit;
 float len_limit, len_diam_limit;
@@ -748,6 +749,7 @@ int WriteAmiraFile_clean(char *amFileOut, char *amFileIn, NETWORK *net, float or
 	for (i=0; i<net->ne; i++) {
 		edge = net->edgeList[i];
 		if (edge.used) {
+			if (vertices_only) net->edgeList[i].npts = 2;	// added
 			for (j=0; j<2; j++) {
 				iv = edge.vert[j];
 				net->vertex[iv].used = true;
@@ -848,7 +850,10 @@ int WriteAmiraFile_clean(char *amFileOut, char *amFileIn, NETWORK *net, float or
 		edge = net->edgeList[i];
 		if (edge.used) {
 			for (k=0;k<edge.npts;k++) {
-				j = edge.pt[k];
+				if (vertices_only)
+					j = new_iv[edge.vert[k]];	// added
+				else
+					j = edge.pt[k];
 				fprintf(fpam,"%6.1f %6.1f %6.1f\n",
 					net->point[j].x - origin_shift[0],
 					net->point[j].y - origin_shift[1],
@@ -862,7 +867,157 @@ int WriteAmiraFile_clean(char *amFileOut, char *amFileIn, NETWORK *net, float or
 		edge = net->edgeList[i];
 		if (edge.used) {
 			for (k=0;k<edge.npts;k++) {
-				j = edge.pt[k];
+				if (vertices_only)
+					j = new_iv[edge.vert[k]];	// added
+				else
+					j = edge.pt[k];
+				fprintf(fpam,"%6.2f\n",net->point[j].d);
+			}
+		}
+	}
+	printf("did diameters\n");
+	fclose(fpam);
+	printf("Completed WriteAmiraFile_clean\n");
+	return 0;
+}
+
+//-----------------------------------------------------------------------------------------------------
+// Write Amira SpatialGraph file with some edges tagged as unused, no internal pts
+//-----------------------------------------------------------------------------------------------------
+int WriteAmiraFile_vertices(char *amFileOut, char *amFileIn, NETWORK *net, float origin_shift[])
+{
+	int i, k, j, new_np, new_nv, new_ne, iv;
+	int *new_iv, *old_iv;
+	EDGE edge;
+
+	printf("\nWriteAmiraFile_vertices: %s\n",amFileOut);
+	fprintf(fpout,"\nWriteAmiraFile_vertices: %s\n",amFileOut);
+	new_iv = (int *)malloc(net->nv*sizeof(int));
+	old_iv = (int *)malloc(net->nv*sizeof(int));
+	// Reset used flags on vertexes
+	for (i=0; i<net->nv; i++)
+		net->vertex[i].used = false;
+	for (i=0; i<net->ne; i++) {
+		edge = net->edgeList[i];
+		if (edge.used) {
+			net->edgeList[i].npts = 2;	// added
+			for (j=0; j<2; j++) {
+				iv = edge.vert[j];
+				net->vertex[iv].used = true;
+			}
+		}
+	}
+
+	iv = 0;
+	for (i=0; i<net->nv; i++) {
+		if (net->vertex[i].used) {
+			new_iv[i] = iv;
+			old_iv[iv] = i;
+			iv++; 
+		}
+	}
+	new_nv = iv;
+	
+	new_np = 0;
+	new_ne = 0;
+	for (i=0;i<net->ne;i++) {
+		edge = net->edgeList[i];
+		if (edge.used) {
+			new_ne++;
+			new_np += edge.npts;
+			for (j=0; j<2; j++) {
+				iv = edge.vert[j];
+				if (!net->vertex[iv].used) {
+					printf("Error: used edge: %d has unused vertex: %d %d\n",i,j,iv);
+					exit(1);
+				}
+			}
+		} else {
+			for (j=0; j<2; j++) {
+				iv = edge.vert[j];
+				if (net->vertex[iv].used) {
+					printf("Error: unused edge: %d has used vertex: %d %d\n",i,j,iv);
+					exit(1);
+				}
+			}
+		}
+	}
+//	new_np += new_nv;
+	printf("new_ne: %d new_nv: %d new_np: %d\n",new_ne,new_nv,new_np);
+
+	FILE *fpam = fopen(amFileOut,"w");
+	fprintf(fpam,"# AmiraMesh 3D ASCII 2.0\n");
+	fprintf(fpam,"# Created by conduit_analyse from: %s by removing unused edges\n",amFileIn);
+	fprintf(fpam,"\n");
+	fprintf(fpam,"define VERTEX %d\n",new_nv);
+	fprintf(fpam,"define EDGE %d\n",new_ne);
+	fprintf(fpam,"define POINT %d\n",new_np);
+	fprintf(fpam,"\n");
+	fprintf(fpam,"Parameters {\n");
+	fprintf(fpam,"    ContentType \"HxSpatialGraph\"\n");
+	fprintf(fpam,"}\n");
+	fprintf(fpam,"\n");
+	fprintf(fpam,"VERTEX { float[3] VertexCoordinates } @1\n");
+	fprintf(fpam,"EDGE { int[2] EdgeConnectivity } @2\n");
+	fprintf(fpam,"EDGE { int NumEdgePoints } @3\n");
+	fprintf(fpam,"POINT { float[3] EdgePointCoordinates } @4\n");
+	fprintf(fpam,"POINT { float thickness } @5\n");
+	fprintf(fpam,"\n");
+
+	fprintf(fpam,"\n@1\n");
+	for (iv=0;iv<new_nv;iv++) {
+		i = old_iv[iv];
+		fprintf(fpam,"%6.1f %6.1f %6.1f\n",
+			net->vertex[i].point.x - origin_shift[0],
+			net->vertex[i].point.y - origin_shift[1],
+			net->vertex[i].point.z - origin_shift[2]);
+	}
+	printf("did vertices\n");
+	fprintf(fpam,"\n@2\n");
+	for (i=0;i<net->ne;i++) {
+		edge = net->edgeList[i];
+		if (edge.used) {
+			int iv0 = new_iv[edge.vert[0]];
+			int iv1 = new_iv[edge.vert[1]];
+	//		fprintf(fpam,"%d %d\n",edge.vert[0],edge.vert[1]);
+			fprintf(fpam,"%d %d\n",iv0,iv1);
+			if (iv0 == iv1) {
+				printf("Error: identical vertex indexes: edge: %d vert: %d %d iv0,iv1: %d %d\n",i,edge.vert[0],edge.vert[1],iv0,iv1);
+				exit(1);
+			}
+		}
+	}
+	printf("did edge vert\n");
+	fprintf(fpam,"\n@3\n");
+	for (i=0;i<net->ne;i++) {
+		edge = net->edgeList[i];
+		if (edge.used) {
+			fprintf(fpam,"%d\n",edge.npts);
+		}
+	}
+	printf("did edge npts\n");
+	fprintf(fpam,"\n@4\n");
+	for (i=0;i<net->ne;i++) {
+		edge = net->edgeList[i];
+		if (edge.used) {
+			for (k=0;k<edge.npts;k++) {
+				j = new_iv[edge.vert[k]];	// added
+//				j = edge.pt[k];
+				fprintf(fpam,"%6.1f %6.1f %6.1f\n",
+					net->point[j].x - origin_shift[0],
+					net->point[j].y - origin_shift[1],
+					net->point[j].z - origin_shift[2]);
+			}
+		}
+	}
+	printf("did points\n");
+	fprintf(fpam,"\n@5\n");
+	for (i=0;i<net->ne;i++) {
+		edge = net->edgeList[i];
+		if (edge.used) {
+			for (k=0;k<edge.npts;k++) {
+				j = new_iv[edge.vert[k]];	// added
+//				j = edge.pt[k];
 				fprintf(fpam,"%6.2f\n",net->point[j].d);
 			}
 		}
@@ -3087,6 +3242,7 @@ int main(int argc, char **argv)
 	float origin_shift[3];
 	int limit_mode;
 	float limit_value;
+	int ivert;
 
 	int itpt;
 	double *tpt;
@@ -3106,10 +3262,12 @@ int main(int argc, char **argv)
 	printf("\n");
 
 	printf("argc: %d\n", argc);
-	if (argc != 3 && argc != 9 && argc != 20) {
+	if (argc != 4 && argc != 9 && argc != 20) {
 		printf("To strip out unconnected edges:\n");
-		printf("Usage: conduit_analyse input_amfile output_file\n");
-		printf("       (the cleaned network file will be created as clean.am)\n");
+		printf("Usage: conduit_analyse input_amfile output_file ivert\n");
+		printf("       ivert       = flag for am file with vertices only\n");
+		printf("       (the cleaned network file will be created as: \n");
+		printf("            clean.am if ivert=0, clean_vert.am if ivert=1)\n");
 		printf("\nTo perform joining and trimming of dead ends:\n");
 		printf("Usage: conduit_analyse input_amfile output_file sfactor max_len limit_mode limit_value ddiam dlen\n");
 		printf("       sfactor     = shrinkage compensation factor e.g. 1.25\n");
@@ -3143,8 +3301,10 @@ int main(int argc, char **argv)
 		printf("Writing conduit_analyse_error.log\n");
 		fpout = fopen("conduit_analyse_error.log","w");
 		fprintf(fpout,"To strip out unconnected edges:\n");
-		fprintf(fpout,"Usage: conduit_analyse input_amfile output_file\n");
-		fprintf(fpout,"       (the cleaned network file will be created as clean.am)\n");
+		fprintf(fpout,"Usage: conduit_analyse input_amfile output_file ivert\n");
+		fprintf(fpout,"       ivert       = flag for am file with vertices only\n");
+		fprintf(fpout,"       (the cleaned network file will be created as: \n");
+		fprintf(fpout,"            clean.am if ivert=0, clean_vert.am if ivert=1)\n");
 		fprintf(fpout,"\nTo perform joining and trimming of dead ends:\n");
 		fprintf(fpout,"Usage: conduit_analyse input_amfile output_file sfactor max_len limit_mode limit_value ddiam dlen\n");
 		fprintf(fpout,"       sfactor     = shrinkage compensation factor e.g. 1.25\n");
@@ -3199,12 +3359,21 @@ int main(int argc, char **argv)
 	origin_shift[1] = 0;
 	origin_shift[2] = 0;
 
-	if (argc == 3) {
+	if (argc == 4) {
+		// testing
+//		WriteAmiraFile_vertices("vert.am",input_amfile,NP0,origin_shift);
+//		return 0;
+//		vertices_only = true;
+		sscanf(argv[3],"%d",&ivert);
+		vertices_only = (ivert != 0);
 		mode = 1;
 		SetupVertexLists(NP0);
 		// To look for unconnected fragments and create a network with all edges used.
 		Fragments(NP0);
-		strcpy(filename,"clean.am");
+		if (vertices_only)
+			strcpy(filename,"clean_vert.am");
+		else
+			strcpy(filename,"clean.am");
 		sprintf(output_amfile,"%s%s%s",drive,dir,filename);
 		printf("output_amfile: %s\n",output_amfile);
 		fprintf(fpout,"output_amfile: %s\n",output_amfile);

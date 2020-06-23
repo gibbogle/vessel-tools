@@ -192,6 +192,11 @@ void MainWindow::conduit_analyser()
         qstr += ui->lineEdit_ddiam->text();
         qstr += " ";
         qstr += ui->lineEdit_dlen->text();
+    } else {
+        if (ui->checkBox_vertices_only->isChecked())
+            qstr += " 1";
+        else
+            qstr += " 0";
     }
 
 	if (qstr.size()>(int)sizeof(cmdstr)-1) {
