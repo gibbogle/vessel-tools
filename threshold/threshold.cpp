@@ -31,6 +31,49 @@ long long width, height, depth, imsize;
 #define V(a,b,c)  p[(c)*imsize+(b)*width+(a)]
 #define B(a,b,c)  back[(c)*imsize+(b)*width+(a)]
 
+unsigned char *p, *back;
+FILE *fp;
+
+/*
+int x1=17;
+int x2=21;
+int yy1=1007;
+int y2=1011;
+int z1=202;
+int z2=203;
+
+void show_V()
+{
+	int x, y, z, val;
+	for (z=z1; z<=z2; z++) {
+		for (y=yy1; y<=y2; y++) {
+			for (x=x1; x<=x2; x++) {
+				val = V(x,y,z);
+				fprintf(fp,"%d   ",val);
+			}
+			fprintf(fp,"\n");
+		}
+		fprintf(fp,"\n");
+	}
+}
+
+void show_B()
+{
+	int x, y, z, val;
+	for (z=z1; z<=z2; z++) {
+		for (y=yy1; y<=y2; y++) {
+			for (x=x1; x<=x2; x++) {
+				val = B(x,y,z);
+				fprintf(fp,"%d   ",val);
+			}
+			fprintf(fp,"\n");
+		}
+		fprintf(fp,"\n");
+	}
+}
+*/
+
+
 //------------------------------------------------------------------------------------------------------
 // There are two threshold ranges, depending on the background level b.
 // For b < T, the threshold = b + delta
@@ -41,8 +84,11 @@ void LocalThreshold(int T, int delta)
 	int x, y, z;
 	double thresh;
 	unsigned char b, v;
-	unsigned char *p = (unsigned char *)(im->GetBufferPointer());
-	unsigned char *back = (unsigned char *)(background->GetBufferPointer());
+	p = (unsigned char *)(im->GetBufferPointer());
+	back = (unsigned char *)(background->GetBufferPointer());
+
+//	show_V();
+//	show_B();
 
 	for (z=0; z<depth; z++)
 //	for (z=214; z<depth; z++)
@@ -72,6 +118,7 @@ void LocalThreshold(int T, int delta)
 		}
 	}
 	printf("\n");
+//	show_V();
 }
 
 //------------------------------------------------------------------------------------------------------
@@ -80,7 +127,6 @@ int main(int argc, char**argv)
 {
 	int T, delta;
 	char *infile, *backfile, *outfile;
-	FILE *fp;
 	char errfile[] = "error.log";
 	fp = fopen(errfile,"w");
 

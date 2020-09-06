@@ -1,0 +1,8 @@
+Denoiser information
+
+This program removes background noise from a binary 3D TIFF image.
+
+Using BinaryMedianImageFilter, it computes the value of each output voxel as the statistical median of the neighbourhood of values around the corresponding input voxel.
+
+Radius specifies the size of the neighbourhood along each dimension. The value is used as the semi-size of a cubic box. 
+For example, a radius of 1 will result in a 3x3x3 neighbourhood, while a radius of 2 will result in a 5x5x5 neighbourhood.
